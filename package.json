@@ -1,0 +1,33 @@
+{
+    "name": "@dabighomie/ugwtf",
+    "version": "1.0.0",
+    "description": "Unified GitHub Workflow Transformation Framework — deploy standardized CI/CD, Copilot automation, and quality gates across all DaBigHomie repos",
+    "type": "module",
+    "bin": {
+        "ugwtf": "./dist/index.js"
+    },
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsx src/index.ts",
+        "deploy": "tsx src/index.ts deploy",
+        "validate": "tsx src/index.ts validate",
+        "fix": "tsx src/index.ts fix",
+        "labels": "tsx src/index.ts labels",
+        "type-check": "tsc --noEmit"
+    },
+    "keywords": [
+        "github",
+        "workflow",
+        "automation",
+        "copilot",
+        "ci-cd",
+        "ugwtf"
+    ],
+    "author": "DaBigHomie",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/node": "^22.0.0",
+        "tsx": "^4.19.0",
+        "typescript": "^5.7.0"
+    }
+}

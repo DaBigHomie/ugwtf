@@ -1,0 +1,60 @@
+{
+  "generated": "2026-03-06T21:56:11.847Z",
+  "repos": {
+    "damieus": {
+      "score": 88,
+      "domains": {
+        "labels": 100,
+        "workflows": 67,
+        "issues": 100,
+        "prs": 85
+      },
+      "timestamp": "2026-03-06T21:55:43.252Z"
+    },
+    "ffs": {
+      "score": 54,
+      "domains": {
+        "labels": 100,
+        "workflows": 0,
+        "issues": 45,
+        "prs": 70
+      },
+      "timestamp": "2026-03-06T21:55:51.316Z"
+    },
+    "043": {
+      "score": 100,
+      "domains": {
+        "labels": 100,
+        "workflows": 100,
+        "issues": 100,
+        "prs": 100
+      },
+      "timestamp": "2026-03-06T21:55:58.459Z"
+    },
+    "maximus": {
+      "score": 74,
+      "domains": {
+        "labels": 100,
+        "workflows": 33,
+        "issues": 61,
+        "prs": 100
+      },
+      "timestamp": "2026-03-06T21:56:05.616Z"
+    },
+    "cae": {
+      "score": 74,
+      "domains": {
+        "labels": 100,
+        "workflows": 0,
+        "issues": 97,
+        "prs": 100
+      },
+      "timestamp": "2026-03-06T21:56:11.847Z"
+    }
+  },
+  "summary": {
+    "total": 5,
+    "passing": 2,
+    "average": 78
+  }
+}
