@@ -115,8 +115,8 @@ async function auditIssues(ctx: AgentContext): Promise<AuditDomain> {
     findings.push(`${stalled.length} potentially stalled issues`);
   }
 
-  // Score: fewer findings = higher score
-  const deductions = unlabeled.length * 5 + unassigned.length * 3 + stalled.length * 10;
+  // Cap each category to prevent a single issue type from tanking the whole domain
+  const deductions = Math.min(25, unlabeled.length * 5) + Math.min(15, unassigned.length * 3) + Math.min(30, stalled.length * 10);
   const score = Math.max(0, 100 - deductions);
   return { name: 'Issues', score, maxScore: 100, findings };
 }
@@ -155,9 +155,86 @@ async function auditPRs(ctx: AgentContext): Promise<AuditDomain> {
     findings.push(`${dbPRsNoLabel.length} potential DB migration PRs missing 'database' label`);
   }
 
-  const deductions = drafts.length * 5 + unreviewedCopilot.length * 10 + dbPRsNoLabel.length * 15;
+  // Check for stale dependabot PRs (open > 14 days)
+  const now = Date.now();
+  const fourteenDays = 14 * 24 * 60 * 60 * 1000;
+  const staleDependabot = prs.filter(p => {
+    const isDependabot = p.user.login === 'dependabot[bot]' || p.labels.some(l => l.name === 'dependencies');
+    const age = now - new Date(p.created_at).getTime();
+    return isDependabot && age > fourteenDays;
+  });
+  if (staleDependabot.length > 0) {
+    findings.push(`${staleDependabot.length} stale dependabot PRs (>14 days) — merge or close`);
+  }
+
+  // Check for duplicate Copilot PRs (same title or similar branch prefix)
+  const copilotPRs = prs.filter(p =>
+    p.user.login === 'copilot' || p.head.ref.startsWith('copilot/')
+  );
+  const seenTitles = new Map<string, number>();
+  for (const pr of copilotPRs) {
+    const normalized = pr.title.replace(/\[WIP\]\s*/i, '').trim().toLowerCase();
+    if (seenTitles.has(normalized)) {
+      findings.push(`Duplicate Copilot PRs: #${seenTitles.get(normalized)} and #${pr.number} ("${pr.title}")`);
+    } else {
+      seenTitles.set(normalized, pr.number);
+    }
+  }
+
+  // Check for PRs with no labels at all
+  const unlabeledPRs = prs.filter(p => p.labels.length === 0 && p.user.login !== 'dependabot[bot]');
+  if (unlabeledPRs.length > 0) {
+    findings.push(`${unlabeledPRs.length} PRs with no labels`);
+  }
+
+  // Check for old open PRs (> 30 days)
+  const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+  const stalePRs = prs.filter(p => {
+    const age = now - new Date(p.updated_at).getTime();
+    return age > thirtyDays;
+  });
+  if (stalePRs.length > 0) {
+    findings.push(`${stalePRs.length} stale PRs (no activity >30 days)`);
+  }
+
+  // Cap each category to prevent a single issue type from tanking the whole domain
+  const deductions = Math.min(15, drafts.length * 5)
+    + Math.min(20, unreviewedCopilot.length * 8)
+    + Math.min(15, dbPRsNoLabel.length * 15)
+    + Math.min(25, staleDependabot.length * 5)
+    + Math.min(10, unlabeledPRs.length * 3)
+    + Math.min(15, stalePRs.length * 5);
   const score = Math.max(0, 100 - deductions);
   return { name: 'PRs', score, maxScore: 100, findings };
+}
+
+async function auditBranches(ctx: AgentContext): Promise<AuditDomain> {
+  const repoConfig = getRepo(ctx.repoAlias);
+  if (!repoConfig) return { name: 'Branches', score: 0, maxScore: 100, findings: ['No repo config'] };
+
+  const { owner, repo } = parseSlug(repoConfig.slug);
+  const branches = await ctx.github.listBranches(owner, repo);
+
+  const findings: string[] = [];
+
+  // Detect copilot/* branches that should have been cleaned up
+  const copilotBranches = branches.filter(b => b.name.startsWith('copilot/'));
+  if (copilotBranches.length > 3) {
+    findings.push(`${copilotBranches.length} copilot/* branches — consider cleanup`);
+  }
+
+  // Detect total branch count (>20 is noisy)
+  const protectedBranches = ['main', 'master', 'develop', 'staging'];
+  const featureBranches = branches.filter(b => !protectedBranches.includes(b.name));
+  if (featureBranches.length > 20) {
+    findings.push(`${featureBranches.length} non-protected branches — stale branch accumulation`);
+  }
+
+  // Cap each category to prevent a single issue type from tanking the whole domain
+  const deductions = Math.min(25, Math.max(0, copilotBranches.length - 3) * 2)
+    + (featureBranches.length > 20 ? Math.min(20, (featureBranches.length - 20)) : 0);
+  const score = Math.max(0, 100 - deductions);
+  return { name: 'Branches', score, maxScore: 100, findings };
 }
 
 const fullAuditAgent: Agent = {
@@ -177,6 +254,7 @@ const fullAuditAgent: Agent = {
     domains.push(await auditWorkflows(ctx));
     domains.push(await auditIssues(ctx));
     domains.push(await auditPRs(ctx));
+    domains.push(await auditBranches(ctx));
 
     const overallScore = Math.round(
       domains.reduce((sum, d) => sum + d.score, 0) / domains.length
@@ -207,7 +285,7 @@ const fullAuditAgent: Agent = {
       }
     }
 
-    ctx.logger.info(lines.slice(0, 8).join('\n'));
+    ctx.logger.info(lines.join('\n'));
     ctx.logger.groupEnd();
 
     return {
@@ -249,8 +327,9 @@ const scoreboardAgent: Agent = {
         const workflows = await auditWorkflows(subCtx);
         const issues = await auditIssues(subCtx);
         const prs = await auditPRs(subCtx);
+        const branches = await auditBranches(subCtx);
 
-        const overall = Math.round((labels.score + workflows.score + issues.score + prs.score) / 4);
+        const overall = Math.round((labels.score + workflows.score + issues.score + prs.score + branches.score) / 5);
         scores[alias] = {
           score: overall,
           domains: {
@@ -258,6 +337,7 @@ const scoreboardAgent: Agent = {
             workflows: workflows.score,
             issues: issues.score,
             prs: prs.score,
+            branches: branches.score,
           },
           timestamp: new Date().toISOString(),
         };
@@ -266,7 +346,7 @@ const scoreboardAgent: Agent = {
         ctx.logger.warn(`Failed to audit ${alias}: ${err instanceof Error ? err.message : String(err)}`);
         scores[alias] = {
           score: 0,
-          domains: { labels: 0, workflows: 0, issues: 0, prs: 0 },
+          domains: { labels: 0, workflows: 0, issues: 0, prs: 0, branches: 0 },
           timestamp: new Date().toISOString(),
         };
       }

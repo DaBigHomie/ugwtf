@@ -1,60 +1,65 @@
 {
-  "generated": "2026-03-06T21:56:11.847Z",
+  "generated": "2026-03-12T08:43:30.734Z",
   "repos": {
     "damieus": {
-      "score": 88,
+      "score": 79,
       "domains": {
         "labels": 100,
-        "workflows": 67,
-        "issues": 100,
-        "prs": 85
+        "workflows": 100,
+        "issues": 80,
+        "prs": 62,
+        "branches": 55
       },
-      "timestamp": "2026-03-06T21:55:43.252Z"
+      "timestamp": "2026-03-12T08:43:14.487Z"
     },
     "ffs": {
-      "score": 54,
+      "score": 80,
       "domains": {
         "labels": 100,
-        "workflows": 0,
-        "issues": 45,
-        "prs": 70
+        "workflows": 100,
+        "issues": 65,
+        "prs": 34,
+        "branches": 100
       },
-      "timestamp": "2026-03-06T21:55:51.316Z"
+      "timestamp": "2026-03-12T08:43:18.977Z"
     },
     "043": {
-      "score": 100,
+      "score": 91,
       "domains": {
         "labels": 100,
         "workflows": 100,
         "issues": 100,
-        "prs": 100
+        "prs": 100,
+        "branches": 55
       },
-      "timestamp": "2026-03-06T21:55:58.459Z"
+      "timestamp": "2026-03-12T08:43:22.843Z"
     },
     "maximus": {
-      "score": 74,
+      "score": 94,
       "domains": {
         "labels": 100,
-        "workflows": 33,
-        "issues": 61,
-        "prs": 100
+        "workflows": 100,
+        "issues": 85,
+        "prs": 100,
+        "branches": 84
       },
-      "timestamp": "2026-03-06T21:56:05.616Z"
+      "timestamp": "2026-03-12T08:43:26.967Z"
     },
     "cae": {
-      "score": 74,
+      "score": 98,
       "domains": {
         "labels": 100,
-        "workflows": 0,
+        "workflows": 100,
         "issues": 97,
-        "prs": 100
+        "prs": 100,
+        "branches": 92
       },
-      "timestamp": "2026-03-06T21:56:11.847Z"
+      "timestamp": "2026-03-12T08:43:30.734Z"
     }
   },
   "summary": {
     "total": 5,
-    "passing": 2,
-    "average": 78
+    "passing": 4,
+    "average": 88
   }
 }

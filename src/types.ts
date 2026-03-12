@@ -153,6 +153,8 @@ export interface GitHubClient {
   listWorkflowRuns(owner: string, repo: string): Promise<GitHubWorkflowRun[]>;
   /** Get file contents from repo */
   getFileContents(owner: string, repo: string, path: string): Promise<string>;
+  /** List branches */
+  listBranches(owner: string, repo: string): Promise<Array<{ name: string; commit: { sha: string } }>>;
   /** Check rate limit */
   getRateLimit(): Promise<{ remaining: number; limit: number; reset: number }>;
 }
@@ -165,6 +167,8 @@ export interface GitHubIssue {
   labels: Array<{ name: string }>;
   assignees: Array<{ login: string }>;
   html_url: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface GitHubPR {
@@ -178,6 +182,8 @@ export interface GitHubPR {
   base: { ref: string };
   html_url: string;
   user: { login: string };
+  created_at: string;
+  updated_at: string;
 }
 
 export interface GitHubFile {

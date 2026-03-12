@@ -1,16 +1,92 @@
 /**
- * Copilot Full Automation Pipeline Generator
+ * Copilot Full Automation Pipeline — 30x Generator
  *
- * 5-phase pipeline ported from damieus-com-migration gold standard:
- *   Phase 1: Immediate PR creation when issue labeled
- *   Phase 2: Detect DB migrations in changed files (firewall gate)
- *   Phase 3: Quality validation on PR (tsc + lint + build)
- *   Phase 4: Auto-approve & merge (BLOCKED for DB migration PRs)
- *   Phase 5: Failure handling with actionable comments
+ * Complete 8-phase self-healing pipeline:
+ *   Phase 1: Issue triage → assign Copilot coding agent → create branch + draft PR
+ *   Phase 2: Promote draft → ready for review → request Copilot code review
+ *   Phase 3: Quality validation (tsc + lint + build) + DB migration detection
+ *   Phase 4: Implement Copilot review suggestions (feedback loop → re-trigger Copilot)
+ *   Phase 5: Auto-approve & squash merge (BLOCKED for DB migration PRs)
+ *   Phase 6: DB migration firewall (manual merge required)
+ *   Phase 7: Failure handling → re-assign Copilot to fix (self-healing loop)
+ *   Phase 8: Post-merge cleanup → update issues → chain to next issue
  *
  * Adapts node version, Supabase project ID, and label triggers per repo config.
  */
 import type { RepoConfig } from '../config/repo-registry.js';
+
+/**
+ * Generates the optional Phase 3.5 E2E validation job YAML block.
+ * Returns empty string for repos without E2E tests configured.
+ */
+function generateE2EJobYaml(repo: RepoConfig): string {
+  return `
+  # =========================================================================
+  # PHASE 3.5: E2E VALIDATION (optional, non-blocking)
+  # Runs end-to-end tests after quality checks pass — does NOT block merge
+  # =========================================================================
+  e2e-validation:
+    name: "Phase 3.5: E2E Validation"
+    runs-on: ubuntu-latest
+    needs: validate-pr
+    continue-on-error: true
+    if: |
+      needs.validate-pr.outputs.all_checks_passed == 'true'
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@v4
+        with:
+          ref: \${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '${repo.nodeVersion}'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        id: e2e
+        run: ${repo.e2eCommand}
+        continue-on-error: true
+
+      - name: Comment E2E results
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          E2E_STATUS: \${{ steps.e2e.outcome }}
+        with:
+          script: |
+            const status = process.env.E2E_STATUS;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: [
+                '## Phase 3.5: E2E Validation (Non-Blocking)',
+                '',
+                '| Check | Status |',
+                '|-------|--------|',
+                \`| E2E Tests | \${status === 'success' ? 'Pass' : 'FAIL (non-blocking)'} |\`,
+                '',
+                status !== 'success'
+                  ? 'E2E tests did not pass. This is **non-blocking** — auto-merge can still proceed.'
+                  : 'All E2E tests passed.',
+                '',
+                '*UGWTF 30x Pipeline — Phase 3.5 complete*'
+              ].join('\\n')
+            });`;
+}
 
 export function generateCopilotFullAutomation(repo: RepoConfig): string {
   // Build the manual-merge comment for DB migration PRs
@@ -19,26 +95,36 @@ export function generateCopilotFullAutomation(repo: RepoConfig): string {
         `'1. Apply migration SQL via Supabase Dashboard SQL Editor',`,
         `'2. Regenerate types: \\\`npx supabase gen types typescript --project-id ${repo.supabaseProjectId} > ${repo.supabaseTypesPath}\\\`',`,
         `'3. Deploy Edge Functions if needed',`,
-        `'4. Merge PR manually after verification',`,
+        `'4. Run quality gates: \\\`npx tsc --noEmit && npm run lint && npm run build\\\`',`,
+        `'5. Merge PR manually after verification',`,
       ].join('\n                ')
     : [
         `'1. Review migration SQL carefully',`,
         `'2. Apply migration manually',`,
-        `'3. Merge PR manually after verification',`,
+        `'3. Run quality gates: \\\`npx tsc --noEmit && npm run lint && npm run build\\\`',`,
+        `'4. Merge PR manually after verification',`,
       ].join('\n                ');
 
+  // Phase 3.5: Optional E2E validation job (only when repo.hasE2E is true)
+  const e2eJob = repo.hasE2E && repo.e2eCommand
+    ? generateE2EJobYaml(repo)
+    : '';
+
   return `# Auto-generated by @dabighomie/ugwtf — do not edit manually
-name: Copilot Full Automation Pipeline
+# 30x Copilot Full Automation Pipeline — 8-phase self-healing loop
+name: Copilot Full Automation Pipeline — 30x
 
 on:
   issues:
     types: [opened, labeled]
   pull_request_target:
-    types: [opened, synchronize, ready_for_review]
+    types: [opened, synchronize, ready_for_review, closed]
     branches:
       - ${repo.defaultBranch}
       - 'feature/**'
       - 'copilot/**'
+  pull_request_review:
+    types: [submitted]
   workflow_dispatch:
     inputs:
       issue_number:
@@ -46,12 +132,17 @@ on:
         required: true
         type: number
 
+concurrency:
+  group: copilot-automation-\${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
+
 jobs:
   # =========================================================================
-  # PHASE 1: IMMEDIATE PR CREATION
+  # PHASE 1: ISSUE TRIAGE & COPILOT ASSIGNMENT
+  # Issue labeled → check existing PRs → assign Copilot → create branch + draft PR
   # =========================================================================
   trigger-pr-creation:
-    name: Immediate PR Creation
+    name: "Phase 1: Issue Triage & Copilot Assignment"
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'issues' &&
@@ -89,6 +180,7 @@ jobs:
             if (linkedPR) {
               core.setOutput('should_create', 'false');
               core.setOutput('issue_number', issue_number);
+              console.log(\`PR #\${linkedPR.number} already linked to issue #\${issue_number}\`);
             } else {
               core.setOutput('should_create', 'true');
               core.setOutput('issue_number', issue_number);
@@ -101,6 +193,16 @@ jobs:
           ISSUE_NUMBER: \${{ steps.check.outputs.issue_number }}
         with:
           script: |
+            // COPILOT ASSIGNMENT API WORKAROUND
+            // The REST API call addAssignees({assignees: ['copilot']}) works
+            // reliably within GitHub Actions context but may silently fail
+            // via external API calls (gh CLI, MCP tools):
+            //   - gh issue edit --add-assignee @copilot → "user not found"
+            //   - gh api POST .../assignees → 200 OK but no actual assignment
+            // Fallback strategies (priority order):
+            //   1. This workflow (GitHub Actions context) — PREFERRED
+            //   2. UGWTF CLI copilotAssignAgent — uses Octokit directly
+            //   3. Manual: workflow_dispatch trigger on this workflow
             const issueNumber = parseInt(process.env.ISSUE_NUMBER);
             try {
               await github.rest.issues.addAssignees({
@@ -109,26 +211,30 @@ jobs:
                 issue_number: issueNumber,
                 assignees: ['copilot']
               });
+              console.log(\`Copilot assigned to issue #\${issueNumber}\`);
             } catch (err) {
-              console.log(\`Could not assign Copilot: \${err.message}\`);
+              core.warning(\`Copilot assignment failed: \${err.message}. Use workflow_dispatch or UGWTF CLI as fallback.\`);
             }
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issueNumber,
               body: [
-                '**Copilot Full Automation Activated**',
+                '## 30x Copilot Full Automation Activated',
                 '',
                 'Copilot coding agent has been assigned to this issue.',
                 '',
-                '**Pipeline:**',
-                '- Copilot coding agent: Assigned',
-                '- Quality checks: TypeScript + ESLint + Build',
-                '- DB migration firewall: Active',
-                '- Auto-approve: If checks pass (non-DB PRs only)',
-                '- Auto-merge: Enabled (squash)',
+                '**8-Phase Pipeline:**',
+                '1. Copilot coding agent — **Assigned**',
+                '2. Draft PR → Ready for Review — *automatic*',
+                '3. Quality checks — TypeScript + ESLint + Build',
+                '4. Copilot code review — *auto-requested*',
+                '5. Review feedback → Copilot re-implements — *self-healing loop*',
+                '6. Auto-approve & merge — squash (non-DB PRs)',
+                '7. DB migration firewall — manual merge if needed',
+                '8. Post-merge cleanup — issues updated automatically',
                 '',
-                '*Copilot will create a PR and push commits automatically.*'
+                '*Copilot will create a PR and push commits. The pipeline handles the rest.*'
               ].join('\\n')
             });
             await github.rest.issues.addLabels({
@@ -167,7 +273,7 @@ jobs:
                 title: \`[Auto] \${issueTitle}\`,
                 head: branchName,
                 base: '${repo.defaultBranch}',
-                body: \`Fixes #\${issueNumber}\\n\\nAutomated PR — Copilot will push implementation commits.\`,
+                body: \`Fixes #\${issueNumber}\\n\\nAutomated PR — Copilot will push implementation commits.\\n\\n*Managed by UGWTF 30x Pipeline*\`,
                 draft: true
               });
               await github.rest.issues.addLabels({
@@ -181,16 +287,144 @@ jobs:
             }
 
   # =========================================================================
-  # PHASE 2: QUALITY VALIDATION (runs on PR)
-  # Includes DB migration detection for firewall gating
+  # PHASE 2: PROMOTE DRAFT → READY FOR REVIEW + REQUEST COPILOT REVIEW
+  # When Copilot pushes commits to a draft PR, promote it and request review
   # =========================================================================
-  validate-pr:
-    name: Quality Checks
+  promote-and-review:
+    name: "Phase 2: Promote Draft & Request Review"
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'pull_request_target' &&
+      github.event.action == 'synchronize' &&
+      github.event.pull_request.draft == true &&
       (contains(github.event.pull_request.labels.*.name, 'automation:copilot') ||
-       contains(github.event.pull_request.labels.*.name, 'automation:full'))
+       startsWith(github.event.pull_request.head.ref, 'copilot/'))
+    permissions:
+      contents: read
+      pull-requests: write
+      actions: write
+
+    steps:
+      - name: Check if PR has real implementation
+        id: check-ready
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100
+            });
+            const hasImplementation = files.length > 0 && files.some(f =>
+              f.filename.endsWith('.ts') || f.filename.endsWith('.tsx') ||
+              f.filename.endsWith('.js') || f.filename.endsWith('.jsx') ||
+              f.filename.endsWith('.css') || f.filename.endsWith('.json') ||
+              f.filename.endsWith('.yml') || f.filename.endsWith('.yaml') ||
+              f.filename.endsWith('.md') || f.filename.endsWith('.sql')
+            );
+            core.setOutput('ready', hasImplementation ? 'true' : 'false');
+            console.log(\`PR has \${files.length} changed files, implementation: \${hasImplementation}\`);
+
+      - name: Convert draft to ready for review
+        if: steps.check-ready.outputs.ready == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+                draft: false
+              });
+              console.log('Draft PR promoted to ready for review');
+            } catch (err) {
+              console.log(\`Could not promote draft: \${err.message}\`);
+            }
+
+      - name: Request Copilot code review
+        if: steps.check-ready.outputs.ready == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+                reviewers: ['copilot']
+              });
+              console.log('Copilot code review requested');
+            } catch (err) {
+              console.log(\`Could not request Copilot review: \${err.message}\`);
+            }
+
+      - name: Approve pending workflow runs
+        if: steps.check-ready.outputs.ready == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              const { data: runs } = await github.rest.actions.listWorkflowRunsForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                status: 'action_required',
+                per_page: 10
+              });
+              const prRuns = runs.workflow_runs.filter(r =>
+                r.head_sha === context.payload.pull_request.head.sha
+              );
+              for (const run of prRuns) {
+                await github.rest.actions.approveWorkflowRun({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  run_id: run.id
+                });
+                console.log(\`Approved workflow run \${run.id}\`);
+              }
+            } catch (err) {
+              console.log(\`Workflow approval skipped: \${err.message}\`);
+            }
+
+      - name: Comment promotion status
+        if: steps.check-ready.outputs.ready == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: [
+                '## Phase 2: Ready for Review',
+                '',
+                '| Action | Status |',
+                '|--------|--------|',
+                '| Draft → Ready | Promoted |',
+                '| Copilot Code Review | Requested |',
+                '| Workflow Approval | Checked |',
+                '',
+                'Quality checks will run next. Copilot will review the implementation.',
+                '',
+                '*UGWTF 30x Pipeline — Phase 2 complete*'
+              ].join('\\n')
+            });
+
+  # =========================================================================
+  # PHASE 3: QUALITY VALIDATION (runs on PR)
+  # TypeScript + ESLint + Build + DB migration detection
+  # =========================================================================
+  validate-pr:
+    name: "Phase 3: Quality Validation"
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request_target' &&
+      (github.event.action == 'ready_for_review' || github.event.action == 'synchronize') &&
+      github.event.pull_request.draft == false &&
+      (contains(github.event.pull_request.labels.*.name, 'automation:copilot') ||
+       contains(github.event.pull_request.labels.*.name, 'automation:full') ||
+       startsWith(github.event.pull_request.head.ref, 'copilot/'))
     permissions:
       contents: read
       pull-requests: write
@@ -278,22 +512,22 @@ jobs:
             const passed = process.env.OVERALL === 'true';
             const hasDB = process.env.HAS_DB === 'true';
             const body = [
-              '## Automated Quality Check Results',
+              '## Phase 3: Quality Validation Results',
               '',
               '| Check | Status |',
               '|-------|--------|',
-              \`| TypeScript | \${ts === 'success' ? 'Pass' : 'Fail'} |\`,
-              \`| ESLint | \${lint === 'success' ? 'Pass' : 'Fail'} |\`,
-              \`| Build | \${build === 'success' ? 'Pass' : 'Fail'} |\`,
+              \`| TypeScript | \${ts === 'success' ? 'Pass' : 'FAIL'} |\`,
+              \`| ESLint | \${lint === 'success' ? 'Pass' : 'FAIL'} |\`,
+              \`| Build | \${build === 'success' ? 'Pass' : 'FAIL'} |\`,
               \`| DB Migration | \${hasDB ? 'DETECTED — manual merge required' : 'None'} |\`,
               '',
               passed && !hasDB
-                ? '✅ **All checks passed** — proceeding to auto-approval'
+                ? '**All checks passed** — proceeding to auto-approval & merge'
                 : passed && hasDB
-                ? '✅ **Checks passed** but DB migration detected — **manual merge required**'
-                : '❌ **Checks failed** — manual review required',
+                ? '**Checks passed** but DB migration detected — **manual merge required**'
+                : '**Checks failed** — Copilot will be re-assigned to fix',
               '',
-              '*Automated by UGWTF Copilot Full Automation Pipeline*'
+              '*UGWTF 30x Pipeline — Phase 3 complete*'
             ].join('\\n');
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -301,12 +535,108 @@ jobs:
               issue_number: context.payload.pull_request.number,
               body
             });
+${e2eJob}
+  # =========================================================================
+  # PHASE 4: IMPLEMENT COPILOT REVIEW SUGGESTIONS (self-healing feedback loop)
+  # When Copilot code review requests changes → re-assign Copilot to implement
+  # =========================================================================
+  implement-review-feedback:
+    name: "Phase 4: Implement Review Suggestions"
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request_review' &&
+      github.event.review.state == 'changes_requested' &&
+      (contains(github.event.pull_request.labels.*.name, 'automation:copilot') ||
+       startsWith(github.event.pull_request.head.ref, 'copilot/'))
+    permissions:
+      pull-requests: write
+      issues: write
+      contents: read
+
+    steps:
+      - name: Analyze review suggestions
+        id: analyze
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.pulls.listReviewComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100
+            });
+
+            const reviewComments = comments.filter(c =>
+              c.pull_request_review_id === context.payload.review.id
+            );
+            const suggestions = reviewComments.filter(c =>
+              c.body && c.body.includes('\`\`\`suggestion')
+            );
+            const totalComments = reviewComments.length;
+            const suggestionCount = suggestions.length;
+
+            core.setOutput('total_comments', totalComments.toString());
+            core.setOutput('suggestion_count', suggestionCount.toString());
+            core.setOutput('reviewer', context.payload.review.user.login);
+            console.log(\`Review has \${totalComments} comments, \${suggestionCount} suggestions\`);
+
+      - name: Re-assign Copilot to implement fixes
+        uses: actions/github-script@v7
+        env:
+          TOTAL_COMMENTS: \${{ steps.analyze.outputs.total_comments }}
+          SUGGESTION_COUNT: \${{ steps.analyze.outputs.suggestion_count }}
+          REVIEWER: \${{ steps.analyze.outputs.reviewer }}
+        with:
+          script: |
+            const totalComments = parseInt(process.env.TOTAL_COMMENTS);
+            const suggestionCount = parseInt(process.env.SUGGESTION_COUNT);
+            const reviewer = process.env.REVIEWER;
+            const prNumber = context.payload.pull_request.number;
+
+            const body = context.payload.pull_request.body || '';
+            const issueMatch = body.match(/(?:Fixes|Closes|Resolves)\\s+#(\\d+)/i);
+            const linkedIssue = issueMatch ? parseInt(issueMatch[1]) : null;
+
+            if (linkedIssue) {
+              try {
+                await github.rest.issues.addAssignees({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: linkedIssue,
+                  assignees: ['copilot']
+                });
+              } catch (err) {
+                console.log(\`Could not re-assign Copilot: \${err.message}\`);
+              }
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: [
+                '## Phase 4: Review Feedback — Self-Healing Loop',
+                '',
+                \`Code review by **\${reviewer}** requested changes.\`,
+                '',
+                '| Metric | Count |',
+                '|--------|-------|',
+                \`| Review comments | \${totalComments} |\`,
+                \`| Suggested changes | \${suggestionCount} |\`,
+                '',
+                '**Action:** Copilot coding agent has been re-assigned to implement the review feedback.',
+                'New commits will re-trigger quality validation (Phase 3).',
+                '',
+                '*UGWTF 30x Pipeline — Phase 4: feedback loop activated*'
+              ].join('\\n')
+            });
 
   # =========================================================================
-  # PHASE 3: AUTO-APPROVE & MERGE (BLOCKED for DB migration PRs)
+  # PHASE 5: AUTO-APPROVE & MERGE (BLOCKED for DB migration PRs)
+  # All checks pass + no DB migration → approve + squash merge
   # =========================================================================
   auto-merge:
-    name: Auto-Approve & Merge
+    name: "Phase 5: Auto-Approve & Merge"
     runs-on: ubuntu-latest
     needs: validate-pr
     if: |
@@ -328,33 +658,47 @@ jobs:
         env:
           GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
 
-      - name: Mark issue completed
+      - name: Comment merge status
         uses: actions/github-script@v7
         with:
           script: |
-            const body = context.payload.pull_request?.body || '';
-            const match = body.match(/(Fixes|Closes|Resolves) #(\\d+)/i);
-            if (match) {
-              const issueNumber = parseInt(match[2]);
-              await github.rest.issues.addLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                labels: ['automation:completed']
-              });
-              await github.rest.issues.removeLabel({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                name: 'automation:in-progress'
-              }).catch(() => {});
-            }
+            const now = new Date().toISOString();
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: [
+                '## Phase 5: Auto-Approve & Merge',
+                '',
+                '| Action | Status |',
+                '|--------|--------|',
+                '| Auto-approve | Done |',
+                '| Auto-merge | Enabled (squash) |',
+                '',
+                'PR will merge automatically once all branch protection checks pass.',
+                '',
+                '<details><summary>Audit Trail</summary>',
+                '',
+                '| Field | Value |',
+                '|-------|-------|',
+                \`| Run ID | \${context.runId} |\`,
+                \`| Actor | \${context.actor} |\`,
+                \`| Head SHA | \${context.payload.pull_request.head.sha.substring(0, 7)} |\`,
+                \`| Timestamp | \${now} |\`,
+                '| Strategy | squash-merge |',
+                '',
+                '</details>',
+                '',
+                '*UGWTF 30x Pipeline — Phase 5 complete*'
+              ].join('\\n')
+            });
 
   # =========================================================================
-  # PHASE 4: DB MIGRATION FIREWALL (manual merge required)
+  # PHASE 6: DB MIGRATION FIREWALL (manual merge required)
+  # All checks pass but DB migration detected → block auto-merge
   # =========================================================================
   db-migration-hold:
-    name: DB Migration — Manual Merge Required
+    name: "Phase 6: DB Migration Firewall"
     runs-on: ubuntu-latest
     needs: validate-pr
     if: |
@@ -374,7 +718,7 @@ jobs:
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
               body: [
-                '## DB Migration Detected — Manual Merge Required',
+                '## Phase 6: DB Migration Firewall — Manual Merge Required',
                 '',
                 'Quality checks passed but this PR contains database migrations.',
                 'Auto-merge is **disabled** for safety.',
@@ -382,7 +726,7 @@ jobs:
                 '**Manual steps required:**',
                 ${dbMergeInstructions}
                 '',
-                '*Automated by UGWTF Copilot Full Automation Pipeline*'
+                '*UGWTF 30x Pipeline — Phase 6: firewall active*'
               ].join('\\n')
             });
             await github.rest.issues.addLabels({
@@ -393,10 +737,11 @@ jobs:
             });
 
   # =========================================================================
-  # PHASE 5: FAILURE HANDLING
+  # PHASE 7: FAILURE HANDLING → RE-ASSIGN COPILOT (self-healing)
+  # Quality checks failed → notify + re-trigger Copilot to fix
   # =========================================================================
   handle-failure:
-    name: Handle Failure
+    name: "Phase 7: Failure Handling & Auto-Retry"
     runs-on: ubuntu-latest
     needs: validate-pr
     if: needs.validate-pr.outputs.all_checks_passed == 'false'
@@ -405,42 +750,211 @@ jobs:
       issues: write
 
     steps:
-      - name: Request manual review
+      - name: Re-assign Copilot to fix failures
         uses: actions/github-script@v7
+        env:
+          LINKED_ISSUE: \${{ needs.validate-pr.outputs.linked_issue }}
         with:
           script: |
+            const prNumber = context.payload.pull_request.number;
+            const linkedIssue = process.env.LINKED_ISSUE;
+
+            if (linkedIssue) {
+              try {
+                await github.rest.issues.addAssignees({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: parseInt(linkedIssue),
+                  assignees: ['copilot']
+                });
+              } catch (err) {
+                console.log(\`Could not re-assign Copilot: \${err.message}\`);
+              }
+            }
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
+              issue_number: prNumber,
               body: [
-                '## Quality Checks Failed',
+                '## Phase 7: Quality Checks Failed — Self-Healing',
                 '',
-                'Automated quality checks did not pass. Manual review required.',
+                'Automated quality checks did not pass.',
                 '',
-                '**Next steps:**',
-                '1. Check workflow logs for TypeScript / ESLint / Build errors',
-                '2. Fix the issues and push to the PR branch',
-                '3. Quality checks will re-run automatically',
+                '**Auto-retry:** Copilot coding agent has been re-assigned to fix the issues.',
+                '',
+                '**What happens next:**',
+                '1. Copilot analyzes the TypeScript / ESLint / Build errors',
+                '2. Copilot pushes fix commits to this PR branch',
+                '3. Quality checks re-run automatically (Phase 3)',
+                '4. If all pass → auto-merge proceeds (Phase 5)',
+                '',
+                'If Copilot cannot fix automatically, manual review is required.',
+                '',
+                '*UGWTF 30x Pipeline — Phase 7: self-healing loop activated*'
               ].join('\\n')
             });
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
+              issue_number: prNumber,
               labels: ['needs-review']
             });
 
-            // Also label the linked issue if found
-            const body = context.payload.pull_request?.body || '';
-            const match = body.match(/(Fixes|Closes|Resolves) #(\\d+)/i);
-            if (match) {
-              const issueNumber = parseInt(match[2]);
-              await github.rest.issues.addLabels({
+  # =========================================================================
+  # PHASE 8: POST-MERGE CLEANUP & ISSUE CHAIN
+  # PR merged → update linked issues → close completed → chain next issue
+  # =========================================================================
+  post-merge-cleanup:
+    name: "Phase 8: Post-Merge Cleanup"
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request_target' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      (contains(github.event.pull_request.labels.*.name, 'automation:copilot') ||
+       startsWith(github.event.pull_request.head.ref, 'copilot/'))
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - name: Update linked issues and chain
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request.body || '';
+            const prNumber = context.payload.pull_request.number;
+            const prTitle = context.payload.pull_request.title;
+
+            const issueMatches = [...body.matchAll(/(?:Fixes|Closes|Resolves)\\s+#(\\d+)/gi)];
+            const completedIssues = [];
+
+            for (const match of issueMatches) {
+              const issueNumber = parseInt(match[1]);
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  labels: ['automation:completed']
+                });
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  name: 'automation:in-progress'
+                }).catch(() => {});
+
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  state: 'closed',
+                  state_reason: 'completed'
+                });
+
+                completedIssues.push(issueNumber);
+              } catch (err) {
+                console.log(\`Could not update issue #\${issueNumber}: \${err.message}\`);
+              }
+            }
+
+            const openIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'agent:copilot,automation:copilot',
+              per_page: 5,
+              sort: 'created',
+              direction: 'asc'
+            });
+
+            const nextIssue = openIssues.data.find(i =>
+              !i.pull_request &&
+              !i.labels.some(l => l.name === 'automation:in-progress')
+            );
+
+            let chainMessage = '';
+            if (nextIssue) {
+              try {
+                await github.rest.issues.addAssignees({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: nextIssue.number,
+                  assignees: ['copilot']
+                });
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: nextIssue.number,
+                  labels: ['automation:in-progress']
+                });
+                chainMessage = \`**Chain:** Copilot auto-assigned to next issue #\${nextIssue.number}: \${nextIssue.title}\`;
+
+                // Handoff context: post minimal context on the chained issue
+                // so the next agent knows what just changed (point to artifacts, not source)
+                const { data: prFiles } = await github.rest.pulls.listFiles({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: prNumber,
+                  per_page: 30
+                });
+                const changedPaths = prFiles.map(f => f.filename).slice(0, 15);
+                const handoffBody = [
+                  '## Handoff Context from PR #' + prNumber,
+                  '',
+                  \`Previous PR merged: **\${prTitle}**\`,
+                  '',
+                  '**Files changed** (review these before starting):',
+                  ...changedPaths.map(p => \`- \\\`\${p}\\\`\`),
+                  prFiles.length > 15 ? \`- ... and \${prFiles.length - 15} more\` : '',
+                  '',
+                  '**Quality gates passed:** TypeScript, ESLint, Build',
+                  '',
+                  '*Handoff generated by UGWTF 30x Pipeline*'
+                ].filter(Boolean).join('\\n');
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: nextIssue.number,
+                  body: handoffBody
+                });
+              } catch (err) {
+                console.log(\`Could not chain to issue #\${nextIssue.number}: \${err.message}\`);
+              }
+            }
+
+            const now = new Date().toISOString();
+            if (completedIssues.length > 0 || chainMessage) {
+              await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: issueNumber,
-                labels: ['needs-review']
+                issue_number: prNumber,
+                body: [
+                  '## Phase 8: Post-Merge Cleanup',
+                  '',
+                  \`PR #\${prNumber} merged successfully.\`,
+                  '',
+                  completedIssues.length > 0
+                    ? \`**Completed issues:** \${completedIssues.map(n => \`#\${n}\`).join(', ')}\`
+                    : '',
+                  chainMessage,
+                  '',
+                  '<details><summary>Audit Trail</summary>',
+                  '',
+                  '| Field | Value |',
+                  '|-------|-------|',
+                  \`| Run ID | \${context.runId} |\`,
+                  \`| Actor | \${context.actor} |\`,
+                  \`| Merged SHA | \${context.payload.pull_request.merge_commit_sha?.substring(0, 7) ?? 'N/A'} |\`,
+                  \`| Timestamp | \${now} |\`,
+                  \`| Issues Closed | \${completedIssues.length} |\`,
+                  '',
+                  '</details>',
+                  '',
+                  '*UGWTF 30x Pipeline — all phases complete*'
+                ].filter(Boolean).join('\\n')
               });
             }
 `;

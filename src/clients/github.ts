@@ -38,9 +38,10 @@ export function createGitHubClient(logger: Logger, dryRun = false): GitHubClient
           input: JSON.stringify(body),
           encoding: 'utf-8',
           timeout: 30_000,
+          maxBuffer: 10 * 1024 * 1024,
         });
       } else {
-        result = execSync(cmd, { encoding: 'utf-8', timeout: 30_000, shell: '/bin/zsh' });
+        result = execSync(cmd, { encoding: 'utf-8', timeout: 30_000, shell: '/bin/zsh', maxBuffer: 10 * 1024 * 1024 });
       }
       return result.trim() || '{}';
     } catch (err) {
@@ -164,6 +165,11 @@ export function createGitHubClient(logger: Logger, dryRun = false): GitHubClient
       const raw = ghApi('GET', `/repos/${owner}/${repo}/actions/runs?per_page=10`);
       const parsed = parseJSON<{ workflow_runs?: GitHubWorkflowRun[] }>(raw);
       return parsed.workflow_runs ?? [];
+    },
+
+    async listBranches(owner, repo) {
+      const raw = ghApi('GET', `/repos/${owner}/${repo}/branches?per_page=100`);
+      return parseJSONArray<{ name: string; commit: { sha: string } }>(raw);
     },
 
     async getRateLimit() {
