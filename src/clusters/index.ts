@@ -8,7 +8,7 @@
  *   labels → workflows → quality → issues → prs → audit
  *   labels → prompts
  */
-import type { Cluster } from '../types.js';
+import type { Agent, Cluster } from '../types.js';
 import { labelAgents } from '../agents/label-agents.js';
 import { workflowAgents } from '../agents/workflow-agents.js';
 import { qualityAgents } from '../agents/quality-agents.js';
@@ -16,6 +16,7 @@ import { issueAgents } from '../agents/issue-agents.js';
 import { prAgents } from '../agents/pr-agents.js';
 import { auditAgents } from '../agents/audit-agents.js';
 import { promptAgents } from '../agents/prompt-agents.js';
+import { visualAuditCluster } from '@dabighomie/audit-orchestrator/cluster';
 
 export const CLUSTERS: Cluster[] = [
   {
@@ -66,6 +67,10 @@ export const CLUSTERS: Cluster[] = [
     description: 'Scan, validate, score, and forecast .prompt.md files; create GitHub Issues',
     agents: promptAgents,
     dependsOn: ['labels'],
+  },
+  {
+    ...visualAuditCluster,
+    agents: visualAuditCluster.agents as unknown as Agent[],
   },
 ];
 

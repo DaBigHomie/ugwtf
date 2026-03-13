@@ -17,7 +17,7 @@ const COMMAND_CLUSTER_MAP: Record<string, string[]> = {
   labels:   ['labels'],
   issues:   ['issues'],
   prs:      ['prs'],
-  audit:    ['audit'],
+  audit:    ['audit', 'visual-audit'],
   status:   ['audit'],
   prompts:  ['prompts'],
 };
