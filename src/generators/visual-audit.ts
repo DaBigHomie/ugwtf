@@ -41,24 +41,29 @@ jobs:
             const fs = require('fs');
             const raw = fs.readFileSync('audit-results.json', 'utf8');
             const result = JSON.parse(raw);
-            const score = result.score;
+            const score = result.overallCompletion;
             const icon = score >= 80 ? ':white_check_mark:' : score >= 50 ? ':warning:' : ':x:';
             const issues = result.issues || [];
-            const critical = issues.filter(i => i.severity === 'error').length;
-            const warnings = issues.filter(i => i.severity === 'warning').length;
+            const critical = issues.filter(i => i.severity === 'critical').length;
+            const high = issues.filter(i => i.severity === 'high').length;
+            const medium = issues.filter(i => i.severity === 'medium').length;
+            const low = issues.filter(i => i.severity === 'low').length;
 
             let body = '## ' + icon + ' Visual Audit: ' + score + '%\\n\\n';
             body += '| Metric | Value |\\n|--------|-------|\\n';
             body += '| Score | **' + score + '%** |\\n';
-            body += '| Critical Issues | ' + critical + ' |\\n';
-            body += '| Warnings | ' + warnings + ' |\\n';
+            body += '| Critical | ' + critical + ' |\\n';
+            body += '| High | ' + high + ' |\\n';
+            body += '| Medium | ' + medium + ' |\\n';
+            body += '| Low | ' + low + ' |\\n';
             body += '| Total Issues | ' + issues.length + ' |\\n\\n';
 
             if (issues.length > 0) {
               body += '### Top Issues\\n\\n';
+              const sevIcon = { critical: ':red_circle:', high: ':orange_circle:', medium: ':yellow_circle:', low: ':green_circle:' };
               for (const issue of issues.slice(0, 10)) {
-                const sev = issue.severity === 'error' ? ':x:' : ':warning:';
-                body += '- ' + sev + ' **' + issue.rule + '**: ' + issue.message + '\\n';
+                const sev = sevIcon[issue.severity] || ':white_circle:';
+                body += '- ' + sev + ' **' + issue.id + '**: ' + issue.title + '\\n';
               }
               if (issues.length > 10) {
                 body += '\\n_...and ' + (issues.length - 10) + ' more._\\n';
