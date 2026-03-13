@@ -11,6 +11,7 @@ import { generateCopilotFullAutomation } from '../generators/copilot-automation.
 import { generateSecurityAudit } from '../generators/security-audit.js';
 import { generateDependabotAutoMerge } from '../generators/dependabot-auto-merge.js';
 import { generateSupabaseMigration } from '../generators/supabase-migration.js';
+import { generateVisualAudit } from '../generators/visual-audit.js';
 import { writeFile, repoPath } from '../utils/fs.js';
 
 interface WorkflowSpec {
@@ -30,6 +31,7 @@ const WORKFLOW_SPECS: WorkflowSpec[] = [
     generator: generateSupabaseMigration,
     condition: (repo) => repo.supabaseProjectId !== null,
   },
+  { filename: 'visual-audit.yml', generator: generateVisualAudit },
 ];
 
 function makeDeployAgent(spec: WorkflowSpec): Agent {
