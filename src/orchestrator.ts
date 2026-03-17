@@ -8,13 +8,16 @@ import type { OrchestratorOptions, SwarmConfig, SwarmResult, Logger } from './ty
 import { createGitHubClient } from './clients/github.js';
 import { createLogger } from './utils/logger.js';
 import { executeSwarm } from './swarm/executor.js';
+import { writeJsonReport } from './output/json-reporter.js';
+import { writeMarkdownReport } from './output/markdown-reporter.js';
+import { persistLastRun } from './output/persist.js';
 
 // Map orchestrator commands to cluster IDs
 const COMMAND_CLUSTER_MAP: Record<string, string[]> = {
   // Core pipeline
   deploy:      ['labels', 'workflows'],
   validate:    ['quality'],
-  fix:         ['labels', 'workflows', 'quality'],
+  fix:         ['labels', 'workflows', 'quality', 'fix'],
   labels:      ['labels'],
   issues:      ['issues'],
   prs:         ['prs'],
@@ -133,6 +136,18 @@ export async function orchestrate(options: OrchestratorOptions): Promise<SwarmRe
     }
   } else {
     logger.success(`All ${result.summary.succeeded} agents completed successfully`);
+  }
+
+  // Persist last-run results
+  await persistLastRun(result, options.command);
+
+  // Write output if requested
+  if (options.output === 'json') {
+    const path = await writeJsonReport(result, options.command);
+    logger.info(`JSON report written to: ${path}`);
+  } else if (options.output === 'markdown') {
+    const path = await writeMarkdownReport(result, options.command);
+    logger.info(`Markdown report written to: ${path}`);
   }
 
   return result;

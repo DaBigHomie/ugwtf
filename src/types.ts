@@ -128,6 +128,8 @@ export type OrchestratorCommand =
   | 'supabase'    // Migration safety, RLS, type freshness, query patterns
   | 'gateway';    // Prompt validation, instruction scoring, token budgets
 
+export type OutputFormat = 'json' | 'markdown' | 'summary';
+
 export interface OrchestratorOptions {
   command: OrchestratorCommand;
   repos: string[];
@@ -135,6 +137,7 @@ export interface OrchestratorOptions {
   dryRun: boolean;
   verbose: boolean;
   concurrency: number;
+  output?: OutputFormat;
 }
 
 // ---------------------------------------------------------------------------

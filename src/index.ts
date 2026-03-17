@@ -22,6 +22,7 @@
  *   --verbose        Show debug output
  *   --concurrency N  Max parallel repos (default: 3)
  *   --cluster ID     Run specific cluster(s) (can repeat)
+ *   --output FMT    Output format: json, markdown, summary
  *
  * Examples:
  *   ugwtf deploy damieus ffs
@@ -29,7 +30,7 @@
  *   ugwtf prs damieus --verbose
  *   ugwtf labels --concurrency 5
  */
-import type { OrchestratorCommand, OrchestratorOptions } from './types.js';
+import type { OrchestratorCommand, OrchestratorOptions, OutputFormat } from './types.js';
 import { orchestrate } from './orchestrator.js';
 import { allAliases } from './config/repo-registry.js';
 
@@ -73,6 +74,7 @@ function printUsage(): void {
     --verbose, -v    Show debug output
     --concurrency N  Max parallel repos (default: 3)
     --cluster ID     Run specific cluster(s) (repeatable)
+    --output FMT     Output format: json, markdown, summary (default: summary)
     --help, -h       Show this help
 
   Repos: ${allAliases().join(', ')}
@@ -106,8 +108,10 @@ export function parseArgs(argv: string[]): OrchestratorOptions | null {
   let dryRun = false;
   let verbose = false;
   let concurrency = 3;
+  let output: OutputFormat | undefined;
 
   const knownAliases = new Set(allAliases());
+  const validOutputFormats: OutputFormat[] = ['json', 'markdown', 'summary'];
 
   for (let i = 1; i < args.length; i++) {
     const arg = args[i];
@@ -133,6 +137,14 @@ export function parseArgs(argv: string[]): OrchestratorOptions | null {
         process.exit(1);
       }
       clusters.push(clusterId);
+    } else if (arg === '--output') {
+      i++;
+      const fmt = args[i] as OutputFormat | undefined;
+      if (!fmt || !validOutputFormats.includes(fmt)) {
+        console.error(`--output requires one of: ${validOutputFormats.join(', ')}`);
+        process.exit(1);
+      }
+      output = fmt;
     } else if (arg?.startsWith('--')) {
       console.error(`Unknown option: ${arg}`);
       process.exit(1);
@@ -152,6 +164,7 @@ export function parseArgs(argv: string[]): OrchestratorOptions | null {
     dryRun,
     verbose,
     concurrency,
+    output,
   };
 }
 
