@@ -56,6 +56,7 @@ import { scenarioAgents } from '../agents/scenario-agents.js';
 import { designSystemV2Agents } from '../agents/design-system-v2-agents.js';
 import { supabaseFsdAgents } from '../agents/supabase-fsd-agents.js';
 import { aiGatewayAgents } from '../agents/ai-gateway-agents.js';
+import { fixAgents } from '../agents/fix-agents.js';
 
 export const CLUSTERS: Cluster[] = [
   // ── Core pipeline (9 clusters, dependencies between each other) ────────
@@ -118,6 +119,13 @@ export const CLUSTERS: Cluster[] = [
   {
     ...visualAuditCluster,
     agents: visualAuditCluster.agents as unknown as Agent[],
+  },
+  {
+    id: 'fix',
+    name: 'Auto-Fix',
+    description: 'Fix labels, workflows, types, and config drift automatically',
+    agents: fixAgents,
+    dependsOn: ['labels', 'workflows', 'quality'],
   },
 
   // ── Architecture & Code Quality (3 clusters) ──────────────────────────

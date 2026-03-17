@@ -123,4 +123,31 @@ describe('parseArgs', () => {
     const result = parseArgs(['node', 'ugwtf', 'deploy']);
     expect(result?.concurrency).toBe(3);
   });
+
+  // ── G18: --output flag tests ───────────────────────────────────────────
+
+  it('parses --output json', () => {
+    const result = parseArgs(['node', 'ugwtf', 'deploy', '--output', 'json']);
+    expect(result?.output).toBe('json');
+  });
+
+  it('parses --output markdown', () => {
+    const result = parseArgs(['node', 'ugwtf', 'deploy', '--output', 'markdown']);
+    expect(result?.output).toBe('markdown');
+  });
+
+  it('parses --output summary', () => {
+    const result = parseArgs(['node', 'ugwtf', 'deploy', '--output', 'summary']);
+    expect(result?.output).toBe('summary');
+  });
+
+  it('exits on invalid --output value', () => {
+    expect(() => parseArgs(['node', 'ugwtf', 'deploy', '--output', 'csv'])).toThrow('process.exit called');
+    expect(mockExit).toHaveBeenCalledWith(1);
+  });
+
+  it('output defaults to undefined', () => {
+    const result = parseArgs(['node', 'ugwtf', 'deploy']);
+    expect(result?.output).toBeUndefined();
+  });
 });
