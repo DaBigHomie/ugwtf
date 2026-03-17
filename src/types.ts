@@ -103,6 +103,7 @@ export interface SwarmSummary {
 // ---------------------------------------------------------------------------
 
 export type OrchestratorCommand =
+  // Core pipeline
   | 'deploy'      // Write workflows + configs to repos
   | 'validate'    // Check repo state against expected
   | 'fix'         // Auto-fix drift
@@ -111,7 +112,16 @@ export type OrchestratorCommand =
   | 'prs'         // Review/manage PRs
   | 'audit'       // Full audit of all repos
   | 'status'      // Show current state
-  | 'prompts';    // Scan, validate, forecast, and create issues from .prompt.md files
+  | 'prompts'     // Scan, validate, forecast, and create issues from .prompt.md files
+  | 'chain'       // Manage prompt-chain lifecycle: load, create issues, advance
+  // Domain scans
+  | 'scan'        // Run all domain-scan clusters (fsd, security, a11y, etc.)
+  | 'security'    // Security scanning + secret leak detection
+  | 'performance' // Bundle size + heavy dependency detection
+  | 'a11y'        // Accessibility validation
+  | 'seo'         // SEO meta tags, sitemaps
+  | 'docs'        // Documentation coverage
+  | 'commerce';   // E-commerce feature validation
 
 export interface OrchestratorOptions {
   command: OrchestratorCommand;

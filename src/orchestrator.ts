@@ -11,15 +11,33 @@ import { executeSwarm } from './swarm/executor.js';
 
 // Map orchestrator commands to cluster IDs
 const COMMAND_CLUSTER_MAP: Record<string, string[]> = {
-  deploy:   ['labels', 'workflows'],
-  validate: ['quality'],
-  fix:      ['labels', 'workflows', 'quality'],
-  labels:   ['labels'],
-  issues:   ['issues'],
-  prs:      ['prs'],
-  audit:    ['audit', 'visual-audit'],
-  status:   ['audit'],
-  prompts:  ['prompts'],
+  // Core pipeline
+  deploy:      ['labels', 'workflows'],
+  validate:    ['quality'],
+  fix:         ['labels', 'workflows', 'quality'],
+  labels:      ['labels'],
+  issues:      ['issues'],
+  prs:         ['prs'],
+  audit:       ['audit', 'visual-audit'],
+  status:      ['audit'],
+  prompts:     ['prompts'],
+  chain:       ['chain'],
+
+  // Domain scans — individual
+  security:    ['security'],
+  performance: ['performance'],
+  a11y:        ['a11y'],
+  seo:         ['seo'],
+  docs:        ['docs', 'context'],
+  commerce:    ['commerce'],
+
+  // Comprehensive scan — all domain clusters
+  scan: [
+    'fsd', 'testing', 'database', 'migration', 'security', 'devops',
+    'analytics', 'docs', 'context', 'commerce', 'design', 'performance',
+    'seo', 'a11y', 'sovereign', 'email', 'content', 'routing', 'state',
+    'auth', 'integration', 'monitoring', 'animation',
+  ],
 };
 
 export async function orchestrate(options: OrchestratorOptions): Promise<SwarmResult> {

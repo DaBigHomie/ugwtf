@@ -138,6 +138,61 @@ async function scanDirectory(dirPath: string, format: 'A' | 'B'): Promise<Parsed
 }
 
 // ---------------------------------------------------------------------------
+// Shared scan cache — avoids 4x redundant directory reads per cluster run
+// ---------------------------------------------------------------------------
+
+const scanCache = new Map<string, ParsedPrompt[]>();
+
+async function scanAllPrompts(localPath: string): Promise<ParsedPrompt[]> {
+  const cached = scanCache.get(localPath);
+  if (cached) return cached;
+
+  const formatA = await scanDirectory(join(localPath, '.github', 'prompts'), 'A');
+  const formatB = await scanDirectory(join(localPath, 'docs', 'agent-prompts'), 'B');
+  const formatBExtra = await scanDirectory(join(localPath, 'docs', 'prompts'), 'B');
+  const all = [...formatA, ...formatB, ...formatBExtra];
+
+  scanCache.set(localPath, all);
+  return all;
+}
+
+/** Clear the scan cache (call between orchestrator runs if needed) */
+export function clearPromptScanCache(): void {
+  scanCache.clear();
+}
+
+// ---------------------------------------------------------------------------
+// Time parsing — handles ranges, weeks, abbreviations, combined formats
+// ---------------------------------------------------------------------------
+
+function parseEstimatedTime(timeStr: string): number {
+  let days = 0;
+
+  // Handle ranges like "1-2 days" or "2-4 hours" — take the max
+  const rangeDay = timeStr.match(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)\s*(?:days?|d\b)/i);
+  const rangeHour = timeStr.match(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)\s*(?:hours?|h\b|hrs?\b)/i);
+
+  if (rangeDay) {
+    days += parseFloat(rangeDay[2]!);
+  } else if (rangeHour) {
+    days += parseFloat(rangeHour[2]!) / 8;
+  } else {
+    // Single value matches (accumulate for combined like "2 days 4 hours")
+    for (const m of timeStr.matchAll(/(\d+\.?\d*)\s*(?:weeks?|w\b|wks?\b)/gi)) {
+      days += parseFloat(m[1]!) * 5;
+    }
+    for (const m of timeStr.matchAll(/(\d+\.?\d*)\s*(?:days?|d\b)/gi)) {
+      days += parseFloat(m[1]!);
+    }
+    for (const m of timeStr.matchAll(/(\d+\.?\d*)\s*(?:hours?|h\b|hrs?\b)/gi)) {
+      days += parseFloat(m[1]!) / 8;
+    }
+  }
+
+  return days;
+}
+
+// ---------------------------------------------------------------------------
 // Validation scoring (gold standard)
 // ---------------------------------------------------------------------------
 
@@ -256,10 +311,10 @@ function priorityToLabel(priority: string | null): string {
   if (!priority) return 'priority:p2'; // default to medium
   const num = priority.replace(/^P/i, '');
   const n = parseInt(num);
-  if (n <= 1) return 'priority:p0';
-  if (n <= 3) return 'priority:p1';
-  if (n <= 5) return 'priority:p2';
-  return 'priority:p3';
+  if (n <= 0) return 'priority:p0';
+  if (n === 1) return 'priority:p1';
+  if (n === 2) return 'priority:p2';
+  return 'priority:p3'; // P3 and above
 }
 
 // ---------------------------------------------------------------------------
@@ -283,18 +338,12 @@ const promptScanner: Agent = {
     const localPath = ctx.localPath;
     ctx.logger.group(`Scanning prompts in ${ctx.repoAlias}`);
 
-    // Scan both directories
-    const formatAPrompts = await scanDirectory(join(localPath, '.github', 'prompts'), 'A');
-    const formatBPrompts = await scanDirectory(join(localPath, 'docs', 'agent-prompts'), 'B');
-    // Also check docs/prompts/ as a fallback
-    const formatBExtra = await scanDirectory(join(localPath, 'docs', 'prompts'), 'B');
-
-    const allPrompts = [...formatAPrompts, ...formatBPrompts, ...formatBExtra];
+    const allPrompts = await scanAllPrompts(localPath);
 
     const completed = allPrompts.filter(p => p.status?.includes('COMPLETE'));
     const actionable = allPrompts.filter(p => !p.status?.includes('COMPLETE'));
 
-    ctx.logger.info(`Found ${allPrompts.length} prompt files (${formatAPrompts.length} Format A, ${formatBPrompts.length + formatBExtra.length} Format B)`);
+    ctx.logger.info(`Found ${allPrompts.length} prompt files (${allPrompts.filter(p => p.format === 'A').length} Format A, ${allPrompts.filter(p => p.format === 'B').length} Format B)`);
     ctx.logger.info(`Actionable: ${actionable.length} | Completed: ${completed.length}`);
 
     for (const p of actionable) {
@@ -336,10 +385,7 @@ const promptValidator: Agent = {
     const localPath = ctx.localPath;
     ctx.logger.group(`Validating prompts in ${ctx.repoAlias}`);
 
-    const formatA = await scanDirectory(join(localPath, '.github', 'prompts'), 'A');
-    const formatB = await scanDirectory(join(localPath, 'docs', 'agent-prompts'), 'B');
-    const formatBExtra = await scanDirectory(join(localPath, 'docs', 'prompts'), 'B');
-    const allPrompts = [...formatA, ...formatB, ...formatBExtra];
+    const allPrompts = await scanAllPrompts(localPath);
 
     if (allPrompts.length === 0) {
       ctx.logger.info('No prompts found — skipping validation');
@@ -414,10 +460,7 @@ const promptIssueCreator: Agent = {
 
     ctx.logger.group(`Creating issues from prompts in ${ctx.repoAlias}`);
 
-    const formatA = await scanDirectory(join(localPath, '.github', 'prompts'), 'A');
-    const formatB = await scanDirectory(join(localPath, 'docs', 'agent-prompts'), 'B');
-    const formatBExtra = await scanDirectory(join(localPath, 'docs', 'prompts'), 'B');
-    const allPrompts = [...formatA, ...formatB, ...formatBExtra];
+    const allPrompts = await scanAllPrompts(localPath);
 
     // Filter to actionable prompts only
     const actionable = allPrompts.filter(p => !p.status?.includes('COMPLETE'));
@@ -514,10 +557,7 @@ const promptForecaster: Agent = {
     const localPath = ctx.localPath;
     ctx.logger.group(`30x Forecast for ${ctx.repoAlias}`);
 
-    const formatA = await scanDirectory(join(localPath, '.github', 'prompts'), 'A');
-    const formatB = await scanDirectory(join(localPath, 'docs', 'agent-prompts'), 'B');
-    const formatBExtra = await scanDirectory(join(localPath, 'docs', 'prompts'), 'B');
-    const allPrompts = [...formatA, ...formatB, ...formatBExtra];
+    const allPrompts = await scanAllPrompts(localPath);
 
     if (allPrompts.length === 0) {
       ctx.logger.info('No prompts found');
@@ -536,10 +576,7 @@ const promptForecaster: Agent = {
     let totalDays = 0;
     for (const p of actionable) {
       if (p.estimatedTime) {
-        const dayMatch = p.estimatedTime.match(/([\d.]+)\s*days?/i);
-        const hourMatch = p.estimatedTime.match(/([\d.]+)\s*hours?/i);
-        if (dayMatch) totalDays += parseFloat(dayMatch[1]!);
-        else if (hourMatch) totalDays += parseFloat(hourMatch[1]!) / 8;
+        totalDays += parseEstimatedTime(p.estimatedTime);
       }
     }
 

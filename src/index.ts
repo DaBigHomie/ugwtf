@@ -15,6 +15,7 @@
  *   audit    — Full audit of all repos with scoreboard
  *   status   — Quick health check
  *   prompts  — Scan, validate, and create issues from .prompt.md files
+ *   chain    — Manage prompt-chain lifecycle (load, create issues, advance)
  *
  * Options:
  *   --dry-run        Don't make any changes
@@ -33,7 +34,8 @@ import { orchestrate } from './orchestrator.js';
 import { allAliases } from './config/repo-registry.js';
 
 const VALID_COMMANDS: OrchestratorCommand[] = [
-  'deploy', 'validate', 'fix', 'labels', 'issues', 'prs', 'audit', 'status', 'prompts',
+  'deploy', 'validate', 'fix', 'labels', 'issues', 'prs', 'audit', 'status', 'prompts', 'chain',
+  'scan', 'security', 'performance', 'a11y', 'seo', 'docs', 'commerce',
 ];
 
 function printUsage(): void {
@@ -52,6 +54,14 @@ function printUsage(): void {
     audit      Full audit of all repos with scoreboard
     status     Quick health check
     prompts    Scan, validate, and create issues from .prompt.md files
+    chain      Manage prompt-chain lifecycle (load, create issues, advance)
+    scan       Run all domain-scan clusters (fsd, security, a11y, etc.)
+    security   Security scanning + secret leak detection
+    performance Bundle size + heavy dependency detection
+    a11y       Accessibility validation
+    seo        SEO meta tags, sitemaps
+    docs       Documentation coverage
+    commerce   E-commerce feature validation
 
   Options:
     --dry-run        Don't make any changes
