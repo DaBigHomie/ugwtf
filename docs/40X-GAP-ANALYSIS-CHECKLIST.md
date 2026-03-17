@@ -35,19 +35,19 @@
 ## P1 — High (Next Sprint)
 
 ### Cat 4: Result Persistence & Output
-- [ ] **G18** Add `--output` flag to CLI (json, markdown, summary)
-- [ ] **G19** Create `src/output/json-reporter.ts` — write `SwarmResult` to JSON file
-- [ ] **G20** Create `src/output/markdown-reporter.ts` — write audit markdown
-- [ ] **G21** Persist last-run results to `.ugwtf/last-run.json`
+- [x] **G18** Add `--output` flag to CLI (json, markdown, summary)
+- [x] **G19** Create `src/output/json-reporter.ts` — write `SwarmResult` to JSON file
+- [x] **G20** Create `src/output/markdown-reporter.ts` — write audit markdown
+- [x] **G21** Persist last-run results to `.ugwtf/last-run.json`
 
 ### Cat 5: Auto-Fix Agent Depth
-- [ ] **G22** `fix-label-agent` — sync missing labels, remove orphans
-- [ ] **G23** `fix-workflow-agent` — overwrite drifted workflow files
-- [ ] **G24** `fix-types-agent` — regen Supabase types if stale
-- [ ] **G25** `fix-config-agent` — write missing `tsconfig.json`, `eslint.config.*`
+- [x] **G22** `fix-label-agent` — sync missing labels, remove orphans
+- [x] **G23** `fix-workflow-agent` — overwrite drifted workflow files
+- [x] **G24** `fix-types-agent` — regen Supabase types if stale
+- [x] **G25** `fix-config-agent` — write missing `tsconfig.json`, `eslint.config.*`
 
 ### Cat 6: Shared Utilities
-- [ ] **G26** Extract `withRetry()`, `parseJsonSafe()`, `slugify()` into `src/utils/common.ts`
+- [x] **G26** Extract `withRetry()`, `parseJsonSafe()`, `slugify()` into `src/utils/common.ts`
 
 ---
 
