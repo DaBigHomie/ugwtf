@@ -85,7 +85,7 @@ function printUsage(): void {
 `);
 }
 
-function parseArgs(argv: string[]): OrchestratorOptions | null {
+export function parseArgs(argv: string[]): OrchestratorOptions | null {
   // Skip node and script path
   const args = argv.slice(2);
 
@@ -170,4 +170,8 @@ async function main(): Promise<void> {
   }
 }
 
-main();
+// Only run when executed directly (not imported by tests)
+const isDirectRun = process.argv[1]?.endsWith('index.ts') || process.argv[1]?.endsWith('index.js');
+if (isDirectRun) {
+  main();
+}
