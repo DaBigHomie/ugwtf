@@ -51,6 +51,12 @@ import { monitoringAgents } from '../agents/monitoring-agents.js';
 import { animationAgents } from '../agents/animation-agents.js';
 import { migrationAgents } from '../agents/migration-agents.js';
 
+// --- 40x wave agents ---
+import { scenarioAgents } from '../agents/scenario-agents.js';
+import { designSystemV2Agents } from '../agents/design-system-v2-agents.js';
+import { supabaseFsdAgents } from '../agents/supabase-fsd-agents.js';
+import { aiGatewayAgents } from '../agents/ai-gateway-agents.js';
+
 export const CLUSTERS: Cluster[] = [
   // ── Core pipeline (9 clusters, dependencies between each other) ────────
   {
@@ -295,6 +301,36 @@ export const CLUSTERS: Cluster[] = [
     description: 'Plan compliance checking, cross-repo consistency',
     agents: sovereignAgents,
     dependsOn: [],
+  },
+
+  // ── 40x Wave (4 clusters) ──────────────────────────────────────────────
+  {
+    id: 'scenarios',
+    name: 'Scenario & Use-Case Engine',
+    description: 'Discover user flows, validate acceptance criteria, report uncovered scenarios',
+    agents: scenarioAgents,
+    dependsOn: ['testing'],
+  },
+  {
+    id: 'design-system',
+    name: 'Design System V2 (Stitch)',
+    description: 'Design tokens, component contracts, responsive constraints, spec generation',
+    agents: designSystemV2Agents,
+    dependsOn: ['design'],
+  },
+  {
+    id: 'supabase-fsd',
+    name: 'Supabase + FSD Integration',
+    description: 'Migration safety, RLS completeness, type freshness, schema-to-FSD mapping, query patterns',
+    agents: supabaseFsdAgents,
+    dependsOn: ['database', 'fsd'],
+  },
+  {
+    id: 'ai-gateway',
+    name: 'AI Gateway & Prompt Intelligence',
+    description: 'Prompt validation, instruction scoring, token budgeting, AI config consistency',
+    agents: aiGatewayAgents,
+    dependsOn: ['docs'],
   },
 ];
 

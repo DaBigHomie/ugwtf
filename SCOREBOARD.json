@@ -1,16 +1,16 @@
 {
-  "generated": "2026-03-12T08:43:30.734Z",
+  "generated": "2026-03-17T04:48:10.985Z",
   "repos": {
     "damieus": {
-      "score": 79,
+      "score": 75,
       "domains": {
         "labels": 100,
         "workflows": 100,
-        "issues": 80,
-        "prs": 62,
+        "issues": 75,
+        "prs": 46,
         "branches": 55
       },
-      "timestamp": "2026-03-12T08:43:14.487Z"
+      "timestamp": "2026-03-17T04:47:22.485Z"
     },
     "ffs": {
       "score": 80,
@@ -21,45 +21,45 @@
         "prs": 34,
         "branches": 100
       },
-      "timestamp": "2026-03-12T08:43:18.977Z"
+      "timestamp": "2026-03-17T04:47:35.802Z"
     },
     "043": {
-      "score": 91,
-      "domains": {
-        "labels": 100,
-        "workflows": 100,
-        "issues": 100,
-        "prs": 100,
-        "branches": 55
-      },
-      "timestamp": "2026-03-12T08:43:22.843Z"
-    },
-    "maximus": {
-      "score": 94,
-      "domains": {
-        "labels": 100,
-        "workflows": 100,
-        "issues": 85,
-        "prs": 100,
-        "branches": 84
-      },
-      "timestamp": "2026-03-12T08:43:26.967Z"
-    },
-    "cae": {
-      "score": 98,
+      "score": 90,
       "domains": {
         "labels": 100,
         "workflows": 100,
         "issues": 97,
         "prs": 100,
+        "branches": 55
+      },
+      "timestamp": "2026-03-17T04:47:48.342Z"
+    },
+    "maximus": {
+      "score": 93,
+      "domains": {
+        "labels": 100,
+        "workflows": 100,
+        "issues": 85,
+        "prs": 95,
+        "branches": 84
+      },
+      "timestamp": "2026-03-17T04:48:01.280Z"
+    },
+    "cae": {
+      "score": 97,
+      "domains": {
+        "labels": 100,
+        "workflows": 100,
+        "issues": 97,
+        "prs": 95,
         "branches": 92
       },
-      "timestamp": "2026-03-12T08:43:30.734Z"
+      "timestamp": "2026-03-17T04:48:10.985Z"
     }
   },
   "summary": {
     "total": 5,
     "passing": 4,
-    "average": 88
+    "average": 87
   }
 }

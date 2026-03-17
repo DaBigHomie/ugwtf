@@ -36,6 +36,7 @@ import { allAliases } from './config/repo-registry.js';
 const VALID_COMMANDS: OrchestratorCommand[] = [
   'deploy', 'validate', 'fix', 'labels', 'issues', 'prs', 'audit', 'status', 'prompts', 'chain',
   'scan', 'security', 'performance', 'a11y', 'seo', 'docs', 'commerce',
+  'scenarios', 'design-system', 'supabase', 'gateway',
 ];
 
 function printUsage(): void {
@@ -62,6 +63,10 @@ function printUsage(): void {
     seo        SEO meta tags, sitemaps
     docs       Documentation coverage
     commerce   E-commerce feature validation
+    scenarios  User flow discovery + acceptance criteria coverage
+    design-system  Design tokens, component contracts, responsive audit
+    supabase   Migration safety, RLS, type freshness, query patterns
+    gateway    Prompt validation, instruction scoring, token budgets
 
   Options:
     --dry-run        Don't make any changes

@@ -121,7 +121,12 @@ export type OrchestratorCommand =
   | 'a11y'        // Accessibility validation
   | 'seo'         // SEO meta tags, sitemaps
   | 'docs'        // Documentation coverage
-  | 'commerce';   // E-commerce feature validation
+  | 'commerce'    // E-commerce feature validation
+  // 40x wave
+  | 'scenarios'   // User flow discovery + acceptance criteria coverage
+  | 'design-system' // Design tokens, component contracts, responsive audit
+  | 'supabase'    // Migration safety, RLS, type freshness, query patterns
+  | 'gateway';    // Prompt validation, instruction scoring, token budgets
 
 export interface OrchestratorOptions {
   command: OrchestratorCommand;
