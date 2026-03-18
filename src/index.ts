@@ -32,7 +32,7 @@
  */
 import type { OrchestratorCommand, OrchestratorOptions, OutputFormat } from './types.js';
 import { orchestrate } from './orchestrator.js';
-import { allAliases } from './config/repo-registry.js';
+import { allAliases, registerReposFromRC, type RepoConfig } from './config/repo-registry.js';
 import { scaffoldAgent, parseNewAgentArgs } from './scaffold/new-agent.js';
 import { scaffoldRepo, parseNewRepoArgs } from './scaffold/new-repo.js';
 import { listCommand, parseListArgs } from './commands/list.js';
@@ -238,6 +238,12 @@ async function main(): Promise<void> {
 
   // Merge .ugwtfrc.json defaults (CLI flags take precedence)
   const rc = loadRC();
+
+  // G48: Register external repos from RC config
+  if (rc.repos?.length) {
+    registerReposFromRC(rc.repos as Partial<RepoConfig>[]);
+  }
+
   if (options.repos.length === 0 && rc.defaultRepos?.length) {
     options.repos = rc.defaultRepos;
   }
