@@ -4,8 +4,8 @@
  * Validates GitHub Actions workflows, deployment readiness,
  * and build configuration consistency.
  */
-import type { Agent, AgentResult } from '../types.js';
-import { readdir, readFile } from 'node:fs/promises';
+import type { Agent, AgentResult, AgentFinding } from '../types.js';
+import { readdir, readFile, access } from 'node:fs/promises';
 import { join } from 'node:path';
 
 // ---------------------------------------------------------------------------
@@ -134,4 +134,71 @@ const buildConfigValidator: Agent = {
   },
 };
 
-export const devopsAgents: Agent[] = [workflowSyntaxValidator, buildConfigValidator];
+// ---------------------------------------------------------------------------
+// Agent: Env Example Checker
+// ---------------------------------------------------------------------------
+
+const envExampleChecker: Agent = {
+  id: 'env-example-checker',
+  name: 'Env Example Checker',
+  description: 'Check for .env.example documenting required environment variables',
+  clusterId: 'devops',
+  shouldRun() { return true; },
+
+  async execute(ctx): Promise<AgentResult> {
+    const start = Date.now();
+    ctx.logger.group(`Env Example: ${ctx.repoAlias}`);
+
+    const findings: AgentFinding[] = [];
+    const envExampleFiles = ['.env.example', '.env.local.example', 'env.example', '.env.template'];
+    let found = false;
+
+    for (const f of envExampleFiles) {
+      try {
+        await access(join(ctx.localPath, f));
+        found = true;
+        ctx.logger.info(`Found: ${f}`);
+        break;
+      } catch {
+        // Not found
+      }
+    }
+
+    if (!found) {
+      // Check if project uses env vars but has no documented example
+      let usesEnv = false;
+      for (const ef of ['.env', '.env.local']) {
+        try {
+          await access(join(ctx.localPath, ef));
+          usesEnv = true;
+          break;
+        } catch {
+          // Not found
+        }
+      }
+
+      if (usesEnv) {
+        findings.push({
+          severity: 'warning',
+          message: 'Project uses .env but has no .env.example',
+          suggestion: 'Create .env.example with placeholder values for required environment variables',
+        });
+      }
+    }
+
+    ctx.logger.info(`Env example: ${found ? 'present' : 'absent'} | Issues: ${findings.length}`);
+    ctx.logger.groupEnd();
+
+    return {
+      agentId: this.id,
+      status: findings.some(f => f.severity === 'error') ? 'failed' : 'success',
+      repo: ctx.repoAlias,
+      duration: Date.now() - start,
+      message: found ? 'Env example present' : 'No env example file',
+      artifacts: findings.map(f => f.message),
+      findings,
+    };
+  },
+};
+
+export const devopsAgents: Agent[] = [workflowSyntaxValidator, buildConfigValidator, envExampleChecker];

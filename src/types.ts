@@ -8,6 +8,16 @@
 
 export type AgentStatus = 'idle' | 'running' | 'success' | 'failed' | 'skipped';
 
+export type FindingSeverity = 'error' | 'warning' | 'info';
+
+export interface AgentFinding {
+  severity: FindingSeverity;
+  message: string;
+  file?: string;
+  line?: number;
+  suggestion?: string;
+}
+
 export interface AgentResult {
   agentId: string;
   status: AgentStatus;
@@ -15,6 +25,7 @@ export interface AgentResult {
   duration: number;
   message: string;
   artifacts: string[];
+  findings?: AgentFinding[];
   error?: string;
 }
 
