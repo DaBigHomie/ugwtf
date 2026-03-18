@@ -195,6 +195,36 @@ See **[docs/ADDING-AGENTS.md](docs/ADDING-AGENTS.md)** for a step-by-step guide 
 
 ## Development
 
+### Environment Setup
+
+Copy `.env.example` to `.env` and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+The `.env` file is loaded automatically by the CLI. Existing env vars always take precedence.
+
+**Required when `gh` CLI is not installed:**
+- `GITHUB_TOKEN` — Personal Access Token with `repo`, `workflow`, `read:org` scopes
+
+The CLI auto-detects `gh` CLI on PATH and uses it for API calls. If `gh` is unavailable, it falls back to native `fetch` with `GITHUB_TOKEN` or `GH_TOKEN`.
+
+### GitHub Actions Secrets
+
+| Secret | Required For | Description |
+|--------|-------------|-------------|
+| `UGWTF_PAT` | Deploy + Audit workflows | Fine-grained PAT with `contents:write`, `issues:write`, `pull-requests:write`, `workflows:write` scoped to DaBigHomie org repos |
+| `NPM_TOKEN` | Release workflow | npm publish token (automation type) |
+| `NOTIFICATION_WEBHOOK_URL` | Audit regression alerts | Slack or Discord webhook URL |
+
+### Branch Protection (Recommended)
+
+Enable on `main` branch:
+- Require CI status checks to pass (`type-check`, `test`)
+- Prevent force pushes
+- Require linear history (optional)
+
 ```bash
 # Type check
 npx tsc --noEmit
@@ -212,10 +242,21 @@ npm run test:coverage
 npm run build
 ```
 
+## CI/CD Workflows
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `ci.yml` | Push + PR to `main` | Type check, test, PR scoreboard comment |
+| `release.yml` | Tag `v*` | Build, publish to npm, create GitHub Release |
+| `ugwtf-audit.yml` | Nightly cron + manual | Run audit, upload scoreboard, notify on regression |
+| `ugwtf-deploy.yml` | Push to `main` | Deploy labels + workflows to all repos |
+
+**Dependabot** is configured for weekly npm + GitHub Actions updates.
+
 ## Testing
 
 - **Framework**: Vitest
-- **147 tests** across 10 test files
+- **156 tests** across 12 test files
 - **Coverage threshold**: 60% lines
 
 ```
