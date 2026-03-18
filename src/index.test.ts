@@ -13,6 +13,8 @@ import { parseListArgs } from './commands/list.js';
 import { parseRunAgentArgs, findAgent } from './commands/run-agent.js';
 import { loadRC, type UGWTFRCConfig } from './config/rc-loader.js';
 import { InternalPluginRegistry } from './plugins/loader.js';
+import { registerRepo, registerReposFromRC, getRepo, allAliases, type RepoConfig } from './config/repo-registry.js';
+import { validateRepoOverrides, mergeRepoConfig, loadRepoConfig, type RepoConfigOverrides } from './config/repo-config-loader.js';
 
 describe('parseArgs', () => {
   beforeEach(() => {
@@ -270,5 +272,169 @@ describe('InternalPluginRegistry', () => {
     const registry = new InternalPluginRegistry();
     registry.addCommand('my-cmd', ['cluster-a', 'cluster-b']);
     expect(registry.commands.get('my-cmd')).toEqual(['cluster-a', 'cluster-b']);
+  });
+});
+
+// ── G48: External repo registration ────────────────────────────────────────
+
+describe('registerRepo', () => {
+  const testAlias = '_test_g48_' + Date.now();
+
+  it('registers a new repo at runtime', () => {
+    const config: RepoConfig = {
+      slug: 'TestOrg/test-repo',
+      alias: testAlias,
+      framework: 'node',
+      supabaseProjectId: null,
+      supabaseUrlSecret: null,
+      supabaseServiceKeySecret: null,
+      supabaseTypesPath: null,
+      nodeVersion: '22',
+      defaultBranch: 'main',
+      hasE2E: false,
+      e2eCommand: null,
+      extraLabels: [],
+      localPath: '/tmp/test-repo',
+    };
+    registerRepo(config);
+    expect(getRepo(testAlias)).toEqual(config);
+    expect(allAliases()).toContain(testAlias);
+  });
+
+  it('throws if alias already exists', () => {
+    expect(() => registerRepo({
+      slug: 'X/Y', alias: 'damieus', framework: 'node',
+      supabaseProjectId: null, supabaseUrlSecret: null,
+      supabaseServiceKeySecret: null, supabaseTypesPath: null,
+      nodeVersion: '20', defaultBranch: 'main', hasE2E: false,
+      e2eCommand: null, extraLabels: [], localPath: '/tmp',
+    })).toThrow('already registered');
+  });
+});
+
+describe('registerReposFromRC', () => {
+  const rcAlias = '_test_rc_' + Date.now();
+
+  it('registers repos from partial config array', () => {
+    registerReposFromRC([
+      { slug: 'Org/rc-repo', alias: rcAlias, framework: 'nextjs' },
+    ]);
+    const repo = getRepo(rcAlias);
+    expect(repo).toBeDefined();
+    expect(repo?.slug).toBe('Org/rc-repo');
+    expect(repo?.framework).toBe('nextjs');
+    expect(repo?.nodeVersion).toBe('20'); // default
+  });
+
+  it('skips entries without slug or alias', () => {
+    const before = allAliases().length;
+    registerReposFromRC([{ slug: 'X/Y' } as Partial<RepoConfig>]);
+    expect(allAliases().length).toBe(before);
+  });
+});
+
+// ── G49/G50: Per-repo config validation ────────────────────────────────────
+
+describe('validateRepoOverrides', () => {
+  it('extracts valid scalar overrides', () => {
+    const result = validateRepoOverrides({
+      nodeVersion: '22',
+      framework: 'nextjs',
+      defaultBranch: 'develop',
+      hasE2E: true,
+      e2eCommand: 'npx playwright test',
+    });
+    expect(result.nodeVersion).toBe('22');
+    expect(result.framework).toBe('nextjs');
+    expect(result.defaultBranch).toBe('develop');
+    expect(result.hasE2E).toBe(true);
+    expect(result.e2eCommand).toBe('npx playwright test');
+  });
+
+  it('rejects invalid framework values', () => {
+    const result = validateRepoOverrides({ framework: 'django' });
+    expect(result.framework).toBeUndefined();
+  });
+
+  it('accepts null for nullable fields', () => {
+    const result = validateRepoOverrides({
+      supabaseProjectId: null,
+      e2eCommand: null,
+    });
+    expect(result.supabaseProjectId).toBeNull();
+    expect(result.e2eCommand).toBeNull();
+  });
+
+  it('validates extraLabels array', () => {
+    const result = validateRepoOverrides({
+      extraLabels: [
+        { name: 'valid', color: 'ff0000', description: 'A label' },
+        { name: 123 }, // invalid
+        'not-an-object', // invalid
+      ],
+    });
+    expect(result.extraLabels).toHaveLength(1);
+    expect(result.extraLabels![0]!.name).toBe('valid');
+  });
+
+  it('ignores unknown fields', () => {
+    const result = validateRepoOverrides({ somethingElse: true, nodeVersion: '18' });
+    expect(result.nodeVersion).toBe('18');
+    expect((result as Record<string, unknown>).somethingElse).toBeUndefined();
+  });
+});
+
+// ── G51: Merge config with defaults ────────────────────────────────────────
+
+describe('mergeRepoConfig', () => {
+  const base: RepoConfig = {
+    slug: 'Org/base',
+    alias: 'base',
+    framework: 'vite-react',
+    supabaseProjectId: 'abc123',
+    supabaseUrlSecret: 'URL_BASE',
+    supabaseServiceKeySecret: 'KEY_BASE',
+    supabaseTypesPath: 'src/types.ts',
+    nodeVersion: '20',
+    defaultBranch: 'main',
+    hasE2E: false,
+    e2eCommand: null,
+    extraLabels: [{ name: 'existing', color: '000000', description: 'Existing label' }],
+    localPath: '/tmp/base',
+  };
+
+  it('replaces scalar fields', () => {
+    const merged = mergeRepoConfig(base, { nodeVersion: '22', framework: 'nextjs' });
+    expect(merged.nodeVersion).toBe('22');
+    expect(merged.framework).toBe('nextjs');
+    // unchanged fields
+    expect(merged.slug).toBe('Org/base');
+    expect(merged.defaultBranch).toBe('main');
+  });
+
+  it('appends new extraLabels without duplicates', () => {
+    const merged = mergeRepoConfig(base, {
+      extraLabels: [
+        { name: 'new-label', color: 'ff0000', description: 'New' },
+        { name: 'existing', color: '111111', description: 'Dup' }, // should be skipped
+      ],
+    });
+    expect(merged.extraLabels).toHaveLength(2);
+    expect(merged.extraLabels.map(l => l.name)).toEqual(['existing', 'new-label']);
+    // Original color preserved for duplicate
+    expect(merged.extraLabels.find(l => l.name === 'existing')?.color).toBe('000000');
+  });
+
+  it('does not mutate the original', () => {
+    const merged = mergeRepoConfig(base, { nodeVersion: '22' });
+    expect(base.nodeVersion).toBe('20');
+    expect(merged.nodeVersion).toBe('22');
+  });
+});
+
+describe('loadRepoConfig', () => {
+  it('returns empty object for non-existent path', () => {
+    const result = loadRepoConfig('/tmp/nonexistent-ugwtf-repo-config-test');
+    expect(result).toEqual({});
   });
 });

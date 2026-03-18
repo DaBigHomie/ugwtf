@@ -25,6 +25,16 @@ export interface UGWTFRCConfig {
   verbose?: boolean;
   concurrency?: number;
   output?: OutputFormat;
+  /** External repos to register at startup (G48) */
+  repos?: Array<{
+    slug: string;
+    alias: string;
+    framework?: string;
+    localPath?: string;
+    nodeVersion?: string;
+    defaultBranch?: string;
+    [key: string]: unknown;
+  }>;
 }
 
 const VALID_OUTPUTS: OutputFormat[] = ['json', 'markdown', 'summary'];
@@ -47,7 +57,7 @@ export function loadRC(dir?: string): UGWTFRCConfig {
 }
 
 /** Validate and extract only known fields with correct types. */
-function validateRC(raw: Record<string, unknown>): UGWTFRCConfig {
+export function validateRC(raw: Record<string, unknown>): UGWTFRCConfig {
   const config: UGWTFRCConfig = {};
 
   if (Array.isArray(raw.defaultRepos) && raw.defaultRepos.every(r => typeof r === 'string')) {
@@ -60,6 +70,16 @@ function validateRC(raw: Record<string, unknown>): UGWTFRCConfig {
   }
   if (typeof raw.output === 'string' && VALID_OUTPUTS.includes(raw.output as OutputFormat)) {
     config.output = raw.output as OutputFormat;
+  }
+  // G48: external repo registration via RC config
+  if (Array.isArray(raw.repos)) {
+    const valid = raw.repos.filter(
+      (r): r is UGWTFRCConfig['repos'] extends Array<infer T> ? T : never =>
+        typeof r === 'object' && r !== null &&
+        typeof (r as Record<string, unknown>).slug === 'string' &&
+        typeof (r as Record<string, unknown>).alias === 'string'
+    );
+    if (valid.length > 0) config.repos = valid;
   }
 
   return config;

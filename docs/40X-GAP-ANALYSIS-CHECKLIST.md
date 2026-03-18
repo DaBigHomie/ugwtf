@@ -84,19 +84,19 @@
 - [x] **G42** Add JSDoc to all exported functions
 
 ### Cat 12: CLI Improvements
-- [ ] **G43** Add `ugwtf list` — show all clusters, agents, repos
-- [ ] **G44** Add `ugwtf run <agent-id>` — run a single agent
-- [ ] **G45** Accept `.ugwtfrc.json` config file for default options
+- [x] **G43** Add `ugwtf list` — show all clusters, agents, repos
+- [x] **G44** Add `ugwtf run <agent-id>` — run a single agent
+- [x] **G45** Accept `.ugwtfrc.json` config file for default options
 
 ### Cat 13: Plugin / Extension System
-- [ ] **G46** Define `UGWTFPlugin` interface (register clusters, agents, commands)
-- [ ] **G47** Load plugins from `node_modules/@ugwtf/*`
-- [ ] **G48** Allow external repos to register without editing `repo-registry.ts`
+- [x] **G46** Define `UGWTFPlugin` interface (register clusters, agents, commands)
+- [x] **G47** Load plugins from `node_modules/@ugwtf/*`
+- [x] **G48** Allow external repos to register without editing `repo-registry.ts`
 
 ### Cat 14: Config File Support
-- [ ] **G49** Support `.ugwtfrc.json` or `ugwtf.config.ts` per-repo
-- [ ] **G50** Override `nodeVersion`, `framework`, `extraLabels` via config file
-- [ ] **G51** Merge file config with repo-registry defaults
+- [x] **G49** Support `.ugwtfrc.json` or `ugwtf.config.ts` per-repo
+- [x] **G50** Override `nodeVersion`, `framework`, `extraLabels` via config file
+- [x] **G51** Merge file config with repo-registry defaults
 
 ### Cat 15: Watch / Incremental Mode
 - [ ] **G52** Add `--watch` flag for continuous validation

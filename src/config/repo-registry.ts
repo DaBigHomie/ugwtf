@@ -201,3 +201,51 @@ export function getRepo(nameOrAlias: string): RepoConfig | undefined {
 export function allAliases(): string[] {
   return Object.keys(REPOS);
 }
+
+// ---------------------------------------------------------------------------
+// G48: External repo registration (without editing this file)
+// ---------------------------------------------------------------------------
+
+/**
+ * Register an external repo at runtime.
+ * Plugins and `.ugwtfrc.json` can call this to add repos without
+ * editing the static REPOS record.
+ *
+ * @throws If the alias is already registered.
+ */
+export function registerRepo(config: RepoConfig): void {
+  if (REPOS[config.alias]) {
+    throw new Error(`Repo alias "${config.alias}" is already registered.`);
+  }
+  REPOS[config.alias] = config;
+}
+
+/**
+ * Register repos from a `.ugwtfrc.json` `repos` array.
+ * Each entry must be a partial RepoConfig with at least `slug` and `alias`.
+ * Missing fields get sensible defaults.
+ */
+export function registerReposFromRC(repos: Partial<RepoConfig>[]): void {
+  for (const partial of repos) {
+    if (!partial.slug || !partial.alias) continue;
+    if (REPOS[partial.alias]) continue; // skip if already registered
+
+    const config: RepoConfig = {
+      slug: partial.slug,
+      alias: partial.alias,
+      framework: partial.framework ?? 'node',
+      supabaseProjectId: partial.supabaseProjectId ?? null,
+      supabaseUrlSecret: partial.supabaseUrlSecret ?? null,
+      supabaseServiceKeySecret: partial.supabaseServiceKeySecret ?? null,
+      supabaseTypesPath: partial.supabaseTypesPath ?? null,
+      nodeVersion: partial.nodeVersion ?? '20',
+      defaultBranch: partial.defaultBranch ?? 'main',
+      hasE2E: partial.hasE2E ?? false,
+      e2eCommand: partial.e2eCommand ?? null,
+      extraLabels: partial.extraLabels ?? [],
+      localPath: partial.localPath ?? `${HOME}/${partial.alias}`,
+    };
+
+    REPOS[config.alias] = config;
+  }
+}
