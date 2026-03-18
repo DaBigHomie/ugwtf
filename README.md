@@ -73,29 +73,46 @@ Omit repos to target all registered repos.
 
 ```
 src/
-├── index.ts              # CLI entry point + argument parser
+├── index.ts               # CLI entry point + argument parser
 ├── orchestrator.ts        # Maps commands → clusters, runs swarm
 ├── types.ts               # All TypeScript interfaces
-├── clients/
-│   └── github.ts          # GitHub API client (Octokit wrapper)
-├── config/
-│   └── repo-registry.ts   # Repo definitions + universal labels
-├── clusters/
-│   └── index.ts           # 34 cluster definitions + dependency ordering
-├── agents/                # ~85 agent implementations (35 files)
+├── agents/                # ~85 agent implementations (36 files)
 │   ├── label-agents.ts
 │   ├── issue-agents.ts
 │   ├── pr-agents.ts
 │   ├── audit-agents.ts
 │   └── ...
+├── clients/
+│   └── github.ts          # GitHub API client (Octokit wrapper)
+├── clusters/
+│   └── index.ts           # 34 cluster definitions + dependency ordering
+├── commands/
+│   ├── list.ts            # List repos/clusters/agents
+│   └── run-agent.ts       # Run a single agent by ID
+├── config/
+│   └── repo-registry.ts   # Repo definitions + universal labels
 ├── generators/            # Workflow YAML generators (7 files)
 │   ├── ci-workflow.ts
 │   ├── copilot-automation.ts
 │   └── ...
 ├── integrations/
 │   └── supabase.ts        # Supabase integration utilities
+├── output/
+│   ├── scoreboard.ts      # Health scoreboard generation
+│   ├── persist.ts         # Result persistence (JSON + Markdown)
+│   ├── json-reporter.ts   # JSON report formatter
+│   ├── markdown-reporter.ts # Markdown report formatter
+│   └── findings-formatter.ts # Findings output
+├── plugins/
+│   └── loader.ts          # Auto-discovers @ugwtf/* plugin packages
+├── scaffold/
+│   ├── new-agent.ts       # Scaffold a new agent file
+│   └── new-repo.ts        # Scaffold a new repo config
 ├── swarm/
 │   └── executor.ts        # Fan-out executor (sequential/parallel)
+├── watch/
+│   ├── watcher.ts         # File watcher for dev mode
+│   └── cache.ts           # Watch cache management
 └── utils/
     ├── fs.ts              # File I/O + YAML helpers
     └── logger.ts          # Structured logger with levels
