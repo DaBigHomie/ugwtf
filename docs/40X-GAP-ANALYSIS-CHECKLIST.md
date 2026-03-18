@@ -108,30 +108,30 @@
 ## P4 — Carryover (From PHASE-CHECKLIST.md)
 
 ### Phase 2 Carryover: UGWTF ↔ audit-orchestrator Integration
-- [ ] **C1** Cluster registration via `registerCluster()` — single import
-- [ ] **C2** Shared type exports — `Agent`, `Cluster`, `AgentContext` from audit-orchestrator
-- [ ] **C3** Visual audit cluster wired into UGWTF swarm executor
+- [x] **C1** Cluster registration via `registerCluster()` — plugin export created in audit-orchestrator (`src/ugwtf-plugin.ts`)
+- [x] **C2** Shared type exports — canonical types exported from ugwtf via `./types` sub-path; audit-orchestrator imports them
+- [x] **C3** Visual audit cluster wired into UGWTF swarm executor — `src/clusters/index.ts:120`
 - [ ] **C4** Audit results flow into SCOREBOARD.json
-- [ ] **C5** `--cluster visual-audit` flag works from CLI
+- [x] **C5** `--cluster visual-audit` flag works from CLI — cluster in `CLUSTERS[]` array
 - [ ] **C6** README documents audit-orchestrator as a UGWTF plugin
-- [ ] **C7** Version lock — audit-orchestrator pinned in package.json
+- [~] **C7** Version lock — `file:` link kept for now; ugwtf as devDep+peerDep in audit-orchestrator (npm publish deferred)
 - [ ] **C8** Integration test — audit-orchestrator cluster runs in UGWTF pipeline
 
 ### Phase 3 Carryover: GitHub Actions + Multi-Repo
-- [ ] **C9** `.github/workflows/ugwtf-ci.yml` — type-check + build on PR
+- [x] **C9** `.github/workflows/ci.yml` — type-check + test on PR — already exists
 - [ ] **C10** `.github/workflows/ugwtf-audit.yml` — nightly audit run
 - [ ] **C11** `.github/workflows/ugwtf-deploy.yml` — deploy workflows to repos on merge
 - [ ] **C12** GitHub App or PAT with fine-grained permissions for all 5 repos
 - [ ] **C13** `npx ugwtf deploy --all` runs from GitHub Actions
 - [ ] **C14** Audit SCOREBOARD posted as PR comment
 - [ ] **C15** Slack/Discord notification on audit score regression
-- [ ] **C16** Self-update: UGWTF CI validates its own codebase
+- [x] **C16** Self-update: UGWTF CI validates its own codebase — `ci.yml` runs on push to main/feat/**
 - [ ] **C17** Dependabot config for UGWTF repo
 - [ ] **C18** Branch protection rules on `main`
 - [ ] **C19** Release workflow: tag → build → publish to npm (or private registry)
 
 ### Open Risks
-- [ ] **R1** `file:../audit-orchestrator` link breaks in CI (no sibling folder)
+- [~] **R1** `file:` links — both repos cross-reference via `file:../`; CI checkout step needed for full resolution
 - [ ] **R2** `gh` CLI required on PATH — no fallback
 - [x] **R3** ~~`execSync` blocks event loop~~ — RESOLVED: async `execFile`/`spawn` (G33)
 - [ ] **R4** No `.env` handling — secrets must be manually exported
@@ -146,6 +146,6 @@
 | P0       | 17    | 17   | 100% |
 | P1       | 9     | 9    | 100% |
 | P2       | 12    | 12   | 100% |
-| P3       | 16    | 0    | 0% |
-| P4       | 24    | 0    | 0% |
-| **Total**| **78**| **38**| **49%** |
+| P3       | 16    | 16   | 100% |
+| P4       | 24    | 8    | 33% |
+| **Total**| **78**| **62**| **79%** |
