@@ -1,13 +1,15 @@
 /**
- * GitHub API client — executes real `gh` CLI calls (async).
+ * GitHub API client — dual transport: `gh` CLI (preferred) or `fetch` fallback.
  *
- * Uses the `gh` CLI (which handles auth via GITHUB_TOKEN or gh auth).
- * Every method shells out to `gh api` for predictable, auditable calls.
+ * Transport selection (automatic at first API call):
+ * 1. If `gh` is on PATH → uses `gh api` subprocess (handles auth via gh auth)
+ * 2. If `gh` is unavailable → falls back to native `fetch` + `GITHUB_TOKEN` env var
  *
  * Features:
- * - Non-blocking async execution (child_process.execFile)
+ * - Non-blocking async execution (child_process.execFile or fetch)
  * - In-memory GET response cache within a single run
  * - Rate-limit awareness with automatic backoff
+ * - Zero external dependencies (Node 18+ native fetch)
  */
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -19,9 +21,32 @@ const execFileAsync = promisify(execFile);
 interface CacheEntry { data: string; timestamp: number }
 
 const CACHE_TTL_MS = 60_000; // 1 minute
+const GITHUB_API_BASE = 'https://api.github.com';
+
+type Transport = 'gh' | 'fetch';
+
+/** Check if `gh` CLI is available on PATH. Cached per process. */
+let ghAvailable: boolean | null = null;
+async function isGhAvailable(): Promise<boolean> {
+  if (ghAvailable !== null) return ghAvailable;
+  try {
+    await execFileAsync('gh', ['--version'], { timeout: 5_000 });
+    ghAvailable = true;
+  } catch {
+    ghAvailable = false;
+  }
+  return ghAvailable;
+}
+
+/** Exported for testing — reset the cached transport probe. */
+export function resetTransportCache(): void {
+  ghAvailable = null;
+}
 
 /**
- * Create a GitHub API client backed by the `gh` CLI with in-memory caching.
+ * Create a GitHub API client with automatic transport selection.
+ *
+ * Prefers `gh` CLI when available; falls back to native `fetch` + `GITHUB_TOKEN`.
  *
  * @param logger - Logger for request/response tracing.
  * @param dryRun - When `true`, mutating calls are skipped.
@@ -30,16 +55,101 @@ const CACHE_TTL_MS = 60_000; // 1 minute
 export function createGitHubClient(logger: Logger, dryRun = false): GitHubClient {
   const cache = new Map<string, CacheEntry>();
   let rateLimitRemaining = Infinity;
+  let resolvedTransport: Transport | null = null;
+
+  /** Resolve transport once, on first API call. */
+  async function getTransport(): Promise<Transport> {
+    if (resolvedTransport) return resolvedTransport;
+    const hasGh = await isGhAvailable();
+    if (hasGh) {
+      resolvedTransport = 'gh';
+      logger.debug('[TRANSPORT] Using gh CLI');
+    } else {
+      const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
+      if (!token) {
+        throw new Error(
+          'gh CLI not found and no GITHUB_TOKEN set. ' +
+          'Install gh (https://cli.github.com) or export GITHUB_TOKEN.'
+        );
+      }
+      resolvedTransport = 'fetch';
+      logger.warn('[TRANSPORT] gh CLI not found — using fetch + GITHUB_TOKEN');
+    }
+    return resolvedTransport;
+  }
+
+  // -- Transport: gh CLI ---------------------------------------------------
+
+  async function ghCliApi(method: string, path: string, body?: Record<string, unknown>): Promise<string> {
+    if (body && Object.values(body).some(v => typeof v !== 'string')) {
+      return new Promise<string>((resolve, reject) => {
+        const proc = spawn('gh', ['api', '-X', method, path, '--input', '-'], {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          timeout: 30_000,
+        });
+        let stdout = '';
+        let stderr = '';
+        proc.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
+        proc.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
+        proc.on('close', (code) => {
+          if (code === 0) resolve(stdout);
+          else reject(new Error(`gh api failed (${code}): ${stderr}`));
+        });
+        proc.on('error', reject);
+        proc.stdin.end(JSON.stringify(body));
+      });
+    }
+    const args = ['api', '-X', method, path];
+    if (body) {
+      for (const [key, value] of Object.entries(body)) {
+        if (typeof value === 'string') {
+          args.push('-f', `${key}=${value}`);
+        }
+      }
+    }
+    const { stdout } = await execFileAsync('gh', args, {
+      encoding: 'utf-8',
+      timeout: 30_000,
+      maxBuffer: 10 * 1024 * 1024,
+    });
+    return stdout;
+  }
+
+  // -- Transport: native fetch ---------------------------------------------
+
+  async function fetchApi(method: string, path: string, body?: Record<string, unknown>): Promise<string> {
+    const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN ?? '';
+    const url = path.startsWith('http') ? path : `${GITHUB_API_BASE}${path}`;
+    const headers: Record<string, string> = {
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'ugwtf/1.0.0',
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const init: RequestInit = { method, headers };
+    if (body && method !== 'GET') {
+      init.body = JSON.stringify(body);
+      headers['Content-Type'] = 'application/json';
+    }
+    const res = await fetch(url, init);
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`GitHub API ${method} ${path} failed (${res.status}): ${text}`);
+    }
+    const text = await res.text();
+    return text || '{}';
+  }
+
+  // -- Unified API dispatcher ----------------------------------------------
 
   async function ghApi(method: string, path: string, body?: Record<string, unknown>): Promise<string> {
-    // Rate-limit guard: if remaining is critically low, back off
     if (rateLimitRemaining < 10 && rateLimitRemaining !== Infinity) {
       const waitMs = 5_000;
       logger.warn(`Rate limit low (${rateLimitRemaining} remaining) — waiting ${waitMs}ms`);
       await new Promise(resolve => setTimeout(resolve, waitMs));
     }
 
-    // GET cache: return cached response if fresh
     if (method === 'GET') {
       const cached = cache.get(path);
       if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
@@ -53,63 +163,23 @@ export function createGitHubClient(logger: Logger, dryRun = false): GitHubClient
       return '{}';
     }
 
-    logger.debug(`gh api ${method} ${path}`);
+    const transport = await getTransport();
+    logger.debug(`[${transport}] ${method} ${path}`);
 
-    try {
-      let result: string;
+    const result = transport === 'gh'
+      ? await ghCliApi(method, path, body)
+      : await fetchApi(method, path, body);
 
-      if (body && Object.values(body).some(v => typeof v !== 'string')) {
-        // Complex body: pipe JSON via stdin using spawn
-        result = await new Promise<string>((resolve, reject) => {
-          const proc = spawn('gh', ['api', '-X', method, path, '--input', '-'], {
-            stdio: ['pipe', 'pipe', 'pipe'],
-            timeout: 30_000,
-          });
-          let stdout = '';
-          let stderr = '';
-          proc.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
-          proc.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
-          proc.on('close', (code) => {
-            if (code === 0) resolve(stdout);
-            else reject(new Error(`gh api failed (${code}): ${stderr}`));
-          });
-          proc.on('error', reject);
-          proc.stdin.end(JSON.stringify(body));
-        });
-      } else {
-        // Simple body: use -f flags
-        const args = ['api', '-X', method, path];
-        if (body) {
-          for (const [key, value] of Object.entries(body)) {
-            if (typeof value === 'string') {
-              args.push('-f', `${key}=${value}`);
-            }
-          }
-        }
-        const { stdout } = await execFileAsync('gh', args, {
-          encoding: 'utf-8',
-          timeout: 30_000,
-          maxBuffer: 10 * 1024 * 1024,
-        });
-        result = stdout;
-      }
+    const trimmed = result.trim() || '{}';
 
-      const trimmed = result.trim() || '{}';
-
-      // Cache GET responses
-      if (method === 'GET') {
-        cache.set(path, { data: trimmed, timestamp: Date.now() });
-      }
-
-      // Decrement rate-limit estimate for write operations
-      if (method !== 'GET' && rateLimitRemaining !== Infinity) {
-        rateLimitRemaining--;
-      }
-
-      return trimmed;
-    } catch (err) {
-      throw err;
+    if (method === 'GET') {
+      cache.set(path, { data: trimmed, timestamp: Date.now() });
     }
+    if (method !== 'GET' && rateLimitRemaining !== Infinity) {
+      rateLimitRemaining--;
+    }
+
+    return trimmed;
   }
 
   /** Like ghApi but returns '{}' on 404 instead of throwing */
