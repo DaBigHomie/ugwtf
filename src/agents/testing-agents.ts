@@ -4,7 +4,7 @@
  * Validates test presence, runs unit tests, checks coverage thresholds,
  * and detects untested critical paths.
  */
-import type { Agent, AgentResult, AgentContext } from '../types.js';
+import type { Agent, AgentResult, AgentContext, AgentFinding } from '../types.js';
 import { getRepo } from '../config/repo-registry.js';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -110,4 +110,64 @@ const testRunner: Agent = {
   },
 };
 
-export const testingAgents: Agent[] = [testPresenceChecker, testRunner];
+// ---------------------------------------------------------------------------
+// Agent: Test Coverage Config Checker
+// ---------------------------------------------------------------------------
+
+const testCoverageConfigChecker: Agent = {
+  id: 'test-coverage-config-checker',
+  name: 'Test Coverage Config Checker',
+  description: 'Verify test coverage thresholds are configured',
+  clusterId: 'testing',
+  shouldRun() { return true; },
+
+  async execute(ctx): Promise<AgentResult> {
+    const start = Date.now();
+    ctx.logger.group(`Coverage Config: ${ctx.repoAlias}`);
+
+    const findings: AgentFinding[] = [];
+    const configFiles = ['vitest.config.ts', 'vitest.config.js', 'jest.config.ts', 'jest.config.js'];
+    let configContent: string | null = null;
+    let configFile: string | null = null;
+
+    for (const f of configFiles) {
+      try {
+        configContent = await readFile(join(ctx.localPath, f), 'utf-8');
+        configFile = f;
+        break;
+      } catch {
+        // Not found
+      }
+    }
+
+    if (!configContent) {
+      findings.push({
+        severity: 'info',
+        message: 'No test config file found',
+        suggestion: 'Create vitest.config.ts with coverage configuration',
+      });
+    } else if (!/coverage/i.test(configContent)) {
+      findings.push({
+        severity: 'warning',
+        message: `${configFile} has no coverage configuration`,
+        file: configFile!,
+        suggestion: 'Add coverage thresholds (e.g., statements: 80, branches: 70)',
+      });
+    }
+
+    ctx.logger.info(`Config: ${configFile ?? 'none'} | Issues: ${findings.length}`);
+    ctx.logger.groupEnd();
+
+    return {
+      agentId: this.id,
+      status: findings.some(f => f.severity === 'error') ? 'failed' : 'success',
+      repo: ctx.repoAlias,
+      duration: Date.now() - start,
+      message: configFile ? `Config: ${configFile}` : 'No test config',
+      artifacts: findings.map(f => f.message),
+      findings,
+    };
+  },
+};
+
+export const testingAgents: Agent[] = [testPresenceChecker, testRunner, testCoverageConfigChecker];

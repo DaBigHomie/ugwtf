@@ -35,6 +35,7 @@ export async function writeJsonReport(result: SwarmResult, command: string): Pro
           message: a.message,
           ...(a.error ? { error: a.error } : {}),
           ...(a.artifacts.length > 0 ? { artifacts: a.artifacts } : {}),
+          ...(a.findings?.length ? { findings: a.findings } : {}),
         })),
       })),
     })),

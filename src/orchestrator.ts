@@ -11,6 +11,8 @@ import { executeSwarm } from './swarm/executor.js';
 import { writeJsonReport } from './output/json-reporter.js';
 import { writeMarkdownReport } from './output/markdown-reporter.js';
 import { persistLastRun } from './output/persist.js';
+import { collectFindings, formatFindingsTable } from './output/findings-formatter.js';
+import { generateScoreboard, writeScoreboard, writeScoreboardMarkdown, formatScoreboardMarkdown } from './output/scoreboard.js';
 
 // Map orchestrator commands to cluster IDs
 const COMMAND_CLUSTER_MAP: Record<string, string[]> = {
@@ -138,8 +140,27 @@ export async function orchestrate(options: OrchestratorOptions): Promise<SwarmRe
     logger.success(`All ${result.summary.succeeded} agents completed successfully`);
   }
 
+  // Print structured findings if any agents returned them
+  const findings = collectFindings(result);
+  if (findings.length > 0) {
+    logger.info('');
+    logger.info(formatFindingsTable(findings));
+  }
+
   // Persist last-run results
   await persistLastRun(result, options.command);
+
+  // Generate SCOREBOARD for audit and scan commands
+  if (['audit', 'scan', 'status'].includes(options.command)) {
+    const scoreboard = generateScoreboard(result);
+    const jsonPath = writeScoreboard(scoreboard);
+    const mdPath = writeScoreboardMarkdown(scoreboard);
+    logger.info('');
+    logger.info(formatScoreboardMarkdown(scoreboard));
+    logger.info('');
+    logger.info(`Scoreboard JSON: ${jsonPath}`);
+    logger.info(`Scoreboard MD:   ${mdPath}`);
+  }
 
   // Write output if requested
   if (options.output === 'json') {

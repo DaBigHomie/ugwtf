@@ -6,6 +6,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { SwarmResult } from '../types.js';
+import { collectFindings, formatFindingsMarkdown } from './findings-formatter.js';
 
 const REPORTS_DIR = join(process.cwd(), '.ugwtf', 'reports');
 
@@ -67,6 +68,15 @@ export async function writeMarkdownReport(result: SwarmResult, command: string):
         lines.push('');
       }
     }
+  }
+
+  // Append findings section
+  const findings = collectFindings(result);
+  if (findings.length > 0) {
+    lines.push('---');
+    lines.push('');
+    lines.push(formatFindingsMarkdown(findings));
+    lines.push('');
   }
 
   writeFileSync(filepath, lines.join('\n'), 'utf-8');
