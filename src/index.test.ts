@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // parseArgs calls process.exit and console.error on bad input.
 // We mock those to prevent test crashes.
@@ -436,5 +436,172 @@ describe('loadRepoConfig', () => {
   it('returns empty object for non-existent path', () => {
     const result = loadRepoConfig('/tmp/nonexistent-ugwtf-repo-config-test');
     expect(result).toEqual({});
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// G52-G54: Watch mode, cache, watcher
+// ═══════════════════════════════════════════════════════════════════════════
+
+import { getRepoHeadSha, readCachedResult, writeCachedResult, isRepoUnchanged } from './watch/cache.js';
+import { parseWatchArgs, WatchController, type FileChangeEvent } from './watch/watcher.js';
+import { mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+
+describe('getRepoHeadSha', () => {
+  it('returns a 40-char hex string for the ugwtf repo itself', () => {
+    const sha = getRepoHeadSha(process.cwd());
+    expect(sha).toBeTruthy();
+    expect(sha).toMatch(/^[0-9a-f]{40}$/);
+  });
+
+  it('returns null for a non-git directory', () => {
+    const sha = getRepoHeadSha('/tmp');
+    expect(sha).toBeNull();
+  });
+});
+
+describe('readCachedResult / writeCachedResult', () => {
+  const testCacheDir = join(process.cwd(), '.ugwtf', 'cache', '__test_cmd__');
+
+  afterEach(() => {
+    // Clean up test cache
+    if (existsSync(testCacheDir)) {
+      rmSync(testCacheDir, { recursive: true, force: true });
+    }
+  });
+
+  it('returns null when no cache exists', () => {
+    const result = readCachedResult('__test_cmd__', 'nonexistent-repo');
+    expect(result).toBeNull();
+  });
+
+  it('round-trips a cached result', () => {
+    const repoResult = {
+      repo: 'test-repo',
+      clusterResults: [{
+        clusterId: 'quality',
+        status: 'success' as const,
+        agentResults: [
+          { agentId: 'tsc-check', status: 'success' as const, repo: 'test-repo', duration: 100, message: 'ok', artifacts: [] },
+          { agentId: 'lint-check', status: 'skipped' as const, repo: 'test-repo', duration: 0, message: 'skipped', artifacts: [] },
+        ],
+        duration: 100,
+      }],
+    };
+
+    // writeCachedResult resolves sha from localPath, so use cwd (ugwtf repo)
+    writeCachedResult('__test_cmd__', 'test-repo', process.cwd(), repoResult);
+
+    const cached = readCachedResult('__test_cmd__', 'test-repo');
+    expect(cached).toBeTruthy();
+    expect(cached!.command).toBe('__test_cmd__');
+    expect(cached!.allPassed).toBe(true);
+    expect(cached!.headSha).toMatch(/^[0-9a-f]{40}$/);
+    expect(cached!.agents).toHaveLength(2);
+    expect(cached!.agents[0]).toEqual({ id: 'tsc-check', status: 'success' });
+  });
+
+  it('sets allPassed=false when an agent failed', () => {
+    const repoResult = {
+      repo: 'fail-repo',
+      clusterResults: [{
+        clusterId: 'quality',
+        status: 'failed' as const,
+        agentResults: [
+          { agentId: 'tsc-check', status: 'failed' as const, repo: 'fail-repo', duration: 50, message: 'err', artifacts: [], error: 'err' },
+        ],
+        duration: 50,
+      }],
+    };
+
+    writeCachedResult('__test_cmd__', 'fail-repo', process.cwd(), repoResult);
+
+    const cached = readCachedResult('__test_cmd__', 'fail-repo');
+    expect(cached!.allPassed).toBe(false);
+  });
+});
+
+describe('isRepoUnchanged', () => {
+  const testCacheDir = join(process.cwd(), '.ugwtf', 'cache', '__test_unchanged__');
+
+  afterEach(() => {
+    if (existsSync(testCacheDir)) {
+      rmSync(testCacheDir, { recursive: true, force: true });
+    }
+  });
+
+  it('returns false when no cache exists', () => {
+    expect(isRepoUnchanged('__test_unchanged__', 'no-cache', process.cwd())).toBe(false);
+  });
+
+  it('returns true when HEAD matches a successful cache', () => {
+    const repoResult = {
+      repo: 'same-repo',
+      clusterResults: [{
+        clusterId: 'q',
+        status: 'success' as const,
+        agentResults: [
+          { agentId: 'a', status: 'success' as const, repo: 'same-repo', duration: 1, message: 'ok', artifacts: [] },
+        ],
+        duration: 1,
+      }],
+    };
+
+    writeCachedResult('__test_unchanged__', 'same-repo', process.cwd(), repoResult);
+    expect(isRepoUnchanged('__test_unchanged__', 'same-repo', process.cwd())).toBe(true);
+  });
+
+  it('returns false when cache has allPassed=false', () => {
+    const repoResult = {
+      repo: 'bad-repo',
+      clusterResults: [{
+        clusterId: 'q',
+        status: 'failed' as const,
+        agentResults: [
+          { agentId: 'a', status: 'failed' as const, repo: 'bad-repo', duration: 1, message: 'err', artifacts: [], error: 'e' },
+        ],
+        duration: 1,
+      }],
+    };
+
+    writeCachedResult('__test_unchanged__', 'bad-repo', process.cwd(), repoResult);
+    expect(isRepoUnchanged('__test_unchanged__', 'bad-repo', process.cwd())).toBe(false);
+  });
+});
+
+describe('parseWatchArgs', () => {
+  it('returns sensible defaults with no args', () => {
+    const opts = parseWatchArgs([]);
+    expect(opts.command).toBe('validate');
+    expect(opts.debounceMs).toBe(1000);
+    expect(opts.verbose).toBe(false);
+    expect(opts.dryRun).toBe(false);
+    expect(opts.concurrency).toBe(3);
+    expect(opts.repos).toEqual([]);
+    expect(opts.clusters).toEqual([]);
+  });
+
+  it('parses --command, --debounce, --verbose, --dry-run', () => {
+    const opts = parseWatchArgs(['--command', 'audit', '--debounce', '500', '--verbose', '--dry-run']);
+    expect(opts.command).toBe('audit');
+    expect(opts.debounceMs).toBe(500);
+    expect(opts.verbose).toBe(true);
+    expect(opts.dryRun).toBe(true);
+  });
+
+  it('parses --concurrency and --cluster', () => {
+    const opts = parseWatchArgs(['--concurrency', '5', '--cluster', 'quality', '--cluster', 'labels']);
+    expect(opts.concurrency).toBe(5);
+    expect(opts.clusters).toEqual(['quality', 'labels']);
+  });
+
+  it('collects known repo aliases as positional args', () => {
+    // Use actual registered aliases
+    const knownAliases = allAliases();
+    if (knownAliases.length > 0) {
+      const opts = parseWatchArgs([knownAliases[0]!]);
+      expect(opts.repos).toContain(knownAliases[0]);
+    }
   });
 });

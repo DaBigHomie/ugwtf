@@ -38,12 +38,15 @@ import { scaffoldRepo, parseNewRepoArgs } from './scaffold/new-repo.js';
 import { listCommand, parseListArgs } from './commands/list.js';
 import { runAgentCommand, parseRunAgentArgs } from './commands/run-agent.js';
 import { loadRC } from './config/rc-loader.js';
+import { parseWatchArgs, startWatch } from './watch/watcher.js';
 
 const SCAFFOLD_COMMANDS = ['new-agent', 'new-repo'] as const;
 type ScaffoldCommand = typeof SCAFFOLD_COMMANDS[number];
 
 const UTILITY_COMMANDS = ['list', 'run'] as const;
 type UtilityCommand = typeof UTILITY_COMMANDS[number];
+
+const WATCH_COMMAND = 'watch' as const;
 
 const VALID_COMMANDS: OrchestratorCommand[] = [
   'deploy', 'validate', 'fix', 'labels', 'issues', 'prs', 'audit', 'status', 'prompts', 'chain',
@@ -87,6 +90,7 @@ function printUsage(): void {
   Utility:
     list       Show all clusters, agents, and repos (ugwtf list [clusters|agents|repos])
     run        Execute a single agent (ugwtf run <agent-id> [repos...] [--dry-run])
+    watch      Watch repos for changes, re-run command (ugwtf watch [repos...] --command CMD)
 
   Options:
     --dry-run        Don't make any changes
@@ -94,6 +98,7 @@ function printUsage(): void {
     --concurrency N  Max parallel repos (default: 3)
     --cluster ID     Run specific cluster(s) (repeatable)
     --output FMT     Output format: json, markdown, summary (default: summary)
+    --debounce N     Watch-mode debounce interval in ms (default: 1000)
     --help, -h       Show this help
 
   Repos: ${allAliases().join(', ')}
@@ -229,6 +234,19 @@ async function main(): Promise<void> {
         return;
       }
     }
+  }
+
+  // G52: Handle watch command — continuous file monitoring + re-run
+  if (firstArg === WATCH_COMMAND) {
+    // Merge .ugwtfrc.json defaults first
+    const rc = loadRC();
+    if (rc.repos?.length) {
+      registerReposFromRC(rc.repos as Partial<RepoConfig>[]);
+    }
+    const watchOpts = parseWatchArgs(rawArgs.slice(1));
+    startWatch(watchOpts);
+    // startWatch keeps the process alive via fs.watch; SIGINT handler will exit
+    return;
   }
 
   const options = parseArgs(process.argv);
