@@ -149,6 +149,8 @@ export interface OrchestratorOptions {
   verbose: boolean;
   concurrency: number;
   output?: OutputFormat;
+  /** G52: enable watch mode — re-run on file changes */
+  watch?: boolean;
 }
 
 // ---------------------------------------------------------------------------

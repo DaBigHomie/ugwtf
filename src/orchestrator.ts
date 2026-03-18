@@ -13,6 +13,8 @@ import { writeMarkdownReport } from './output/markdown-reporter.js';
 import { persistLastRun } from './output/persist.js';
 import { collectFindings, formatFindingsTable } from './output/findings-formatter.js';
 import { generateScoreboard, writeScoreboard, writeScoreboardMarkdown, formatScoreboardMarkdown } from './output/scoreboard.js';
+import { isRepoUnchanged, writeCachedResult } from './watch/cache.js';
+import { getRepo } from './config/repo-registry.js';
 
 // Map orchestrator commands to cluster IDs
 const COMMAND_CLUSTER_MAP: Record<string, string[]> = {
@@ -120,6 +122,37 @@ export async function orchestrate(options: OrchestratorOptions): Promise<SwarmRe
     dryRun: options.dryRun,
   };
 
+  // G53: Skip repos whose HEAD hasn't changed since last successful run
+  const skippedRepos: string[] = [];
+  if (swarmConfig.repos.length > 0) {
+    swarmConfig.repos = swarmConfig.repos.filter(alias => {
+      const repoConfig = getRepo(alias);
+      const localPath = repoConfig?.localPath;
+      if (!localPath) return true; // no localPath → always run
+      if (isRepoUnchanged(options.command, alias, localPath)) {
+        skippedRepos.push(alias);
+        return false;
+      }
+      return true;
+    });
+    if (skippedRepos.length > 0) {
+      logger.info(`Cache: skipping ${skippedRepos.length} unchanged repo(s): ${skippedRepos.join(', ')}`);
+      logger.info('');
+    }
+  }
+
+  // If all repos were cached, return empty success
+  if (swarmConfig.repos.length === 0 && skippedRepos.length > 0) {
+    logger.success('All repos unchanged since last successful run — nothing to do');
+    return {
+      mode: swarmConfig.mode,
+      startedAt: Date.now(),
+      completedAt: Date.now(),
+      results: [],
+      summary: { totalAgents: 0, succeeded: 0, failed: 0, skipped: 0, duration: 0 },
+    };
+  }
+
   // Execute
   const result = await executeSwarm(swarmConfig, github, logger);
 
@@ -156,6 +189,15 @@ export async function orchestrate(options: OrchestratorOptions): Promise<SwarmRe
 
   // Persist last-run results
   await persistLastRun(result, options.command);
+
+  // G53: Cache per-repo results for incremental skip
+  for (const repoResult of result.results) {
+    const repoConfig = getRepo(repoResult.repo);
+    const localPath = repoConfig?.localPath;
+    if (localPath) {
+      writeCachedResult(options.command, repoResult.repo, localPath, repoResult);
+    }
+  }
 
   // Generate SCOREBOARD for audit and scan commands
   if (['audit', 'scan', 'status'].includes(options.command)) {

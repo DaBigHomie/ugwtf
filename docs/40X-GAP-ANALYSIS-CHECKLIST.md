@@ -99,9 +99,9 @@
 - [x] **G51** Merge file config with repo-registry defaults
 
 ### Cat 15: Watch / Incremental Mode
-- [ ] **G52** Add `--watch` flag for continuous validation
-- [ ] **G53** Cache last agent results, skip unchanged repos
-- [ ] **G54** Emit file-change events to trigger targeted re-runs
+- [x] **G52** Add `--watch` flag for continuous validation
+- [x] **G53** Cache last agent results, skip unchanged repos
+- [x] **G54** Emit file-change events to trigger targeted re-runs
 
 ---
 
