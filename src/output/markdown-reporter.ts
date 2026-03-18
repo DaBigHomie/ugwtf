@@ -10,6 +10,13 @@ import { collectFindings, formatFindingsMarkdown } from './findings-formatter.js
 
 const REPORTS_DIR = join(process.cwd(), '.ugwtf', 'reports');
 
+/**
+ * Write a timestamped Markdown report to `.ugwtf/reports/`.
+ *
+ * @param result  - The completed swarm result.
+ * @param command - CLI command name (used in the filename).
+ * @returns Absolute path to the written Markdown file.
+ */
 export async function writeMarkdownReport(result: SwarmResult, command: string): Promise<string> {
   mkdirSync(REPORTS_DIR, { recursive: true });
 

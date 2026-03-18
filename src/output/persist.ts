@@ -25,6 +25,13 @@ export interface LastRunData {
   failedAgents: Array<{ agentId: string; repo: string; message: string }>;
 }
 
+/**
+ * Persist a compact last-run summary to `.ugwtf/last-run.json`.
+ *
+ * @param result  - The completed swarm result.
+ * @param command - CLI command that produced the result.
+ * @returns Absolute path to the written file.
+ */
 export async function persistLastRun(result: SwarmResult, command: string): Promise<string> {
   mkdirSync(UGWTF_DIR, { recursive: true });
 
@@ -61,6 +68,11 @@ export async function persistLastRun(result: SwarmResult, command: string): Prom
   return LAST_RUN_PATH;
 }
 
+/**
+ * Read the last-run summary from `.ugwtf/last-run.json`.
+ *
+ * @returns The parsed {@link LastRunData}, or `null` if the file does not exist.
+ */
 export function readLastRun(): LastRunData | null {
   try {
     const raw = readFileSync(LAST_RUN_PATH, 'utf-8');

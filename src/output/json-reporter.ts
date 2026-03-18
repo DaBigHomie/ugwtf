@@ -9,6 +9,13 @@ import type { SwarmResult } from '../types.js';
 
 const REPORTS_DIR = join(process.cwd(), '.ugwtf', 'reports');
 
+/**
+ * Write a timestamped JSON report to `.ugwtf/reports/`.
+ *
+ * @param result  - The completed swarm result.
+ * @param command - CLI command name (used in the filename).
+ * @returns Absolute path to the written JSON file.
+ */
 export async function writeJsonReport(result: SwarmResult, command: string): Promise<string> {
   mkdirSync(REPORTS_DIR, { recursive: true });
 

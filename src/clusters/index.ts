@@ -342,10 +342,18 @@ export const CLUSTERS: Cluster[] = [
   },
 ];
 
+/** Look up a single cluster by its ID.
+ * @param id - Cluster identifier (e.g. `'labels'`, `'quality'`).
+ * @returns The matching {@link Cluster}, or `undefined`.
+ */
 export function getCluster(id: string): Cluster | undefined {
   return CLUSTERS.find(c => c.id === id);
 }
 
+/** Return clusters matching the given IDs, or all clusters if the list is empty.
+ * @param ids - Cluster IDs to filter by.
+ * @returns Matching {@link Cluster} array.
+ */
 export function getClusters(ids: string[]): Cluster[] {
   if (ids.length === 0) return CLUSTERS;
   return CLUSTERS.filter(c => ids.includes(c.id));

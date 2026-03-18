@@ -78,10 +78,10 @@
 ## P3 — Low (Polish & Extensibility)
 
 ### Cat 11: Documentation
-- [ ] **G39** Create `docs/ARCHITECTURE.md` — swarm execution model, cluster DAG
-- [ ] **G40** Create `docs/ADDING-AGENTS.md` — how to write a new agent
-- [ ] **G41** Create `docs/ADDING-REPOS.md` — how to register a new repo
-- [ ] **G42** Add JSDoc to all exported functions
+- [x] **G39** Create `docs/ARCHITECTURE.md` — swarm execution model, cluster DAG
+- [x] **G40** Create `docs/ADDING-AGENTS.md` — how to write a new agent
+- [x] **G41** Create `docs/ADDING-REPOS.md` — how to register a new repo
+- [x] **G42** Add JSDoc to all exported functions
 
 ### Cat 12: CLI Improvements
 - [ ] **G43** Add `ugwtf list` — show all clusters, agents, repos
