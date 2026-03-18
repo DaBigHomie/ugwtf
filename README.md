@@ -118,6 +118,64 @@ interface Agent {
 
 Agents are grouped into **clusters**. The executor fans out across repos, running each cluster's agents in sequence per repo while optionally parallelizing across repos.
 
+## Plugins
+
+UGWTF supports external plugin packages that register additional clusters without modifying the core source.
+
+### How plugins work
+
+A plugin exports a `UGWTFPlugin` object:
+
+```typescript
+import type { UGWTFPlugin, PluginRegistry } from '@dabighomie/ugwtf/types';
+import { myCluster } from './cluster.js';
+
+export const plugin: UGWTFPlugin = {
+  name: 'my-plugin',
+  version: '1.0.0',
+  register(registry: PluginRegistry): void {
+    registry.addCluster(myCluster);
+    // registry.addAgent('existing-cluster-id', extraAgent);
+    // registry.addCommand('my-command', ['my-cluster']);
+  },
+};
+```
+
+### Auto-discovery
+
+Packages scoped under `@ugwtf/*` are scanned at startup. Any package that declares `"ugwtf-plugin": true` in its `package.json` is loaded automatically via `src/plugins/loader.ts`.
+
+### First-party plugins
+
+**`@dabighomie/audit-orchestrator`** — visual audit cluster with 10 agents:
+
+```typescript
+// audit-orchestrator/src/ugwtf-plugin.ts
+export const plugin: UGWTFPlugin = {
+  name: 'visual-audit',
+  version: '1.1.0',
+  register(registry: PluginRegistry): void {
+    registry.addCluster(visualAuditCluster);
+  },
+};
+```
+
+Usage:
+
+```bash
+npx ugwtf audit --cluster visual-audit
+npx ugwtf audit damieus --cluster visual-audit --verbose
+```
+
+### Writing a custom plugin
+
+See **[docs/ADDING-AGENTS.md](docs/ADDING-AGENTS.md)** for a step-by-step guide covering:
+
+- The `Agent` interface and `AgentContext` / `AgentResult` types
+- Creating agents and registering them in a cluster
+- Plugin package structure for external distribution
+- Testing patterns and checklist for new agents
+
 ## Development
 
 ```bash
@@ -140,17 +198,21 @@ npm run build
 ## Testing
 
 - **Framework**: Vitest
-- **68 tests** across 7 test files
+- **147 tests** across 10 test files
 - **Coverage threshold**: 60% lines
 
 ```
 src/utils/fs.test.ts             10 tests
 src/utils/logger.test.ts          6 tests
+src/utils/output.test.ts         14 tests
 src/config/repo-registry.test.ts 11 tests
 src/clusters/clusters.test.ts    11 tests
 src/orchestrator.test.ts          5 tests
 src/index.test.ts                17 tests
 src/swarm/executor.test.ts        8 tests
+src/scoreboard/scoreboard.test.ts 9 tests
+src/integration.test.ts          12 tests
+... + additional swarm/scoreboard tests up to 147 total
 ```
 
 ## License
