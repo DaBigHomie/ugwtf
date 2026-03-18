@@ -2,9 +2,9 @@
 
 > **Repo**: `@dabighomie/ugwtf` v1.0.0
 > **Created**: March 18, 2026
-> **Status**: 24 items total — 26 done (Wave 1 + Wave 2 complete), 6 remaining across Waves 3-5
+> **Status**: 24 items total — 31 done (Wave 1 + Wave 2 + Wave 3 complete), 1 remaining across Waves 4-5
 > **Prerequisite**: P0-P3 complete (54/54 items)
-> **Automation**: 6 swarm scripts created (`scripts/swarm-quality-gate.mts`, `scripts/wave-runner.mts`, `scripts/context-budget.mts`, `scripts/cluster-test-runner.mts`, `scripts/scoreboard-validator.mts`, `scripts/context-analyzer.mts`)
+> **Automation**: 7 swarm scripts created (`scripts/swarm-quality-gate.mts`, `scripts/wave-runner.mts`, `scripts/context-budget.mts`, `scripts/cluster-test-runner.mts`, `scripts/scoreboard-validator.mts`, `scripts/context-analyzer.mts`, `scripts/doc-sync-validator.mts`)
 
 ---
 
@@ -12,8 +12,8 @@
 
 | Status | Count | Items |
 |--------|-------|-------|
-| Already Done | 26 | C1, C2, C3, C4, C5, C8, C9, C16, R3, R5 + C7.1, R1.2 + Wave 1-2 sub-items |
-| Remaining | 6 | C6, C7.2-C7.5, C10-C15, C17-C19, R1.3-R1.4, R2, R4 |
+| Already Done | 31 | C1, C2, C3, C4, C5, C6, C8, C9, C16, R3, R5 + C7.1, R1.2 + Wave 1-3 sub-items |
+| Remaining | 1 | C7.2-C7.5, C10-C15, C17-C19, R1.3-R1.4, R2, R4 (blocked: npm publish) |
 
 ---
 
@@ -93,11 +93,13 @@
 **Goal**: Document the plugin integration for external contributors.
 
 ### C6 — README documents audit-orchestrator as a UGWTF plugin
-- [ ] **C6.1** Add "Plugins" section to ugwtf `README.md`
-- [ ] **C6.2** Document: how audit-orchestrator registers as a plugin
-- [ ] **C6.3** Document: how to run visual-audit via CLI (`npx ugwtf audit --cluster visual-audit`)
-- [ ] **C6.4** Document: how to write a custom plugin (reference `UGWTFPlugin` interface from G46)
-- [ ] **C6.5** Cross-reference `docs/ADDING-AGENTS.md` for agent authoring
+- [x] **C6.1** Add "Plugins" section to ugwtf `README.md` — added in commit `4ad8357`
+- [x] **C6.2** Document: how audit-orchestrator registers as a plugin — `ugwtf-plugin.ts` example shown
+- [x] **C6.3** Document: how to run visual-audit via CLI (`npx ugwtf audit --cluster visual-audit`) — CLI usage block added
+- [x] **C6.4** Document: how to write a custom plugin (reference `UGWTFPlugin` interface) — full interface + example in README
+- [x] **C6.5** Cross-reference `docs/ADDING-AGENTS.md` for agent authoring — linked from README Plugins section
+
+**Wave 3 automation**: `scripts/doc-sync-validator.mts` — 4-agent swarm validating README sections, ADDING-AGENTS.md headings, test count sync, and P4 checklist coverage
 
 ---
 
