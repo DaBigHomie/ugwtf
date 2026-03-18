@@ -35,9 +35,15 @@ import { orchestrate } from './orchestrator.js';
 import { allAliases } from './config/repo-registry.js';
 import { scaffoldAgent, parseNewAgentArgs } from './scaffold/new-agent.js';
 import { scaffoldRepo, parseNewRepoArgs } from './scaffold/new-repo.js';
+import { listCommand, parseListArgs } from './commands/list.js';
+import { runAgentCommand, parseRunAgentArgs } from './commands/run-agent.js';
+import { loadRC } from './config/rc-loader.js';
 
 const SCAFFOLD_COMMANDS = ['new-agent', 'new-repo'] as const;
 type ScaffoldCommand = typeof SCAFFOLD_COMMANDS[number];
+
+const UTILITY_COMMANDS = ['list', 'run'] as const;
+type UtilityCommand = typeof UTILITY_COMMANDS[number];
 
 const VALID_COMMANDS: OrchestratorCommand[] = [
   'deploy', 'validate', 'fix', 'labels', 'issues', 'prs', 'audit', 'status', 'prompts', 'chain',
@@ -77,6 +83,10 @@ function printUsage(): void {
   Scaffold:
     new-agent  Generate agent boilerplate (ugwtf new-agent <id> --cluster <cid>)
     new-repo   Generate repo config entry (ugwtf new-repo <alias> --slug O/R --framework fw)
+
+  Utility:
+    list       Show all clusters, agents, and repos (ugwtf list [clusters|agents|repos])
+    run        Execute a single agent (ugwtf run <agent-id> [repos...] [--dry-run])
 
   Options:
     --dry-run        Don't make any changes
@@ -204,9 +214,38 @@ async function main(): Promise<void> {
     }
   }
 
+  // Handle utility commands (list, run)
+  if (firstArg && UTILITY_COMMANDS.includes(firstArg as UtilityCommand)) {
+    const subArgs = rawArgs.slice(1);
+    switch (firstArg as UtilityCommand) {
+      case 'list': {
+        const target = parseListArgs(subArgs);
+        if (target) listCommand(target);
+        return;
+      }
+      case 'run': {
+        const opts = parseRunAgentArgs(subArgs);
+        if (opts) await runAgentCommand(opts);
+        return;
+      }
+    }
+  }
+
   const options = parseArgs(process.argv);
   if (!options) {
     process.exit(0);
+  }
+
+  // Merge .ugwtfrc.json defaults (CLI flags take precedence)
+  const rc = loadRC();
+  if (options.repos.length === 0 && rc.defaultRepos?.length) {
+    options.repos = rc.defaultRepos;
+  }
+  if (!options.output && rc.output) options.output = rc.output;
+  if (!options.verbose && rc.verbose) options.verbose = rc.verbose;
+  if (!options.dryRun && rc.dryRun) options.dryRun = rc.dryRun;
+  if (options.concurrency === 3 && rc.concurrency !== undefined) {
+    options.concurrency = rc.concurrency;
   }
 
   try {

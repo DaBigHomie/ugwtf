@@ -9,6 +9,10 @@ const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 const mockConsoleLog = vi.spyOn(console, 'log').mockImplementation(() => {});
 
 import { parseArgs } from './index.js';
+import { parseListArgs } from './commands/list.js';
+import { parseRunAgentArgs, findAgent } from './commands/run-agent.js';
+import { loadRC, type UGWTFRCConfig } from './config/rc-loader.js';
+import { InternalPluginRegistry } from './plugins/loader.js';
 
 describe('parseArgs', () => {
   beforeEach(() => {
@@ -149,5 +153,122 @@ describe('parseArgs', () => {
   it('output defaults to undefined', () => {
     const result = parseArgs(['node', 'ugwtf', 'deploy']);
     expect(result?.output).toBeUndefined();
+  });
+});
+
+// ── G43: list command tests ────────────────────────────────────────────────
+
+describe('parseListArgs', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns "all" with no arguments', () => {
+    expect(parseListArgs([])).toBe('all');
+  });
+
+  it('returns "clusters" target', () => {
+    expect(parseListArgs(['clusters'])).toBe('clusters');
+  });
+
+  it('returns "agents" target', () => {
+    expect(parseListArgs(['agents'])).toBe('agents');
+  });
+
+  it('returns "repos" target', () => {
+    expect(parseListArgs(['repos'])).toBe('repos');
+  });
+
+  it('returns null for --help', () => {
+    expect(parseListArgs(['--help'])).toBeNull();
+  });
+
+  it('exits on unknown target', () => {
+    expect(() => parseListArgs(['badtarget'])).toThrow('process.exit called');
+    expect(mockExit).toHaveBeenCalledWith(1);
+  });
+});
+
+// ── G44: run command tests ─────────────────────────────────────────────────
+
+describe('parseRunAgentArgs', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns null for no arguments', () => {
+    expect(parseRunAgentArgs([])).toBeNull();
+  });
+
+  it('returns null for --help', () => {
+    expect(parseRunAgentArgs(['--help'])).toBeNull();
+  });
+
+  it('parses agent ID', () => {
+    const result = parseRunAgentArgs(['label-sync']);
+    expect(result?.agentId).toBe('label-sync');
+    expect(result?.repos).toEqual([]);
+    expect(result?.dryRun).toBe(false);
+    expect(result?.verbose).toBe(false);
+  });
+
+  it('parses agent ID with repos and flags', () => {
+    const result = parseRunAgentArgs(['label-sync', 'damieus', '--dry-run', '--verbose']);
+    expect(result?.agentId).toBe('label-sync');
+    expect(result?.repos).toContain('damieus');
+    expect(result?.dryRun).toBe(true);
+    expect(result?.verbose).toBe(true);
+  });
+
+  it('exits on unknown argument', () => {
+    expect(() => parseRunAgentArgs(['label-sync', '--nope'])).toThrow('process.exit called');
+    expect(mockExit).toHaveBeenCalledWith(1);
+  });
+});
+
+describe('findAgent', () => {
+  it('finds an existing agent', () => {
+    const agent = findAgent('label-sync');
+    expect(agent).toBeDefined();
+    expect(agent?.id).toBe('label-sync');
+  });
+
+  it('returns undefined for non-existent agent', () => {
+    expect(findAgent('does-not-exist-xyz')).toBeUndefined();
+  });
+});
+
+// ── G45: RC config tests ──────────────────────────────────────────────────
+
+describe('loadRC', () => {
+  it('returns empty object for non-existent directory', () => {
+    const result = loadRC('/tmp/nonexistent-ugwtf-test-dir');
+    expect(result).toEqual({});
+  });
+});
+
+// ── G46/G47: Plugin system tests ──────────────────────────────────────────
+
+describe('InternalPluginRegistry', () => {
+  it('accumulates clusters', () => {
+    const registry = new InternalPluginRegistry();
+    const cluster = { id: 'test', name: 'Test', description: 'Test cluster', agents: [], dependsOn: [] };
+    registry.addCluster(cluster);
+    expect(registry.clusters).toHaveLength(1);
+    expect(registry.clusters[0]!.id).toBe('test');
+  });
+
+  it('accumulates agents by cluster ID', () => {
+    const registry = new InternalPluginRegistry();
+    const agent = {
+      id: 'test-agent', name: 'Test', description: 'desc', clusterId: 'test',
+      execute: async () => ({ agentId: 'test-agent', status: 'success' as const, repo: '', duration: 0, message: '', artifacts: [] }),
+      shouldRun: () => true,
+    };
+    registry.addAgent('test', agent);
+    registry.addAgent('test', { ...agent, id: 'test-agent-2' });
+    expect(registry.agents.get('test')).toHaveLength(2);
+  });
+
+  it('accumulates commands', () => {
+    const registry = new InternalPluginRegistry();
+    registry.addCommand('my-cmd', ['cluster-a', 'cluster-b']);
+    expect(registry.commands.get('my-cmd')).toEqual(['cluster-a', 'cluster-b']);
   });
 });

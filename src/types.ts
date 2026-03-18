@@ -232,6 +232,32 @@ export interface GitHubWorkflowRun {
 }
 
 // ---------------------------------------------------------------------------
+// Plugin system
+// ---------------------------------------------------------------------------
+
+/**
+ * Plugin interface for extending UGWTF.
+ * Plugins are loaded from `node_modules/@ugwtf/*` packages that declare
+ * `"ugwtf-plugin": true` in their `package.json`.
+ */
+export interface UGWTFPlugin {
+  name: string;
+  version: string;
+  /** Called once during startup to register clusters, agents, and commands. */
+  register(registry: PluginRegistry): void;
+}
+
+/** Registry provided to plugins during registration. */
+export interface PluginRegistry {
+  /** Register a new cluster. */
+  addCluster(cluster: Cluster): void;
+  /** Add an agent to an existing or new cluster. */
+  addAgent(clusterId: string, agent: Agent): void;
+  /** Register a new CLI command mapped to cluster IDs. */
+  addCommand(name: string, clusterIds: string[]): void;
+}
+
+// ---------------------------------------------------------------------------
 // Logger
 // ---------------------------------------------------------------------------
 
