@@ -11,6 +11,10 @@ const BLUE = '\x1b[34m';
 const GRAY = '\x1b[90m';
 const BOLD = '\x1b[1m';
 
+/** Create a colour-coded console logger.
+ * @param verbose - When `true`, `logger.debug()` messages are printed.
+ * @returns A {@link Logger} instance.
+ */
 export function createLogger(verbose = false): Logger {
   let indent = 0;
   const pad = () => '  '.repeat(indent);

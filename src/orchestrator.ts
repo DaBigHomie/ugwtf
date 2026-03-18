@@ -52,6 +52,13 @@ const COMMAND_CLUSTER_MAP: Record<string, string[]> = {
   ],
 };
 
+/**
+ * Top-level entry point — resolve clusters from the CLI command, build a
+ * {@link SwarmConfig}, and delegate to {@link executeSwarm}.
+ *
+ * @param options - Parsed CLI options (command, repos, flags).
+ * @returns The aggregated {@link SwarmResult} from all repos and clusters.
+ */
 export async function orchestrate(options: OrchestratorOptions): Promise<SwarmResult> {
   const logger: Logger = createLogger(options.verbose);
 

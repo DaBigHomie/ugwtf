@@ -43,6 +43,12 @@ function computeRepoScore(status: AgentStatus[], total: number): number {
   return Math.round((passed / total) * 100);
 }
 
+/**
+ * Build a {@link Scoreboard} from swarm results, including trend tracking.
+ *
+ * @param result - The completed swarm result.
+ * @returns A scoreboard with per-repo scores and overall average.
+ */
 export function generateScoreboard(result: SwarmResult): Scoreboard {
   const repos: RepoScore[] = result.results.map(repo => {
     const agents: AgentStatus[] = [];
@@ -99,6 +105,11 @@ function readPreviousScoreboard(): Scoreboard | null {
   }
 }
 
+/** Write SCOREBOARD.json to `.ugwtf/`.
+ *
+ * @param scoreboard - The scoreboard data to serialise.
+ * @returns Absolute path to the written file.
+ */
 export function writeScoreboard(scoreboard: Scoreboard): string {
   mkdirSync(UGWTF_DIR, { recursive: true });
   writeFileSync(SCOREBOARD_PATH, JSON.stringify(scoreboard, null, 2), 'utf-8');
@@ -109,6 +120,12 @@ export function writeScoreboard(scoreboard: Scoreboard): string {
 // G38: Emit SCOREBOARD as Markdown
 // ---------------------------------------------------------------------------
 
+/**
+ * Render a scoreboard as a human-readable Markdown string.
+ *
+ * @param scoreboard - The scoreboard data.
+ * @returns Markdown text.
+ */
 export function formatScoreboardMarkdown(scoreboard: Scoreboard): string {
   const lines: string[] = [];
 
@@ -141,6 +158,11 @@ export function formatScoreboardMarkdown(scoreboard: Scoreboard): string {
   return lines.join('\n');
 }
 
+/** Write SCOREBOARD.md to `.ugwtf/`.
+ *
+ * @param scoreboard - The scoreboard data to render.
+ * @returns Absolute path to the written file.
+ */
 export function writeScoreboardMarkdown(scoreboard: Scoreboard): string {
   mkdirSync(UGWTF_DIR, { recursive: true });
   const markdown = formatScoreboardMarkdown(scoreboard);

@@ -20,6 +20,13 @@ interface CacheEntry { data: string; timestamp: number }
 
 const CACHE_TTL_MS = 60_000; // 1 minute
 
+/**
+ * Create a GitHub API client backed by the `gh` CLI with in-memory caching.
+ *
+ * @param logger - Logger for request/response tracing.
+ * @param dryRun - When `true`, mutating calls are skipped.
+ * @returns A {@link GitHubClient} facade.
+ */
 export function createGitHubClient(logger: Logger, dryRun = false): GitHubClient {
   const cache = new Map<string, CacheEntry>();
   let rateLimitRemaining = Infinity;

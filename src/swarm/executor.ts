@@ -201,6 +201,14 @@ function summarize(repoResults: RepoSwarmResult[], startedAt: number): SwarmSumm
 // Main swarm executor
 // ---------------------------------------------------------------------------
 
+/**
+ * Execute agents across repos and clusters with concurrency control.
+ *
+ * @param config  - Swarm configuration (repos, clusters, mode, concurrency).
+ * @param github  - Authenticated GitHub API client.
+ * @param logger  - Logger for progress output.
+ * @returns Aggregated {@link SwarmResult} for the entire run.
+ */
 export async function executeSwarm(
   config: SwarmConfig,
   github: GitHubClient,

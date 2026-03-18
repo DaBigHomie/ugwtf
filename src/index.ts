@@ -33,6 +33,11 @@
 import type { OrchestratorCommand, OrchestratorOptions, OutputFormat } from './types.js';
 import { orchestrate } from './orchestrator.js';
 import { allAliases } from './config/repo-registry.js';
+import { scaffoldAgent, parseNewAgentArgs } from './scaffold/new-agent.js';
+import { scaffoldRepo, parseNewRepoArgs } from './scaffold/new-repo.js';
+
+const SCAFFOLD_COMMANDS = ['new-agent', 'new-repo'] as const;
+type ScaffoldCommand = typeof SCAFFOLD_COMMANDS[number];
 
 const VALID_COMMANDS: OrchestratorCommand[] = [
   'deploy', 'validate', 'fix', 'labels', 'issues', 'prs', 'audit', 'status', 'prompts', 'chain',
@@ -69,6 +74,10 @@ function printUsage(): void {
     supabase   Migration safety, RLS, type freshness, query patterns
     gateway    Prompt validation, instruction scoring, token budgets
 
+  Scaffold:
+    new-agent  Generate agent boilerplate (ugwtf new-agent <id> --cluster <cid>)
+    new-repo   Generate repo config entry (ugwtf new-repo <alias> --slug O/R --framework fw)
+
   Options:
     --dry-run        Don't make any changes
     --verbose, -v    Show debug output
@@ -87,6 +96,12 @@ function printUsage(): void {
 `);
 }
 
+/**
+ * Parse CLI arguments into {@link OrchestratorOptions}.
+ *
+ * @param argv - Raw `process.argv` array.
+ * @returns Parsed options, or `null` if `--help` was requested.
+ */
 export function parseArgs(argv: string[]): OrchestratorOptions | null {
   // Skip node and script path
   const args = argv.slice(2);
@@ -169,6 +184,26 @@ export function parseArgs(argv: string[]): OrchestratorOptions | null {
 }
 
 async function main(): Promise<void> {
+  // Handle scaffold commands separately (no swarm execution needed)
+  const rawArgs = process.argv.slice(2);
+  const firstArg = rawArgs[0];
+
+  if (firstArg && SCAFFOLD_COMMANDS.includes(firstArg as ScaffoldCommand)) {
+    const subArgs = rawArgs.slice(1);
+    switch (firstArg as ScaffoldCommand) {
+      case 'new-agent': {
+        const opts = parseNewAgentArgs(subArgs);
+        if (opts) scaffoldAgent(opts);
+        return;
+      }
+      case 'new-repo': {
+        const opts = parseNewRepoArgs(subArgs);
+        if (opts) scaffoldRepo(opts);
+        return;
+      }
+    }
+  }
+
   const options = parseArgs(process.argv);
   if (!options) {
     process.exit(0);
