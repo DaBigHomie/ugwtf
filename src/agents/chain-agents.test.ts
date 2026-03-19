@@ -252,3 +252,99 @@ describe('chainGenerator agent', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Real chain file validation — projects/o43/prompt-chain.json
+// ---------------------------------------------------------------------------
+
+describe('real chain file: projects/o43/prompt-chain.json', () => {
+  const chainPath = join(import.meta.dirname, '../../projects/o43/prompt-chain.json');
+
+  it('exists and is valid JSON', () => {
+    expect(existsSync(chainPath)).toBe(true);
+    const raw = readFileSync(chainPath, 'utf-8');
+    const config = JSON.parse(raw);
+    expect(config).toBeDefined();
+    expect(typeof config).toBe('object');
+  });
+
+  it('has required top-level fields', () => {
+    const config = JSON.parse(readFileSync(chainPath, 'utf-8'));
+    expect(typeof config.version).toBe('number');
+    expect(typeof config.repo).toBe('string');
+    expect(Array.isArray(config.labels)).toBe(true);
+    expect(Array.isArray(config.chain)).toBe(true);
+  });
+
+  it('has 30 chain entries', () => {
+    const config = JSON.parse(readFileSync(chainPath, 'utf-8'));
+    expect(config.chain.length).toBe(30);
+  });
+
+  it('entries have unique positions', () => {
+    const config = JSON.parse(readFileSync(chainPath, 'utf-8'));
+    const positions = config.chain.map((e: { position: number }) => e.position);
+    expect(new Set(positions).size).toBe(positions.length);
+  });
+
+  it('entries have unique prompt IDs', () => {
+    const config = JSON.parse(readFileSync(chainPath, 'utf-8'));
+    const prompts = config.chain.map((e: { prompt: string }) => e.prompt);
+    expect(new Set(prompts).size).toBe(prompts.length);
+  });
+
+  it('entries have valid severity values', () => {
+    const config = JSON.parse(readFileSync(chainPath, 'utf-8'));
+    const valid = ['critical', 'high', 'medium', 'low'];
+    for (const entry of config.chain) {
+      expect(valid).toContain(entry.severity);
+    }
+  });
+
+  it('dependency references exist in the chain', () => {
+    const config = JSON.parse(readFileSync(chainPath, 'utf-8'));
+    const promptIds = new Set(config.chain.map((e: { prompt: string }) => e.prompt));
+    for (const entry of config.chain) {
+      for (const dep of entry.depends) {
+        expect(promptIds.has(dep)).toBe(true);
+      }
+    }
+  });
+
+  it('wave ordering respects dependencies (dep wave <= dependent wave)', () => {
+    const config = JSON.parse(readFileSync(chainPath, 'utf-8'));
+    const waveOf = new Map<string, number>();
+    for (const entry of config.chain) {
+      waveOf.set(entry.prompt, entry.wave);
+    }
+    for (const entry of config.chain) {
+      for (const dep of entry.depends) {
+        expect(waveOf.get(dep)).toBeLessThanOrEqual(entry.wave);
+      }
+    }
+  });
+
+  it('position ordering respects dependencies (dep position < dependent position)', () => {
+    const config = JSON.parse(readFileSync(chainPath, 'utf-8'));
+    const posOf = new Map<string, number>();
+    for (const entry of config.chain) {
+      posOf.set(entry.prompt, entry.position);
+    }
+    for (const entry of config.chain) {
+      for (const dep of entry.depends) {
+        expect(posOf.get(dep)).toBeLessThan(entry.position);
+      }
+    }
+  });
+
+  it('has exactly 4 waves', () => {
+    const config = JSON.parse(readFileSync(chainPath, 'utf-8'));
+    const waves = new Set(config.chain.map((e: { wave: number }) => e.wave));
+    expect(waves.size).toBe(4);
+  });
+
+  it('repo slug matches ONE4THREE', () => {
+    const config = JSON.parse(readFileSync(chainPath, 'utf-8'));
+    expect(config.repo).toBe('DaBigHomie/one4three-co-next-app');
+  });
+});

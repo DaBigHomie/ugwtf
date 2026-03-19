@@ -7,6 +7,7 @@ Identified during 30x deep dive audit (March 2026).
 | Gap | Severity | Status | Notes |
 |-----|----------|--------|-------|
 | `prompt-agents.test.ts` | ~~High~~ | ✅ Fixed | 54 unit tests added — covers validatePrompt, parseDependencies, scanAllPrompts |
+| Real chain file tests | ~~Medium~~ | ✅ Fixed | 11 tests validate `projects/o43/prompt-chain.json` structure, deps, waves |
 | `pr-agents.test.ts` | Medium | Open | PR review, DB firewall, batch processor, completion tracker — no unit tests |
 | `issue-agents.test.ts` | Medium | Open | Stalled detector, Copilot assign, auto-triage — no unit tests |
 | Generator output tests | Low | Open | YAML generators produce static templates, low risk of regression |
@@ -17,12 +18,20 @@ Identified during 30x deep dive audit (March 2026).
 | Agent File | Has Tests? | Test Count |
 |------------|-----------|------------|
 | `prompt-agents.ts` | ✅ | 54 |
-| `chain-agents.ts` | ✅ | 11 |
+| `chain-agents.ts` | ✅ | 22 |
 | `pr-agents.ts` | ❌ | 0 |
 | `issue-agents.ts` | ❌ | 0 |
 | `label-agents.ts` | ❌ | 0 |
 | `audit-agents.ts` | ❌ | 0 |
 | `fix-agents.ts` | ❌ | 0 |
+
+## Integration Gaps (Closed)
+
+| Gap | Status | Resolution |
+|-----|--------|------------|
+| No `.github/copilot-instructions.md` | ✅ Fixed | Created — agents now get full context when working in ugwtf |
+| `validatePrompt` not wired into chain | ✅ Fixed | chainGenerator now scores all prompts and warns on <50% quality |
+| Tests don't validate real chain files | ✅ Fixed | 11 tests validate o43 chain (30 entries, 4 waves, dep integrity) |
 
 ## Feature Gaps
 

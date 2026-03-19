@@ -9,7 +9,7 @@
 import type { Agent, AgentContext, AgentResult } from '../types.js';
 import { readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { join, basename, relative } from 'node:path';
-import { scanAllPrompts, type ParsedPrompt } from './prompt-agents.js';
+import { scanAllPrompts, validatePrompt, type ParsedPrompt } from './prompt-agents.js';
 import { writeFile } from '../utils/fs.js';
 import { getRepo } from '../config/repo-registry.js';
 
@@ -675,6 +675,16 @@ const chainGenerator: Agent = {
       return { agentId: this.id, status: 'skipped', repo: ctx.repoAlias, duration: Date.now() - start, message: 'No prompts found', artifacts: [] };
     } else {
       ctx.logger.info(`Found ${allPrompts.length} prompts to chain`);
+    }
+
+    // 1b. Quality scoring — warn on low-scoring prompts
+    const scores = prompts.map(p => validatePrompt(p));
+    const avgScore = Math.round(scores.reduce((s, r) => s + r.percent, 0) / scores.length);
+    const lowScoring = scores.filter(r => r.percent < 50);
+
+    ctx.logger.info(`Prompt quality: avg ${avgScore}% (${lowScoring.length} below 50%)`);
+    for (const r of lowScoring) {
+      ctx.logger.warn(`  Low score: ${r.percent}% — ${r.prompt.fileName}`);
     }
 
     // 2. Sort prompts by filename for stable ordering
