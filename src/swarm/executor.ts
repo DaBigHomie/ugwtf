@@ -114,6 +114,7 @@ async function runRepo(
     localPath: repoConfig.localPath ?? process.cwd(),
     dryRun: config.dryRun,
     logger,
+    extras: config.extras ?? {},
   };
 
   logger.group(`Repository: ${repoAlias} (${repoConfig.slug})`);
@@ -262,6 +263,7 @@ export async function executeSwarm(
                 localPath: repoConfig.localPath ?? process.cwd(),
                 dryRun: config.dryRun,
                 logger,
+                extras: config.extras ?? {},
               };
               const result = await runCluster(cluster, ctx);
               repoResultsMap.get(repoAlias)?.push(result);

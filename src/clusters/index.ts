@@ -23,7 +23,7 @@ import { issueAgents } from '../agents/issue-agents.js';
 import { prAgents } from '../agents/pr-agents.js';
 import { auditAgents } from '../agents/audit-agents.js';
 import { promptAgents } from '../agents/prompt-agents.js';
-import { chainAgents } from '../agents/chain-agents.js';
+import { chainAgents, chainGeneratorAgents } from '../agents/chain-agents.js';
 import { visualAuditCluster } from '@dabighomie/audit-orchestrator/cluster';
 
 // --- 21 new domain clusters ---
@@ -114,6 +114,13 @@ export const CLUSTERS: Cluster[] = [
     name: 'Prompt Chain Management',
     description: 'Load, validate, create issues, and advance the prompt execution chain',
     agents: chainAgents,
+    dependsOn: ['prompts'],
+  },
+  {
+    id: 'generate-chain',
+    name: 'Chain Config Generator',
+    description: 'Auto-generate prompt-chain.json from scanned prompts with toposort',
+    agents: chainGeneratorAgents,
     dependsOn: ['prompts'],
   },
   {

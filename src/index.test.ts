@@ -45,6 +45,9 @@ describe('parseArgs', () => {
       dryRun: false,
       verbose: false,
       concurrency: 3,
+      extras: {},
+      noCache: false,
+      output: undefined,
     });
   });
 
@@ -95,6 +98,9 @@ describe('parseArgs', () => {
       dryRun: true,
       verbose: true,
       concurrency: 2,
+      extras: {},
+      noCache: false,
+      output: undefined,
     });
   });
 
