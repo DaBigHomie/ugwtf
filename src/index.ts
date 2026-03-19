@@ -39,6 +39,7 @@ import { listCommand, parseListArgs } from './commands/list.js';
 import { runAgentCommand, parseRunAgentArgs } from './commands/run-agent.js';
 import { loadRC } from './config/rc-loader.js';
 import { parseWatchArgs, startWatch } from './watch/watcher.js';
+import { loadEnv } from './utils/env.js';
 
 const SCAFFOLD_COMMANDS = ['new-agent', 'new-repo'] as const;
 type ScaffoldCommand = typeof SCAFFOLD_COMMANDS[number];
@@ -199,6 +200,9 @@ export function parseArgs(argv: string[]): OrchestratorOptions | null {
 }
 
 async function main(): Promise<void> {
+  // R4: Load .env file (existing env vars take precedence)
+  loadEnv();
+
   // Handle scaffold commands separately (no swarm execution needed)
   const rawArgs = process.argv.slice(2);
   const firstArg = rawArgs[0];

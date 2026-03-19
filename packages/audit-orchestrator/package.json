@@ -1,0 +1,58 @@
+{
+  "name": "@dabighomie/audit-orchestrator",
+  "version": "1.1.0",
+  "description": "Portable visual audit CLI for web projects — dark mode, accessibility, design system, mobile responsiveness, and more.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "audit-orchestrator": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=18.3.0"
+  },
+  "keywords": [
+    "audit",
+    "visual-audit",
+    "dark-mode",
+    "accessibility",
+    "design-system",
+    "mobile",
+    "cli"
+  ],
+  "author": "DaBigHomie",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DaBigHomie/audit-orchestrator.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  },
+  "peerDependencies": {
+    "@dabighomie/ugwtf": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@dabighomie/ugwtf": {
+      "optional": true
+    }
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./agent": "./dist/agent.js",
+    "./cluster": "./dist/cluster.js",
+    "./plugin": "./dist/ugwtf-plugin.js",
+    "./prompt-scanner": "./dist/prompt-scanner.js",
+    "./types": "./dist/types.js"
+  }
+}

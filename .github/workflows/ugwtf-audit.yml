@@ -1,0 +1,89 @@
+name: Nightly Audit
+
+on:
+  schedule:
+    # Run every day at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      repos:
+        description: 'Comma-separated repo aliases (blank = all)'
+        required: false
+        type: string
+      verbose:
+        description: 'Enable verbose output'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  audit:
+    name: Run UGWTF Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Run audit
+        env:
+          GITHUB_TOKEN: ${{ secrets.UGWTF_PAT || secrets.GITHUB_TOKEN }}
+        run: |
+          ARGS="audit"
+          if [ -n "${{ inputs.repos }}" ]; then
+            ARGS="$ARGS ${{ inputs.repos }}"
+          fi
+          ARGS="$ARGS --output json --output markdown"
+          if [ "${{ inputs.verbose }}" = "true" ]; then
+            ARGS="$ARGS --verbose"
+          fi
+          npx tsx src/index.ts $ARGS
+
+      - name: Upload scoreboard artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scoreboard-${{ github.run_number }}
+          path: |
+            .ugwtf/SCOREBOARD.json
+            .ugwtf/SCOREBOARD.md
+          retention-days: 30
+
+      # C15: Notify on score regression >= 5%
+      - name: Check for regression & notify
+        if: always() && hashFiles('.ugwtf/SCOREBOARD.json') != ''
+        env:
+          NOTIFICATION_WEBHOOK_URL: ${{ secrets.NOTIFICATION_WEBHOOK_URL }}
+        run: |
+          if [ -z "$NOTIFICATION_WEBHOOK_URL" ]; then
+            echo "No webhook URL configured — skipping notification"
+            exit 0
+          fi
+          node -e "
+            const fs = require('fs');
+            const sb = JSON.parse(fs.readFileSync('.ugwtf/SCOREBOARD.json','utf8'));
+            const overall = sb.overall || {};
+            const current = overall.score ?? 0;
+            const prev = overall.previousScore ?? current;
+            const delta = current - prev;
+            if (delta <= -5) {
+              const body = JSON.stringify({
+                content: '⚠️ UGWTF Audit Regression: ' + current + '% (was ' + prev + '%, delta ' + delta + '%) — check scoreboard for details.'
+              });
+              fetch(process.env.NOTIFICATION_WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body,
+              }).then(() => console.log('Notification sent'))
+                .catch(e => console.error('Notification failed:', e.message));
+            } else {
+              console.log('No regression (delta: ' + delta + '%) — skipping notification');
+            }
+          "

@@ -118,7 +118,6 @@ export const CLUSTERS: Cluster[] = [
   },
   {
     ...visualAuditCluster,
-    agents: visualAuditCluster.agents as unknown as Agent[],
   },
   {
     id: 'fix',

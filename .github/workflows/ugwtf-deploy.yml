@@ -1,0 +1,31 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  deploy:
+    name: Deploy Labels & Workflows
+    runs-on: ubuntu-latest
+    # Only deploy when CI checks would pass
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Deploy to all repos
+        env:
+          GITHUB_TOKEN: ${{ secrets.UGWTF_PAT }}
+        run: npx tsx src/index.ts deploy --all

@@ -1,0 +1,258 @@
+{
+  "totalIssues": 16,
+  "bySeverity": {
+    "critical": 4,
+    "high": 7,
+    "medium": 4,
+    "low": 1
+  },
+  "byCategory": {
+    "dark-mode": 2,
+    "accessibility": 4,
+    "design": 4,
+    "mobile": 3,
+    "functionality": 3
+  },
+  "overallCompletion": 16,
+  "clusters": [
+    {
+      "id": "C1",
+      "name": "Dark Mode & Contrast",
+      "prompts": [
+        "DM-01",
+        "DM-02"
+      ],
+      "canParallelize": true,
+      "dependsOn": [],
+      "estimatedMinutes": 20,
+      "agentCount": 2
+    },
+    {
+      "id": "C2",
+      "name": "Accessibility",
+      "prompts": [
+        "TID-01",
+        "A11Y-01",
+        "A11Y-03",
+        "A11Y-04"
+      ],
+      "canParallelize": true,
+      "dependsOn": [],
+      "estimatedMinutes": 40,
+      "agentCount": 4
+    },
+    {
+      "id": "C3",
+      "name": "Design System",
+      "prompts": [
+        "DS-01",
+        "DS-03",
+        "DS-04",
+        "BTN-01"
+      ],
+      "canParallelize": true,
+      "dependsOn": [],
+      "estimatedMinutes": 40,
+      "agentCount": 4
+    },
+    {
+      "id": "C4",
+      "name": "Mobile & Responsive",
+      "prompts": [
+        "MOB-01",
+        "MOB-02",
+        "MOB-03"
+      ],
+      "canParallelize": true,
+      "dependsOn": [],
+      "estimatedMinutes": 30,
+      "agentCount": 3
+    },
+    {
+      "id": "C5",
+      "name": "Functionality",
+      "prompts": [
+        "CKO-01",
+        "CKO-02",
+        "CKO-04"
+      ],
+      "canParallelize": true,
+      "dependsOn": [],
+      "estimatedMinutes": 30,
+      "agentCount": 3
+    }
+  ],
+  "issues": [
+    {
+      "id": "DM-01",
+      "title": "No dark mode CSS selectors",
+      "severity": "critical",
+      "category": "dark-mode",
+      "description": "No .dark, [data-theme=\"dark\"], or prefers-color-scheme selectors found in stylesheet",
+      "affectedFiles": [
+        "/Users/dame/management-git/ugwtf/src/app/globals.css"
+      ],
+      "completionPct": 0
+    },
+    {
+      "id": "DM-02",
+      "title": "No CSS theme variables for color modes",
+      "severity": "critical",
+      "category": "dark-mode",
+      "description": "Expected --heading-color, --eyebrow-color, --body-muted, or --text-primary not found",
+      "affectedFiles": [
+        "/Users/dame/management-git/ugwtf/src/app/globals.css"
+      ],
+      "completionPct": 0
+    },
+    {
+      "id": "TID-01",
+      "title": "Low test ID coverage (0 found)",
+      "severity": "high",
+      "category": "accessibility",
+      "description": "Found 0 data-testid attributes (target: 50+ for reliable E2E testing)",
+      "affectedFiles": [
+        "/Users/dame/management-git/ugwtf/src"
+      ],
+      "completionPct": 0
+    },
+    {
+      "id": "A11Y-01",
+      "title": "Low ARIA attribute coverage (7 found)",
+      "severity": "critical",
+      "category": "accessibility",
+      "description": "Found 7 aria- attributes across source files (target: 30+)",
+      "affectedFiles": [
+        "/Users/dame/management-git/ugwtf/src"
+      ],
+      "completionPct": 23
+    },
+    {
+      "id": "A11Y-03",
+      "title": "No focus trap implementation",
+      "severity": "medium",
+      "category": "accessibility",
+      "description": "No focus-trap, FocusTrap, or useFocusTrap references found",
+      "affectedFiles": [
+        "/Users/dame/management-git/ugwtf/src"
+      ],
+      "completionPct": 0
+    },
+    {
+      "id": "A11Y-04",
+      "title": "Low alt text coverage (0 found)",
+      "severity": "high",
+      "category": "accessibility",
+      "description": "Found 0 alt= attributes across source files (target: 10+)",
+      "affectedFiles": [
+        "/Users/dame/management-git/ugwtf/src"
+      ],
+      "completionPct": 0
+    },
+    {
+      "id": "DS-01",
+      "title": "Low CSS custom property usage (0 found)",
+      "severity": "critical",
+      "category": "design",
+      "description": "Found 0 CSS custom properties in stylesheet (target: 10+)",
+      "affectedFiles": [
+        "/Users/dame/management-git/ugwtf/src/app/globals.css"
+      ],
+      "completionPct": 0
+    },
+    {
+      "id": "DS-03",
+      "title": "No design tokens file",
+      "severity": "medium",
+      "category": "design",
+      "description": "No design-system.ts or design-tokens.ts file found in shared/config or lib",
+      "affectedFiles": [],
+      "completionPct": 0
+    },
+    {
+      "id": "DS-04",
+      "title": "No centralized animation imports",
+      "severity": "low",
+      "category": "design",
+      "description": "Found 3 Framer Motion references but no imports from a shared animations module",
+      "affectedFiles": [
+        "/Users/dame/management-git/ugwtf/src"
+      ],
+      "completionPct": 0
+    },
+    {
+      "id": "MOB-01",
+      "title": "Low responsive class usage (6 found)",
+      "severity": "high",
+      "category": "mobile",
+      "description": "Found sm:1 md:4 lg:1 responsive classes (target: 20+ total)",
+      "affectedFiles": [
+        "/Users/dame/management-git/ugwtf/src"
+      ],
+      "completionPct": 30
+    },
+    {
+      "id": "MOB-02",
+      "title": "No mobile menu component detected",
+      "severity": "high",
+      "category": "mobile",
+      "description": "No mobile menu, hamburger menu files or references found",
+      "affectedFiles": [
+        "/Users/dame/management-git/ugwtf/src"
+      ],
+      "completionPct": 0
+    },
+    {
+      "id": "MOB-03",
+      "title": "Low touch target coverage (0 found)",
+      "severity": "medium",
+      "category": "mobile",
+      "description": "Found 0 explicit touch target sizing patterns (target: 5+)",
+      "affectedFiles": [
+        "/Users/dame/management-git/ugwtf/src"
+      ],
+      "completionPct": 0
+    },
+    {
+      "id": "CKO-01",
+      "title": "No checkout page found",
+      "severity": "high",
+      "category": "functionality",
+      "description": "E-commerce references found but no checkout page at expected paths",
+      "affectedFiles": [],
+      "completionPct": 0
+    },
+    {
+      "id": "CKO-02",
+      "title": "No cart/checkout feature directory",
+      "severity": "high",
+      "category": "functionality",
+      "description": "No cart or checkout feature directory found",
+      "affectedFiles": [],
+      "completionPct": 0
+    },
+    {
+      "id": "CKO-04",
+      "title": "No shipping method implementation",
+      "severity": "medium",
+      "category": "functionality",
+      "description": "No ShippingMethod or shippingMethod references found",
+      "affectedFiles": [
+        "/Users/dame/management-git/ugwtf/src"
+      ],
+      "completionPct": 0
+    },
+    {
+      "id": "BTN-01",
+      "title": "No shared Button component",
+      "severity": "high",
+      "category": "design",
+      "description": "No shared button.tsx found in components/ui or shared/ui",
+      "affectedFiles": [],
+      "completionPct": 0
+    }
+  ],
+  "timestamp": "2026-03-19T01:47:45.904Z",
+  "cwd": "/Users/dame/management-git/ugwtf",
+  "framework": "nextjs"
+}
