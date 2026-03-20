@@ -15,7 +15,7 @@ UGWTF has **two separate assignment systems** and **one execution system** that 
 
 | # | Failure | Impact |
 |---|---------|--------|
-| 1 | **Copilot assignment via `gh` CLI silently fails** — `gh issue edit --add-assignee @copilot` returns success but does nothing | Chain-advancer and advance-chain.mts cannot reliably assign Copilot |
+| 1 | **Copilot assignment via `gh` CLI is unreliable** — `gh issue edit --add-assignee @copilot` may silently do nothing or error (e.g., "user not found") | Chain-advancer and advance-chain.mts cannot reliably assign Copilot |
 | 2 | **No rate-limiting on issue-level Copilot assignment** — 12 issues assigned simultaneously via MCP tool | Copilot agent saturated, produced empty/hallucinated PRs |
 | 3 | **No verification step after assignment** — system never confirms Copilot actually picked up the issue and started working | Silent failures go undetected indefinitely |
 
@@ -61,9 +61,9 @@ UGWTF has **two separate assignment systems** and **one execution system** that 
 3. Filter out issues that already have `automation:in-progress` label
 4. For each remaining issue: `assignIssue(owner, repo, number, ['copilot'])` + add `automation:in-progress` label
 
-**Transport**: Uses `ctx.github.assignIssue()` which calls `ghApi('POST', '/repos/.../issues/N/assignees')` — the **gh CLI** transport.
+**Transport**: Uses `ctx.github.assignIssue()`, which goes through the UGWTF GitHub client. That client **defaults to the `gh` CLI transport when available**, and otherwise falls back to a native `fetch`-based REST transport.
 
-**Problem**: The `gh` CLI REST API call to assign `copilot` **silently fails**. It returns 200 OK but Copilot is never actually assigned. This is a known GitHub platform limitation documented in `src/generators/copilot-automation.ts` L195-214.
+**Problem**: When the client routes via the `gh` CLI transport path, the REST API call to assign `copilot` **silently fails**. It returns 200 OK but Copilot is never actually assigned. This is a known GitHub platform limitation documented in `src/generators/copilot-automation.ts` L195-214.
 
 ```typescript
 // From copilot-automation.ts — WORKAROUND DOCUMENTATION:
@@ -74,7 +74,10 @@ UGWTF has **two separate assignment systems** and **one execution system** that 
 //   - gh api POST .../assignees → 200 OK but no actual assignment
 // Fallback strategies (priority order):
 //   1. This workflow (GitHub Actions context) — PREFERRED
-//   2. UGWTF CLI copilotAssignAgent — uses Octokit directly
+//   2. GitHub Actions–only automation or other in-repo workflows that call
+//      Octokit directly (no gh CLI / external transport). Note: the UGWTF
+//      CLI `issue-copilot-assign` agent also uses the gh API transport and
+//      is not reliable as a fallback when Copilot assignment via gh fails.
 //   3. Manual: workflow_dispatch trigger on this workflow
 ```
 
