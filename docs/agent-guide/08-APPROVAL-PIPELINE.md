@@ -73,7 +73,7 @@ Five fixes prevent the 12-empty-PR failure mode discovered across o43/damieus/ff
 
 | Fix | What | Where |
 |-----|------|-------|
-| **Transport** | `assignCopilot()` forces `fetch` transport — `gh` CLI silently fails for Copilot assignment | `clients/github.ts` |
+| **Transport** | `assignCopilot()` uses `fetch` transport when `GITHUB_TOKEN`/`GH_TOKEN` is set; otherwise warns and falls back to `gh` CLI (which may silently fail for Copilot assignment) | `clients/github.ts` |
 | **Rate Limiting** | Max concurrent Copilot assignments (default 1) — prevents flooding | `issue-agents.ts`, `chain-agents.ts` |
 | **Verification** | After each `assignCopilot()`, `getIssue()` confirms Copilot is in assignees | `issue-agents.ts`, `chain-agents.ts` |
 | **PR Quality Gate** | Chain-advancer checks previous entry's PR has real changes (non-lockfile files > 0, additions >= 10) before advancing | `chain-agents.ts` |
@@ -82,7 +82,8 @@ Five fixes prevent the 12-empty-PR failure mode discovered across o43/damieus/ff
 ### New Client Methods
 
 ```typescript
-// Force fetch transport — bypasses gh CLI silent failure
+// Uses fetch transport when GITHUB_TOKEN/GH_TOKEN is set;
+// otherwise warns and falls back to gh CLI (which may silently fail).
 await github.assignCopilot(owner, repo, issueNumber);
 
 // Verify assignment succeeded

@@ -7,7 +7,7 @@ Identified during 30x deep dive audit (March 2026).
 | Gap | Severity | Status | Notes |
 |-----|----------|--------|-------|
 | `prompt-agents.test.ts` | ~~High~~ | ✅ Fixed | 54 unit tests added — covers validatePrompt, parseDependencies, scanAllPrompts |
-| Copilot assignment failures | ~~Critical~~ | ✅ Fixed | 5 fixes: fetch transport, rate limiting, verification, PR quality gate, CLI flags |
+| Copilot assignment failures | ~~Critical~~ | ✅ Fixed | 5 fixes: fetch transport when `GITHUB_TOKEN`/`GH_TOKEN` set (otherwise `gh` fallback which may silently fail), rate limiting, verification, PR quality gate, CLI flags |
 | Real chain file tests | ~~Medium~~ | ✅ Fixed | 11 tests validate `projects/o43/prompt-chain.json` structure, deps, waves |
 | `pr-agents.test.ts` | ~~Medium~~ | ✅ Fixed | 25 unit tests — PR review, DB firewall, batch processor, completion tracker |
 | `issue-agents.test.ts` | ~~Medium~~ | ✅ Fixed | 29 unit tests — stalled detector, Copilot assign, auto-triage |
