@@ -1,4 +1,3 @@
-#!/usr/bin/env npx tsx
 /**
  * fix-stale-docs.mts
  * Automates: README.md test/agent counts, copilot-instructions.md counts,
@@ -7,10 +6,10 @@
  * Run: npx tsx scripts/fix-stale-docs.mts
  */
 import { readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = join(fileURLToPath(import.meta.url), '..', '..');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 let fixes = 0;
 
 function fixFile(relPath: string, replacements: [RegExp | string, string][]) {

@@ -253,6 +253,6 @@
     }
   ],
   "timestamp": "2026-03-20T18:23:54.700Z",
-  "cwd": "/Users/dame/management-git/ugwtf",
+  "cwd": ".",
   "framework": "nextjs"
 }

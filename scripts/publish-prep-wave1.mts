@@ -1,4 +1,3 @@
-#!/usr/bin/env npx tsx
 /**
  * publish-prep-wave1.mts
  * Automates: tsconfig fix, dist rebuild, LICENSE creation, CHANGELOG creation,
@@ -8,10 +7,10 @@
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = join(fileURLToPath(import.meta.url), '..', '..');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 function step(label: string, fn: () => void) {
   process.stdout.write(`⏳ ${label}...`);

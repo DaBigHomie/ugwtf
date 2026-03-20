@@ -1,4 +1,3 @@
-#!/usr/bin/env npx tsx
 /**
  * audit-console-logs.mts
  * Scans src/ for console.log statements outside test/mock files.
@@ -10,10 +9,10 @@
  * console.logs are intentional CLI user output and require manual judgment.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = join(fileURLToPath(import.meta.url), '..', '..');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'src');
 
 interface Hit { file: string; line: number; text: string }
