@@ -37,7 +37,7 @@ function mockGitHub() {
     addComment: vi.fn().mockResolvedValue(undefined),
     assignIssue: vi.fn().mockResolvedValue(undefined),
     assignCopilot: vi.fn().mockResolvedValue(undefined),
-    getIssue: vi.fn().mockResolvedValue({ number: 0, title: '', body: '', state: 'open', labels: [], assignees: [{ login: 'copilot' }], html_url: '', created_at: '', updated_at: '' }),
+    getIssue: vi.fn().mockResolvedValue(makeIssue({ assignees: [{ login: 'copilot' }] })),
     removeLabel: vi.fn(),
     syncLabel: vi.fn(),
     listLabels: vi.fn(),
