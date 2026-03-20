@@ -10,6 +10,7 @@ Identified during 30x deep dive audit (March 2026).
 | Real chain file tests | ~~Medium~~ | ✅ Fixed | 11 tests validate `projects/o43/prompt-chain.json` structure, deps, waves |
 | `pr-agents.test.ts` | Medium | Open | PR review, DB firewall, batch processor, completion tracker — no unit tests |
 | `issue-agents.test.ts` | Medium | Open | Stalled detector, Copilot assign, auto-triage — no unit tests |
+| Copilot assignment failures | ~~Critical~~ | ✅ Fixed | 5 fixes: fetch transport, rate limiting, verification, PR quality gate, CLI flags |
 | Generator output tests | Low | Open | YAML generators produce static templates, low risk of regression |
 | Plugin loader tests | Low | Open | Extensibility feature not yet used in production |
 

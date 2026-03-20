@@ -26,6 +26,29 @@ npx tsx src/index.ts <command> [repos...] [flags]
 | [08-APPROVAL-PIPELINE.md](docs/agent-guide/08-APPROVAL-PIPELINE.md) | 8-phase Copilot approval + DB firewall |
 | [09-GAPS.md](docs/agent-guide/09-GAPS.md) | Known test/feature/doc gaps + next steps |
 
+## Copilot Assignment Safety (March 2026)
+
+Five fixes prevent the 12-empty-PR failure. Agents must use these APIs:
+
+| API | Purpose |
+|-----|---------|
+| `github.assignCopilot(owner, repo, issueNumber)` | Forces `fetch` transport — `gh` CLI silently fails |
+| `github.getIssue(owner, repo, issueNumber)` | Post-assignment verification — confirm `copilot` in assignees |
+| `--max-copilot-concurrency N` | Rate limit concurrent Copilot assignments (default: 1) |
+| `--sequential-copilot` | Alias for `--max-copilot-concurrency 1` |
+
+**Chain-advancer** also checks previous entry's PR has real changes before advancing.
+
+See [08-APPROVAL-PIPELINE.md](docs/agent-guide/08-APPROVAL-PIPELINE.md) for full details.
+
+## Monorepo: audit-orchestrator
+
+`@dabighomie/audit-orchestrator` is bundled as a local package at `packages/audit-orchestrator/`.
+- Dependency: `"file:./packages/audit-orchestrator"` in package.json
+- After `npm install`, it symlinks into `node_modules/@dabighomie/audit-orchestrator`
+- Used by: `src/clusters/index.ts` → `visualAuditCluster`
+- **If missing**: Run `npm install` from ugwtf root — the `file:` protocol handles linking
+
 ## Build & Validate
 
 ```bash

@@ -48,6 +48,8 @@ If built: `ugwtf <command> [repos...] [flags]`
 | `--path` | string | — | Scope prompt scanning to path (generate-chain) |
 | `--no-cache` | boolean | false | Disable repo unchanged-skip cache |
 | `--output` | string | — | Report format: json\|markdown\|summary |
+| `--max-copilot-concurrency` | number | 1 | Max issues assigned to Copilot at once |
+| `--sequential-copilot` | boolean | false | Alias for `--max-copilot-concurrency 1` |
 
 ## Repo Aliases
 
