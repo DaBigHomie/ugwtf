@@ -37,8 +37,8 @@ fixFile('README.md', [
   [/~?85 agents/g, '86 agents'],
   [/34 clusters/g, '35 clusters'],
   [/~?85 agent implementations/g, '86 agent implementations'],
-  [/156 tests.*across.*test files[^\n]*/g, '383 tests across 20 test files'],
   [/\*\*156 tests\*\*/g, '**383 tests**'],
+  [/156 tests.*across.*test files[^\n]*/g, '**383 tests** across 20 test files'],
   ['Private — DaBigHomie', 'MIT — see [LICENSE](LICENSE) for details.'],
 ]);
 

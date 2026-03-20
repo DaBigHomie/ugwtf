@@ -256,7 +256,7 @@ npm run build
 ## Testing
 
 - **Framework**: Vitest
-- **383 tests across 20 test files
+- **383 tests** across 20 test files
 - **Coverage threshold**: 60% lines
 
 ```
