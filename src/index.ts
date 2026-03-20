@@ -100,6 +100,8 @@ function printUsage(): void {
     --concurrency N  Max parallel repos (default: 3)
     --cluster ID     Run specific cluster(s) (repeatable)
     --output FMT     Output format: json, markdown, summary (default: summary)
+    --max-copilot-concurrency N  Max issues assigned to Copilot at once (default: 1)
+    --sequential-copilot         Alias for --max-copilot-concurrency 1
     --debounce N     Watch-mode debounce interval in ms (default: 1000)
     --help, -h       Show this help
 
@@ -187,6 +189,18 @@ export function parseArgs(argv: string[]): OrchestratorOptions | null {
         process.exit(1);
       }
       extras.path = p;
+    } else if (arg === '--max-copilot-concurrency') {
+      i++;
+      const rawVal = args[i];
+      const val = rawVal ? parseInt(rawVal) : NaN;
+      if (isNaN(val) || val < 1) {
+        console.error('--max-copilot-concurrency requires a positive integer');
+        process.exit(1);
+      }
+      extras.maxCopilotConcurrency = String(val);
+    } else if (arg === '--sequential-copilot') {
+      extras.sequentialCopilot = 'true';
+      extras.maxCopilotConcurrency = '1';
     } else if (arg === '--no-cache') {
       noCache = true;
     } else if (arg?.startsWith('--')) {

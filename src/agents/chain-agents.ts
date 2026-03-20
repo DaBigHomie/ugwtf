@@ -458,6 +458,50 @@ const chainAdvancer: Agent = {
       };
     }
 
+    // Fix 2: Issue-level rate limiting — check active Copilot assignments
+    const maxConcurrency = parseInt(ctx.extras?.['maxCopilotConcurrency'] ?? '1', 10);
+    const inProgress = await ctx.github.listIssues(owner, repo, 'open', ['automation:in-progress']);
+    if (inProgress.length >= maxConcurrency) {
+      ctx.logger.warn(`Rate limited: ${inProgress.length}/${maxConcurrency} issues already in-progress`);
+      return {
+        agentId: 'chain-advancer',
+        status: 'success',
+        repo: ctx.repoAlias,
+        duration: Date.now() - start,
+        message: `Rate limited — ${inProgress.length} in-progress (max ${maxConcurrency}). Next: ${nextEntry.prompt} (#${nextEntry.issue})`,
+        artifacts: [],
+      };
+    }
+
+    // Fix 4: PR quality gate — if previous chain entry has a PR, verify it has real changes
+    const prevEntries = config.chain
+      .filter(e => e.position < nextEntry.position && e.issue !== null && !openIssueNumbers.has(e.issue));
+    if (prevEntries.length > 0) {
+      const lastCompleted = prevEntries.sort((a, b) => b.position - a.position)[0]!;
+      const prs = await ctx.github.listPRs(owner, repo, 'all');
+      const linkedPR = prs.find(pr =>
+        pr.body?.includes(`#${lastCompleted.issue}`) ||
+        pr.body?.includes(`Fixes #${lastCompleted.issue}`) ||
+        pr.body?.includes(`Closes #${lastCompleted.issue}`)
+      );
+      if (linkedPR) {
+        const files = await ctx.github.getPRFiles(owner, repo, linkedPR.number);
+        const totalAdditions = files.reduce((sum, f) => sum + f.additions, 0);
+        const nonLockFiles = files.filter(f => !f.filename.endsWith('lock.json') && !f.filename.endsWith('.lock'));
+        if (nonLockFiles.length === 0 || totalAdditions < 10) {
+          ctx.logger.warn(`PR #${linkedPR.number} for previous entry ${lastCompleted.prompt} appears empty (${nonLockFiles.length} files, ${totalAdditions} additions)`);
+          return {
+            agentId: 'chain-advancer',
+            status: 'failed',
+            repo: ctx.repoAlias,
+            duration: Date.now() - start,
+            message: `Quality gate: PR #${linkedPR.number} (${lastCompleted.prompt}) has insufficient changes — ${nonLockFiles.length} files, ${totalAdditions} additions`,
+            artifacts: [`EMPTY_PR: #${linkedPR.number}`],
+          };
+        }
+      }
+    }
+
     // Assign Copilot to the next entry
     ctx.logger.info(`Advancing chain: assigning Copilot to ${nextEntry.prompt} (#${nextEntry.issue})`);
 
@@ -488,10 +532,26 @@ const chainAdvancer: Agent = {
       ].join('\n');
 
       await ctx.github.addComment(owner, repo, nextEntry.issue!, contextComment);
-      await ctx.github.assignIssue(owner, repo, nextEntry.issue!, ['copilot']);
+      // Fix 1: Use assignCopilot (forces fetch transport instead of gh CLI)
+      await ctx.github.assignCopilot(owner, repo, nextEntry.issue!);
       await ctx.github.addLabels(owner, repo, nextEntry.issue!, ['automation:in-progress']);
 
-      ctx.logger.success(`Advanced chain to ${nextEntry.prompt} (#${nextEntry.issue})`);
+      // Fix 3: Verify assignment took effect
+      const updatedIssue = await ctx.github.getIssue(owner, repo, nextEntry.issue!);
+      const verified = updatedIssue.assignees.some(a => a.login === 'copilot');
+      if (!verified) {
+        ctx.logger.error(`Assignment verification FAILED for #${nextEntry.issue} — Copilot not in assignees`);
+        return {
+          agentId: 'chain-advancer',
+          status: 'failed',
+          repo: ctx.repoAlias,
+          duration: Date.now() - start,
+          message: `Copilot assignment verified=false for #${nextEntry.issue}. REST API may have silently failed.`,
+          artifacts: [`UNVERIFIED: #${nextEntry.issue}`],
+        };
+      }
+
+      ctx.logger.success(`Advanced + verified chain to ${nextEntry.prompt} (#${nextEntry.issue})`);
 
       return {
         agentId: 'chain-advancer',

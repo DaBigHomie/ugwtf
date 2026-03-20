@@ -284,6 +284,45 @@ export function createGitHubClient(logger: Logger, dryRun = false): GitHubClient
       });
     },
 
+    async assignCopilot(owner, repo, issueNumber) {
+      if (dryRun) {
+        logger.debug(`[DRY RUN] Would assign Copilot to #${issueNumber}`);
+        return;
+      }
+      // Force fetch transport — gh CLI silently fails for Copilot assignment.
+      // The REST API via fetch + GITHUB_TOKEN is the reliable transport.
+      const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN ?? '';
+      if (!token) {
+        logger.warn('No GITHUB_TOKEN — falling back to gh CLI for Copilot assignment (may silently fail)');
+        await ghApi('POST', `/repos/${owner}/${repo}/issues/${issueNumber}/assignees`, {
+          assignees: ['copilot'] as unknown as string,
+        });
+        return;
+      }
+      const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/issues/${issueNumber}/assignees`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'Authorization': `Bearer ${token}`,
+          'X-GitHub-Api-Version': '2022-11-28',
+          'Content-Type': 'application/json',
+          'User-Agent': 'ugwtf/1.0.0',
+        },
+        body: JSON.stringify({ assignees: ['copilot'] }),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`Copilot assignment failed (${res.status}): ${text}`);
+      }
+      logger.debug(`[FETCH] Assigned Copilot to #${issueNumber}`);
+    },
+
+    async getIssue(owner, repo, issueNumber) {
+      const raw = await ghApi('GET', `/repos/${owner}/${repo}/issues/${issueNumber}`);
+      return parseJSON<GitHubIssue>(raw);
+    },
+
     async getFileContents(owner, repo, path) {
       if (dryRun) return '';
       const raw = await ghApi('GET', `/repos/${owner}/${repo}/contents/${path}`);

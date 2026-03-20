@@ -113,6 +113,8 @@ function createMockGitHub(): GitHubClient {
     addLabels: vi.fn(),
     removeLabel: vi.fn(),
     assignIssue: vi.fn(),
+    assignCopilot: vi.fn(),
+    getIssue: vi.fn().mockResolvedValue({ number: 1, title: '', body: '', state: 'open', labels: [], assignees: [{ login: 'copilot' }], html_url: '', created_at: '', updated_at: '' }),
     listPRs: vi.fn().mockResolvedValue([]),
     getPRFiles: vi.fn().mockResolvedValue([]),
     listWorkflowRuns: vi.fn().mockResolvedValue([]),

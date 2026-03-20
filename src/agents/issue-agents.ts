@@ -75,12 +75,31 @@ const copilotAssignmentAgent: Agent = {
     }
 
     const { owner, repo } = parseSlug(repoConfig.slug);
+
+    // Fix 2: Issue-level rate limiting — check how many are already in-progress
+    const maxConcurrency = parseInt(ctx.extras?.['maxCopilotConcurrency'] ?? '1', 10);
+    const inProgressIssues = await ctx.github.listIssues(owner, repo, 'open', ['automation:in-progress']);
+    if (inProgressIssues.length >= maxConcurrency) {
+      ctx.logger.warn(`Rate limited: ${inProgressIssues.length}/${maxConcurrency} Copilot issues already in-progress`);
+      return {
+        agentId: this.id, status: 'success', repo: ctx.repoAlias, duration: Date.now() - start,
+        message: `Rate limited — ${inProgressIssues.length} in-progress (max ${maxConcurrency})`,
+        artifacts: inProgressIssues.map(i => `IN-PROGRESS: #${i.number}`),
+      };
+    }
+
     const issues = await ctx.github.listIssues(owner, repo, 'open', ['agent:copilot']);
 
     let assigned = 0;
     const errors: string[] = [];
+    const slotsAvailable = maxConcurrency - inProgressIssues.length;
 
     for (const issue of issues) {
+      if (assigned >= slotsAvailable) {
+        ctx.logger.info(`Rate limit reached — assigned ${assigned}, stopping`);
+        break;
+      }
+
       const hasCopilot = issue.assignees.some(a => a.login === 'copilot');
       if (hasCopilot) continue;
 
@@ -94,10 +113,21 @@ const copilotAssignmentAgent: Agent = {
       }
 
       try {
-        await ctx.github.assignIssue(owner, repo, issue.number, ['copilot']);
+        // Fix 1: Use assignCopilot (forces fetch transport)
+        await ctx.github.assignCopilot(owner, repo, issue.number);
         await ctx.github.addLabels(owner, repo, issue.number, ['automation:in-progress']);
+
+        // Fix 3: Verify assignment took effect
+        const updated = await ctx.github.getIssue(owner, repo, issue.number);
+        const verified = updated.assignees.some(a => a.login === 'copilot');
+        if (!verified) {
+          ctx.logger.error(`Assignment verification FAILED for #${issue.number} — Copilot not in assignees`);
+          errors.push(`#${issue.number}: Assignment verification failed`);
+          continue;
+        }
+
         assigned++;
-        ctx.logger.success(`Assigned Copilot to #${issue.number}: ${issue.title}`);
+        ctx.logger.success(`Assigned + verified Copilot on #${issue.number}: ${issue.title}`);
       } catch (err) {
         errors.push(`#${issue.number}: ${err}`);
         ctx.logger.error(`Failed to assign #${issue.number}: ${err}`);
