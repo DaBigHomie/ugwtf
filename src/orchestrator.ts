@@ -29,6 +29,7 @@ const COMMAND_CLUSTER_MAP: Record<string, string[]> = {
   status:      ['audit'],
   prompts:     ['prompts'],
   chain:       ['chain'],
+  'generate-chain': ['generate-chain'],
 
   // Domain scans — individual
   security:    ['security'],
@@ -120,11 +121,12 @@ export async function orchestrate(options: OrchestratorOptions): Promise<SwarmRe
     repos: options.repos,
     clusters,
     dryRun: options.dryRun,
+    extras: options.extras ?? {},
   };
 
   // G53: Skip repos whose HEAD hasn't changed since last successful run
   const skippedRepos: string[] = [];
-  if (swarmConfig.repos.length > 0) {
+  if (swarmConfig.repos.length > 0 && !options.noCache) {
     swarmConfig.repos = swarmConfig.repos.filter(alias => {
       const repoConfig = getRepo(alias);
       const localPath = repoConfig?.localPath;

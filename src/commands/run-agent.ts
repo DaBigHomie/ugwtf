@@ -101,6 +101,7 @@ export async function runAgentCommand(options: RunAgentOptions): Promise<void> {
       localPath: repoConfig.localPath ?? process.cwd(),
       dryRun: options.dryRun,
       logger,
+      extras: {},
     };
 
     if (!agent.shouldRun(ctx)) {

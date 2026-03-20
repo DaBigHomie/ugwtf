@@ -51,6 +51,7 @@ const WATCH_COMMAND = 'watch' as const;
 
 const VALID_COMMANDS: OrchestratorCommand[] = [
   'deploy', 'validate', 'fix', 'labels', 'issues', 'prs', 'audit', 'status', 'prompts', 'chain',
+  'generate-chain',
   'scan', 'security', 'performance', 'a11y', 'seo', 'docs', 'commerce',
   'scenarios', 'design-system', 'supabase', 'gateway',
 ];
@@ -139,7 +140,9 @@ export function parseArgs(argv: string[]): OrchestratorOptions | null {
   let dryRun = false;
   let verbose = false;
   let concurrency = 3;
+  let noCache = false;
   let output: OutputFormat | undefined;
+  const extras: Record<string, string> = {};
 
   const knownAliases = new Set(allAliases());
   const validOutputFormats: OutputFormat[] = ['json', 'markdown', 'summary'];
@@ -176,6 +179,16 @@ export function parseArgs(argv: string[]): OrchestratorOptions | null {
         process.exit(1);
       }
       output = fmt;
+    } else if (arg === '--path') {
+      i++;
+      const p = args[i];
+      if (!p) {
+        console.error('--path requires a folder or prompt file path');
+        process.exit(1);
+      }
+      extras.path = p;
+    } else if (arg === '--no-cache') {
+      noCache = true;
     } else if (arg?.startsWith('--')) {
       console.error(`Unknown option: ${arg}`);
       process.exit(1);
@@ -196,6 +209,8 @@ export function parseArgs(argv: string[]): OrchestratorOptions | null {
     verbose,
     concurrency,
     output,
+    noCache,
+    extras,
   };
 }
 

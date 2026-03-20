@@ -10,14 +10,14 @@
  */
 import type { Agent, AgentResult, AgentContext, GitHubIssue } from '../types.js';
 import { getRepo } from '../config/repo-registry.js';
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, basename } from 'node:path';
 
 // ---------------------------------------------------------------------------
 // Prompt data model
 // ---------------------------------------------------------------------------
 
-interface ParsedPrompt {
+export interface ParsedPrompt {
   filePath: string;
   fileName: string;
   format: 'A' | 'B';
@@ -36,7 +36,54 @@ interface ParsedPrompt {
   sections: string[];
   checklistItems: number;
   totalLines: number;
+  depends: string[];            // dependency references parsed from prompt body
   raw: string;
+}
+
+// ---------------------------------------------------------------------------
+// Dependency parser
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse dependency declarations from prompt markdown body.
+ * Supports:
+ *   - "**Dependencies**: Gaps #20 must be completed first." → ['#20']
+ *   - "**Dependencies**: Gaps #7, #8" → ['#7', '#8']
+ *   - "**Dependencies**: None" or "can run in parallel" → []
+ *   - "**Depends On**: FI-01, FI-03" → ['FI-01', 'FI-03']
+ *   - "**Dependencies**: 01-supabase-client-setup" → ['01-supabase-client-setup']
+ */
+export function parseDependencies(content: string): string[] {
+  // Match lines like **Dependencies**: ... or **Depends On**: ...
+  const depLineMatch = content.match(/\*\*Dependenc(?:ies|y)\*\*:\s*(.+)/i)
+    ?? content.match(/\*\*Depends? On\*\*:\s*(.+)/i);
+
+  if (!depLineMatch) return [];
+  const depLine = depLineMatch[1]!.trim();
+
+  // "None" or "can run in parallel" → no deps
+  if (/^none\b/i.test(depLine) || /can run in parallel/i.test(depLine)) return [];
+
+  const deps: string[] = [];
+
+  // Pattern: Gaps #N → extract all #N
+  for (const m of depLine.matchAll(/#(\d+)/g)) {
+    deps.push(`#${m[1]}`);
+  }
+  if (deps.length > 0) return deps;
+
+  // Pattern: FI-01, FI-03 style prompt IDs
+  for (const m of depLine.matchAll(/([A-Z]+-\d+)/g)) {
+    deps.push(m[1]!);
+  }
+  if (deps.length > 0) return deps;
+
+  // Pattern: filename references (01-supabase-client-setup)
+  for (const m of depLine.matchAll(/(\d{2}-[a-z][a-z0-9-]+)/g)) {
+    deps.push(m[1]!);
+  }
+
+  return deps;
 }
 
 // ---------------------------------------------------------------------------
@@ -75,6 +122,7 @@ function parseFormatB(content: string, filePath: string): ParsedPrompt {
     sections,
     checklistItems,
     totalLines: lines.length,
+    depends: parseDependencies(content),
     raw: content,
   };
 }
@@ -109,6 +157,7 @@ function parseFormatA(content: string, filePath: string): ParsedPrompt {
     sections,
     checklistItems,
     totalLines: lines.length,
+    depends: parseDependencies(content),
     raw: content,
   };
 }
@@ -116,8 +165,8 @@ function parseFormatA(content: string, filePath: string): ParsedPrompt {
 async function scanDirectory(dirPath: string, format: 'A' | 'B'): Promise<ParsedPrompt[]> {
   const prompts: ParsedPrompt[] = [];
   try {
-    const files = await readdir(dirPath);
-    const promptFiles = files.filter(f => f.endsWith('.prompt.md'));
+    const entries = await readdir(dirPath);
+    const promptFiles = entries.filter(f => f.endsWith('.prompt.md'));
 
     for (const file of promptFiles) {
       try {
@@ -131,6 +180,66 @@ async function scanDirectory(dirPath: string, format: 'A' | 'B'): Promise<Parsed
         // Skip unreadable files
       }
     }
+
+    // Recurse into subdirectories (full directory tree)
+    for (const entry of entries) {
+      if (entry.startsWith('.') || entry === 'node_modules') continue;
+      try {
+        const subPath = join(dirPath, entry);
+        const info = await stat(subPath);
+        if (info.isDirectory()) {
+          const subPrompts = await scanDirectory(subPath, format);
+          prompts.push(...subPrompts);
+        }
+      } catch {
+        // Skip inaccessible subdirectories
+      }
+    }
+  } catch {
+    // Directory doesn't exist — that's fine
+  }
+  return prompts;
+}
+
+/**
+ * Scans a directory tree once, auto-detecting format per file.
+ * Files with YAML frontmatter (starting with ---) are parsed as Format A;
+ * all others are parsed as Format B.
+ */
+async function scanDirectoryAuto(dirPath: string): Promise<ParsedPrompt[]> {
+  const prompts: ParsedPrompt[] = [];
+  try {
+    const entries = await readdir(dirPath);
+    const promptFiles = entries.filter(f => f.endsWith('.prompt.md'));
+
+    for (const file of promptFiles) {
+      try {
+        const fullPath = join(dirPath, file);
+        const content = await readFile(fullPath, 'utf-8');
+        const format = content.trimStart().startsWith('---') ? 'A' : 'B';
+        const parsed = format === 'B'
+          ? parseFormatB(content, fullPath)
+          : parseFormatA(content, fullPath);
+        prompts.push(parsed);
+      } catch {
+        // Skip unreadable files
+      }
+    }
+
+    // Recurse into subdirectories (full directory tree)
+    for (const entry of entries) {
+      if (entry.startsWith('.') || entry === 'node_modules') continue;
+      try {
+        const subPath = join(dirPath, entry);
+        const info = await stat(subPath);
+        if (info.isDirectory()) {
+          const subPrompts = await scanDirectoryAuto(subPath);
+          prompts.push(...subPrompts);
+        }
+      } catch {
+        // Skip inaccessible subdirectories
+      }
+    }
   } catch {
     // Directory doesn't exist — that's fine
   }
@@ -138,19 +247,25 @@ async function scanDirectory(dirPath: string, format: 'A' | 'B'): Promise<Parsed
 }
 
 // ---------------------------------------------------------------------------
-// Shared scan cache — avoids 4x redundant directory reads per cluster run
+// Shared scan cache — avoids redundant directory reads per cluster run
 // ---------------------------------------------------------------------------
 
 const scanCache = new Map<string, ParsedPrompt[]>();
 
-async function scanAllPrompts(localPath: string): Promise<ParsedPrompt[]> {
+export async function scanAllPrompts(localPath: string): Promise<ParsedPrompt[]> {
   const cached = scanCache.get(localPath);
   if (cached) return cached;
 
   const formatA = await scanDirectory(join(localPath, '.github', 'prompts'), 'A');
   const formatB = await scanDirectory(join(localPath, 'docs', 'agent-prompts'), 'B');
-  const formatBExtra = await scanDirectory(join(localPath, 'docs', 'prompts'), 'B');
-  const all = [...formatA, ...formatB, ...formatBExtra];
+  // Scan docs/prompts once, auto-detecting format per file via frontmatter
+  const docsPrompts = await scanDirectoryAuto(join(localPath, 'docs', 'prompts'));
+  // Deduplicate by filePath (in case paths overlap across scan roots)
+  const byPath = new Map<string, ParsedPrompt>();
+  for (const p of [...formatA, ...formatB, ...docsPrompts]) {
+    byPath.set(p.filePath, p);
+  }
+  const all = [...byPath.values()];
 
   scanCache.set(localPath, all);
   return all;
@@ -196,7 +311,7 @@ function parseEstimatedTime(timeStr: string): number {
 // Validation scoring (gold standard)
 // ---------------------------------------------------------------------------
 
-interface ValidationResult {
+export interface ValidationResult {
   prompt: ParsedPrompt;
   score: number;
   maxScore: number;
@@ -204,7 +319,7 @@ interface ValidationResult {
   criteria: Array<{ name: string; points: number; maxPoints: number; note: string }>;
 }
 
-function validatePrompt(p: ParsedPrompt): ValidationResult {
+export function validatePrompt(p: ParsedPrompt): ValidationResult {
   const criteria: ValidationResult['criteria'] = [];
 
   // 1. Title clarity (10 pts)

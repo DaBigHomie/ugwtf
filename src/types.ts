@@ -48,6 +48,8 @@ export interface AgentContext {
   localPath: string;
   dryRun: boolean;
   logger: Logger;
+  /** Extra key-value options from CLI (e.g., path) */
+  extras: Record<string, string>;
 }
 
 // ---------------------------------------------------------------------------
@@ -79,6 +81,8 @@ export interface SwarmConfig {
   /** Which clusters to run (IDs). Empty = all */
   clusters: string[];
   dryRun: boolean;
+  /** Extra key-value options from CLI (e.g., path) */
+  extras?: Record<string, string>;
 }
 
 export interface SwarmResult {
@@ -125,6 +129,7 @@ export type OrchestratorCommand =
   | 'status'      // Show current state
   | 'prompts'     // Scan, validate, forecast, and create issues from .prompt.md files
   | 'chain'       // Manage prompt-chain lifecycle: load, create issues, advance
+  | 'generate-chain' // Auto-generate prompt-chain.json from scanned prompts
   // Domain scans
   | 'scan'        // Run all domain-scan clusters (fsd, security, a11y, etc.)
   | 'security'    // Security scanning + secret leak detection
@@ -151,6 +156,10 @@ export interface OrchestratorOptions {
   output?: OutputFormat;
   /** G52: enable watch mode — re-run on file changes */
   watch?: boolean;
+  /** Skip repo-unchanged cache — force all repos to run */
+  noCache?: boolean;
+  /** Extra key-value options passed to agents (e.g., --path) */
+  extras?: Record<string, string>;
 }
 
 // ---------------------------------------------------------------------------
