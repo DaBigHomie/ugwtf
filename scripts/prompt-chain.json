@@ -1,0 +1,437 @@
+{
+  "version": 3,
+  "description": "UGWTF self-publish chain — 40 tasks across 8 waves (dogfooding validation)",
+  "repo": "DaBigHomie/ugwtf",
+  "labels": [
+    "automation:copilot",
+    "agent:copilot",
+    "publish",
+    "dogfood"
+  ],
+  "chain": [
+    {
+      "position": 1,
+      "prompt": "FI-01",
+      "file": "docs/agent-prompts/publish-chain/01-exclude-test-files-from-tsconfig.prompt.md",
+      "wave": 1,
+      "severity": "critical",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 2,
+      "prompt": "FI-02",
+      "file": "docs/agent-prompts/publish-chain/02-remove-mocks-from-dist.prompt.md",
+      "wave": 1,
+      "severity": "critical",
+      "depends": [
+        "FI-01"
+      ],
+      "issue": null
+    },
+    {
+      "position": 3,
+      "prompt": "FI-03",
+      "file": "docs/agent-prompts/publish-chain/03-rebuild-dist-after-tsconfig-fix.prompt.md",
+      "wave": 1,
+      "severity": "critical",
+      "depends": [
+        "FI-01",
+        "FI-02"
+      ],
+      "issue": null
+    },
+    {
+      "position": 4,
+      "prompt": "FI-04",
+      "file": "docs/agent-prompts/publish-chain/04-verify-tests-still-pass-after-tsconfig-change.prompt.md",
+      "wave": 1,
+      "severity": "critical",
+      "depends": [
+        "FI-03"
+      ],
+      "issue": null
+    },
+    {
+      "position": 5,
+      "prompt": "FI-05",
+      "file": "docs/agent-prompts/publish-chain/05-run-npm-publish-dry-run-post-rebuild.prompt.md",
+      "wave": 1,
+      "severity": "critical",
+      "depends": [
+        "FI-04"
+      ],
+      "issue": null
+    },
+    {
+      "position": 6,
+      "prompt": "FI-06",
+      "file": "docs/agent-prompts/publish-chain/06-decide-audit-orchestrator-strategy.prompt.md",
+      "wave": 2,
+      "severity": "critical",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 7,
+      "prompt": "FI-07",
+      "file": "docs/agent-prompts/publish-chain/07-publish-dabighomie-audit-orchestrator.prompt.md",
+      "wave": 2,
+      "severity": "critical",
+      "depends": [
+        "FI-06"
+      ],
+      "issue": null
+    },
+    {
+      "position": 8,
+      "prompt": "FI-08",
+      "file": "docs/agent-prompts/publish-chain/08-update-ugwtf-dependency-from-file-to-version.prompt.md",
+      "wave": 2,
+      "severity": "critical",
+      "depends": [
+        "FI-07"
+      ],
+      "issue": null
+    },
+    {
+      "position": 9,
+      "prompt": "FI-09",
+      "file": "docs/agent-prompts/publish-chain/09-clean-install-to-verify-external-resolution.prompt.md",
+      "wave": 2,
+      "severity": "critical",
+      "depends": [
+        "FI-08"
+      ],
+      "issue": null
+    },
+    {
+      "position": 10,
+      "prompt": "FI-10",
+      "file": "docs/agent-prompts/publish-chain/10-update-monorepo-test-ts-for-registry-dependency.prompt.md",
+      "wave": 2,
+      "severity": "critical",
+      "depends": [
+        "FI-08"
+      ],
+      "issue": null
+    },
+    {
+      "position": 11,
+      "prompt": "FI-11",
+      "file": "docs/agent-prompts/publish-chain/11-add-repository-field-to-package-json.prompt.md",
+      "wave": 3,
+      "severity": "critical",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 12,
+      "prompt": "FI-12",
+      "file": "docs/agent-prompts/publish-chain/12-add-engines-field-to-package-json.prompt.md",
+      "wave": 3,
+      "severity": "high",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 13,
+      "prompt": "FI-13",
+      "file": "docs/agent-prompts/publish-chain/13-run-npm-pkg-fix.prompt.md",
+      "wave": 3,
+      "severity": "medium",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 14,
+      "prompt": "FI-14",
+      "file": "docs/agent-prompts/publish-chain/14-verify-templates-is-in-files-array.prompt.md",
+      "wave": 3,
+      "severity": "medium",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 15,
+      "prompt": "FI-15",
+      "file": "docs/agent-prompts/publish-chain/15-add-explicit-publishconfig-for-scoped-public-access.prompt.md",
+      "wave": 3,
+      "severity": "medium",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 16,
+      "prompt": "FI-16",
+      "file": "docs/agent-prompts/publish-chain/16-create-license-file-for-ugwtf.prompt.md",
+      "wave": 4,
+      "severity": "high",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 17,
+      "prompt": "FI-17",
+      "file": "docs/agent-prompts/publish-chain/17-create-license-file-for-audit-orchestrator.prompt.md",
+      "wave": 4,
+      "severity": "high",
+      "depends": [
+        "FI-07"
+      ],
+      "issue": null
+    },
+    {
+      "position": 18,
+      "prompt": "FI-18",
+      "file": "docs/agent-prompts/publish-chain/18-reconcile-readme-license-section.prompt.md",
+      "wave": 4,
+      "severity": "medium",
+      "depends": [
+        "FI-16"
+      ],
+      "issue": null
+    },
+    {
+      "position": 19,
+      "prompt": "FI-19",
+      "file": "docs/agent-prompts/publish-chain/19-verify-license-in-npm-tarball.prompt.md",
+      "wave": 4,
+      "severity": "low",
+      "depends": [
+        "FI-16"
+      ],
+      "issue": null
+    },
+    {
+      "position": 20,
+      "prompt": "FI-20",
+      "file": "docs/agent-prompts/publish-chain/20-update-agents-md-test-count.prompt.md",
+      "wave": 5,
+      "severity": "high",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 21,
+      "prompt": "FI-21",
+      "file": "docs/agent-prompts/publish-chain/21-update-copilot-instructions-md-test-count.prompt.md",
+      "wave": 5,
+      "severity": "high",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 22,
+      "prompt": "FI-22",
+      "file": "docs/agent-prompts/publish-chain/22-update-05-testing-md.prompt.md",
+      "wave": 5,
+      "severity": "high",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 23,
+      "prompt": "FI-23",
+      "file": "docs/agent-prompts/publish-chain/23-update-readme-md-test-count.prompt.md",
+      "wave": 5,
+      "severity": "high",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 24,
+      "prompt": "FI-24",
+      "file": "docs/agent-prompts/publish-chain/24-update-readme-md-agent-cluster-count.prompt.md",
+      "wave": 5,
+      "severity": "medium",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 25,
+      "prompt": "FI-25",
+      "file": "docs/agent-prompts/publish-chain/25-fix-audit-results-json-hardcoded-paths.prompt.md",
+      "wave": 5,
+      "severity": "medium",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 26,
+      "prompt": "FI-26",
+      "file": "docs/agent-prompts/publish-chain/26-update-09-gaps-md-with-resolved-gaps.prompt.md",
+      "wave": 5,
+      "severity": "medium",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 27,
+      "prompt": "FI-27",
+      "file": "docs/agent-prompts/publish-chain/27-update-copilot-instructions-stats-section.prompt.md",
+      "wave": 5,
+      "severity": "medium",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 28,
+      "prompt": "FI-28",
+      "file": "docs/agent-prompts/publish-chain/28-create-changelog-md.prompt.md",
+      "wave": 6,
+      "severity": "medium",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 29,
+      "prompt": "FI-29",
+      "file": "docs/agent-prompts/publish-chain/29-create-npmignore.prompt.md",
+      "wave": 6,
+      "severity": "low",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 30,
+      "prompt": "FI-30",
+      "file": "docs/agent-prompts/publish-chain/30-verify-release-yml-workflow.prompt.md",
+      "wave": 6,
+      "severity": "medium",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 31,
+      "prompt": "FI-31",
+      "file": "docs/agent-prompts/publish-chain/31-confirm-version-number-strategy.prompt.md",
+      "wave": 6,
+      "severity": "medium",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 32,
+      "prompt": "FI-32",
+      "file": "docs/agent-prompts/publish-chain/32-verify-packages-excluded-from-tarball.prompt.md",
+      "wave": 6,
+      "severity": "low",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 33,
+      "prompt": "FI-33",
+      "file": "docs/agent-prompts/publish-chain/33-verify-global-install-flow.prompt.md",
+      "wave": 6,
+      "severity": "medium",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 34,
+      "prompt": "FI-34",
+      "file": "docs/agent-prompts/publish-chain/34-create-claude-md.prompt.md",
+      "wave": 7,
+      "severity": "low",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 35,
+      "prompt": "FI-35",
+      "file": "docs/agent-prompts/publish-chain/35-run-npm-audit-on-dependencies.prompt.md",
+      "wave": 7,
+      "severity": "medium",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 36,
+      "prompt": "FI-36",
+      "file": "docs/agent-prompts/publish-chain/36-verify-dist-index-js-exports.prompt.md",
+      "wave": 7,
+      "severity": "low",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 37,
+      "prompt": "FI-37",
+      "file": "docs/agent-prompts/publish-chain/37-check-for-console-log-in-production-code.prompt.md",
+      "wave": 7,
+      "severity": "low",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 38,
+      "prompt": "FI-38",
+      "file": "docs/agent-prompts/publish-chain/38-verify-all-repo-configs-load-correctly.prompt.md",
+      "wave": 7,
+      "severity": "low",
+      "depends": [],
+      "issue": null
+    },
+    {
+      "position": 39,
+      "prompt": "FI-39",
+      "file": "docs/agent-prompts/publish-chain/39-final-pre-publish-checklist.prompt.md",
+      "wave": 8,
+      "severity": "critical",
+      "depends": [
+        "FI-01",
+        "FI-02",
+        "FI-03",
+        "FI-04",
+        "FI-05",
+        "FI-06",
+        "FI-07",
+        "FI-08",
+        "FI-09",
+        "FI-10",
+        "FI-11",
+        "FI-12",
+        "FI-13",
+        "FI-14",
+        "FI-15",
+        "FI-16",
+        "FI-17",
+        "FI-18",
+        "FI-19",
+        "FI-20",
+        "FI-21",
+        "FI-22",
+        "FI-23",
+        "FI-24",
+        "FI-25",
+        "FI-26",
+        "FI-27",
+        "FI-28",
+        "FI-29",
+        "FI-30",
+        "FI-31",
+        "FI-32",
+        "FI-33",
+        "FI-34",
+        "FI-35",
+        "FI-36",
+        "FI-37",
+        "FI-38"
+      ],
+      "issue": null
+    },
+    {
+      "position": 40,
+      "prompt": "FI-40",
+      "file": "docs/agent-prompts/publish-chain/40-npm-publish-v1-0-0.prompt.md",
+      "wave": 8,
+      "severity": "critical",
+      "depends": [
+        "FI-39"
+      ],
+      "issue": null
+    }
+  ]
+}

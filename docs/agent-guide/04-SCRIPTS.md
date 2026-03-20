@@ -28,6 +28,13 @@ All scripts in `scripts/`. Run with `npx tsx scripts/<name>.mts`.
 | `validate` | `tsx src/index.ts validate` | Run quality gates |
 | `fix` | `tsx src/index.ts fix` | Auto-fix issues |
 | `labels` | `tsx src/index.ts labels` | Sync labels |
+| `chain:folder:verify` | `tsc --noEmit && vitest run && tsx src/index.ts generate-chain --dry-run --verbose --no-cache` | **Generic**: verify prompts in any folder — pass `-- <repo> --path <folder>` |
+| `chain:folder:run` | `tsx src/index.ts chain` | **Generic**: execute chain for any repo — pass `-- <repo> --verbose` |
+| `dogfood:setup` | `tsx scripts/generate-publish-chain.mts` | Self-publish: generate 40 prompts + chain config |
+| `dogfood:verify` | `tsc + vitest + chain dry-run + generate-chain dry-run (ugwtf, publish-chain)` | Self-publish: full validation (hardcoded) |
+| `dogfood:execute` | `tsx src/index.ts chain ugwtf --verbose` | Self-publish: create/advance issues |
+| `dogfood:full` | `npm run dogfood:setup && npm run dogfood:verify` | Self-publish: setup + verify combined |
+| `publish:verify` | `npm run build && npm publish --dry-run` | Verify package readiness before publish |
 | `type-check` | `tsc --noEmit` | TypeScript validation only |
 | `test` | `vitest run` | Run all tests |
 | `test:watch` | `vitest` | Tests in watch mode |

@@ -32,3 +32,25 @@ All scripts support:
 - `gh` CLI authenticated (`gh auth status`)
 - `npx tsx` available (dev dependency)
 - Run from the UGWTF root directory
+
+## Chain Folder Commands (Generic)
+
+Use these for prompts in **any folder** of **any registered repo** — pass repo and path via `--`:
+
+- `npm run chain:folder:verify -- <repo> --path <folder>` — tsc + tests + generate-chain dry-run
+- `npm run chain:folder:run -- <repo> --verbose` — create issues, advance chain
+
+**Examples:**
+```bash
+npm run chain:folder:verify -- damieus --path docs/agent-prompts/phase-01
+npm run chain:folder:run -- damieus --verbose
+```
+
+## Dogfood Shortcuts (Self-Publish Only)
+
+Hardcoded to ugwtf + `docs/agent-prompts/publish-chain/`:
+
+- `npm run dogfood:setup` — generate 40 self-publish prompts + chain config
+- `npm run dogfood:verify` — full type-check, tests, and both chain dry-runs
+- `npm run dogfood:execute` — create/advance chain issues in GitHub
+- `npm run dogfood:full` — setup + verify in one command

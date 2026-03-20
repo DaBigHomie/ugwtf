@@ -189,6 +189,25 @@ export const REPOS: Record<string, RepoConfig> = {
     ],
     localPath: `${HOME}/management-git/cae-luxury-hair`,
   },
+
+  ugwtf: {
+    slug: 'DaBigHomie/ugwtf',
+    alias: 'ugwtf',
+    framework: 'node',
+    supabaseProjectId: null,
+    supabaseUrlSecret: null,
+    supabaseServiceKeySecret: null,
+    supabaseTypesPath: null,
+    nodeVersion: '20',
+    defaultBranch: 'main',
+    hasE2E: false,
+    e2eCommand: null,
+    extraLabels: [
+      { name: 'publish', color: '6366f1', description: 'npm publish pipeline' },
+      { name: 'dogfood', color: '8b5cf6', description: 'Self-validation (UGWTF on UGWTF)' },
+    ],
+    localPath: `${HOME}/management-git/ugwtf`,
+  },
 };
 
 /** Resolve repo config by alias or slug */

@@ -38,7 +38,52 @@ npx vitest run       # 272 tests pass
 ## Stats
 
 - **86 agents** across **35 clusters**
-- **272 tests** across **15 test files**
+- **383 tests** across **20 test files**
 - **11 automation scripts** in `scripts/`
 - **7 YAML generators** in `src/generators/`
-- **5 registered repos** (damieus, 043, ffs, cae, maximus)
+- **6 registered repos** (damieus, 043, ffs, cae, maximus, ugwtf)
+
+## Chain Workflow (Generic — Any Repo, Any Folder)
+
+For any prompt folder in any registered repo, use the CLI directly:
+
+```bash
+# Verify prompts in a folder (dry-run: toposort, quality scoring, no side effects)
+npm run chain:folder:verify -- <repo> --path <folder>
+
+# Execute chain (create issues, assign Copilot, advance)
+npm run chain:folder:run -- <repo> --verbose
+```
+
+**Examples across repos:**
+```bash
+npm run chain:folder:verify -- damieus --path docs/agent-prompts/phase-01
+npm run chain:folder:verify -- 043 --path docs/agent-prompts/checkout
+npm run chain:folder:run -- damieus --verbose
+```
+
+Or call the CLI directly:
+```bash
+ugwtf generate-chain <repo> --path <folder> --dry-run --verbose
+ugwtf chain <repo> --verbose
+```
+
+## Self-Publish Dogfood (One-Off)
+
+Hardcoded to ugwtf repo + `docs/agent-prompts/publish-chain/`:
+
+```bash
+npm run dogfood:setup     # Generate 40 publish-chain prompts
+npm run dogfood:verify    # tsc + tests + dry-run chain + scoped generate-chain
+npm run dogfood:execute   # Create/advance chain issues in GitHub
+npm run dogfood:full      # setup + verify combined
+```
+
+## No-Manual-Exploration Rule
+
+- ✅ Use `chain:folder:verify` / `chain:folder:run` for any repo's prompts
+- ✅ Use `dogfood:*` scripts for the self-publish chain specifically
+- ❌ Do not manually re-read planning docs to regenerate known artifacts
+- ❌ Do not manually inspect orchestration internals when a dry-run command proves behavior
+
+Manual exploration in a repeatable path wastes context/tokens and introduces avoidable drift.

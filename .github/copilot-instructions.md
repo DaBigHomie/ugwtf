@@ -63,6 +63,35 @@ All may import: types, utils/*, clients/*
 2. `chain <repo>` — reads chain config, creates GitHub issues for entries missing issues, advances chain by assigning Copilot to the next unblocked entry
 3. Prompts are scored 0-100 by `validatePrompt()` (12-point system) — low-scoring prompts emit warnings during chain generation
 
+## Chain Folder Workflow (Generic)
+
+For prompts in any folder of any registered repo:
+
+```bash
+# Verify: tsc + tests + dry-run generate-chain (pass repo/path via --)
+npm run chain:folder:verify -- <repo> --path <folder>
+
+# Execute: create issues, advance chain
+npm run chain:folder:run -- <repo> --verbose
+```
+
+## Dogfood Automation (Self-Publish Only)
+
+Hardcoded to ugwtf + `docs/agent-prompts/publish-chain/`:
+
+```bash
+npm run dogfood:setup     # Generate prompts
+npm run dogfood:verify    # Full validation
+npm run dogfood:full      # setup + verify
+```
+
+### Enforcement
+
+- ✅ Use `chain:folder:verify` / `chain:folder:run` for any repo's prompt folder
+- ✅ Prefer CLI commands over ad-hoc terminal exploration
+- ❌ Do not manually reconstruct chain behavior when dry-run output already proves it
+- ❌ Do not re-derive prompt-chain artifacts by hand if generator exists
+
 ## Validation Scoring (12 criteria, 100 max)
 
 Title (10) · Priority (10) · Objective (15) · Sections (10) · Success Criteria (10) · Testing (10) · Code Examples (10) · Time Estimate (5) · Revenue Impact (5) · Checklists (5) · Reference Impl (5) · Content Depth (5)
