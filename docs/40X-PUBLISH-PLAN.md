@@ -451,7 +451,7 @@ All notable changes to `@dabighomie/ugwtf` will be documented in this file.
 - 11 automation scripts
 - 383 tests across 20 test files
 - Plugin system with @dabighomie/audit-orchestrator
-- Gold-standard 12-point scoring for prompt validation
+- Gold-standard 18-point scoring for prompt validation
 - Swarm executor with topological cluster ordering
 - Wave-based agent execution (sequential, parallel, fan-out)
 - PR scoreboard generation

@@ -61,7 +61,7 @@ All may import: types, utils/*, clients/*
 
 1. `generate-chain <repo>` — scans `.prompt.md` files, parses dependencies, runs Kahn's toposort, assigns waves, writes `scripts/prompt-chain.json`
 2. `chain <repo>` — reads chain config, creates GitHub issues for entries missing issues, advances chain by assigning Copilot to the next unblocked entry
-3. Prompts are scored 0-100 by `validatePrompt()` (12-point system) — low-scoring prompts emit warnings during chain generation
+3. Prompts are scored 0-125 by `validatePrompt()` (18-point system) — low-scoring prompts emit warnings during chain generation
 
 ## Chain Folder Workflow (Generic)
 
@@ -92,9 +92,9 @@ npm run dogfood:full      # setup + verify
 - ❌ Do not manually reconstruct chain behavior when dry-run output already proves it
 - ❌ Do not re-derive prompt-chain artifacts by hand if generator exists
 
-## Validation Scoring (12 criteria, 100 max)
+## Validation Scoring (18 criteria, 125 max)
 
-Title (10) · Priority (10) · Objective (15) · Sections (10) · Success Criteria (10) · Testing (10) · Code Examples (10) · Time Estimate (5) · Revenue Impact (5) · Checklists (5) · Reference Impl (5) · Content Depth (5)
+Title (10) · Priority (10) · Objective (15) · Sections (10) · Success Criteria (10) · Testing (10) · Code Examples (10) · Time Estimate (5) · Revenue Impact (5) · Checklists (5) · Reference Impl (5) · Content Depth (5) · Files to Modify (5) · Tags/Labels (3) · Environment (5) · Blocking Gate (5) · Merge Gate (5) · Dependencies (2)
 
 ## Testing
 

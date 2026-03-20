@@ -1,7 +1,7 @@
 # UGWTF — Test Coverage
 
 **Framework**: Vitest 3.2.4  
-**Total**: 383 tests across 20 files  
+**Total**: 410 tests across 21 files  
 **Status**: All passing  
 **Coverage threshold**: 60% lines
 
@@ -10,7 +10,7 @@
 | File | Tests | What It Covers |
 |------|-------|---------------|
 | `src/index.test.ts` | 64 | CLI parseArgs, command dispatch, flag handling |
-| `src/agents/prompt-agents.test.ts` | 54 | 12-point validatePrompt scoring, parseDependencies, scanAllPrompts, agent metadata |
+| `src/agents/prompt-agents.test.ts` | 61 | 18-point validatePrompt scoring, parseDependencies, scanAllPrompts, agent metadata |
 | `src/monorepo.test.ts` | 36 | Multi-repo operations, orchestration |
 | `src/agents/chain-agents.test.ts` | 26 | Chain generator pipeline, Format B chaining |
 | `src/agents/issue-agents.test.ts` | 29 | Stalled detector, Copilot assign, auto-triage |

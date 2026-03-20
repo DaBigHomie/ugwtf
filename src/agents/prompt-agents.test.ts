@@ -1,7 +1,7 @@
 /**
  * Prompt Agents — Unit Tests
  *
- * Tests the 12-point gold-standard validatePrompt() scoring,
+ * Tests the 18-point gold-standard validatePrompt() scoring,
  * parseDependencies(), scanAllPrompts(), and agent behavior.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -13,8 +13,8 @@ import {
   parseDependencies,
   scanAllPrompts,
   clearPromptScanCache,
-  promptAgents,
-} from './prompt-agents.js';
+} from '../prompt/index.js';
+import { promptAgents } from './prompt-agents.js';
 
 // ---------------------------------------------------------------------------
 // Helpers — build ParsedPrompt objects for targeted scoring tests
@@ -40,6 +40,11 @@ function emptyPrompt(overrides: Partial<ParsedPrompt> = {}): ParsedPrompt {
     hasDatabaseSchema: false,
     hasReferenceImpl: false,
     hasCodeExamples: false,
+    hasFilesToModify: false,
+    hasTags: false,
+    hasEnvironment: false,
+    hasBlockingGate: false,
+    hasMergeGate: false,
     sections: [],
     checklistItems: 0,
     totalLines: 10,
@@ -67,26 +72,31 @@ function perfectPrompt(overrides: Partial<ParsedPrompt> = {}): ParsedPrompt {
     hasDatabaseSchema: true,
     hasReferenceImpl: true,
     hasCodeExamples: true,
+    hasFilesToModify: true,
+    hasTags: true,
+    hasEnvironment: true,
+    hasBlockingGate: true,
+    hasMergeGate: true,
     sections: ['Objective', 'Success Criteria', 'Testing Checklist', 'Implementation'],
     checklistItems: 5,
     totalLines: 120,
-    depends: [],
+    depends: ['#1'],
     raw: '# PROMPT: Setup Database Schema...',
     ...overrides,
   };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// validatePrompt — 12-point scoring
+// validatePrompt — 18-point scoring
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('validatePrompt', () => {
   it('scores a perfect prompt at 100%', () => {
     const result = validatePrompt(perfectPrompt());
     expect(result.percent).toBe(100);
-    expect(result.score).toBe(100);
-    expect(result.maxScore).toBe(100);
-    expect(result.criteria).toHaveLength(12);
+    expect(result.score).toBe(125);
+    expect(result.maxScore).toBe(125);
+    expect(result.criteria).toHaveLength(18);
   });
 
   it('scores an empty Format B prompt near minimum', () => {
@@ -282,16 +292,59 @@ describe('validatePrompt', () => {
     });
   });
 
-  // ----- Aggregate scoring -----
-  describe('aggregate scoring', () => {
-    it('returns exactly 12 criteria', () => {
-      const result = validatePrompt(emptyPrompt());
-      expect(result.criteria).toHaveLength(12);
+  // ----- Criteria 13-18: New fields -----
+  describe('criteria 13-18: New fields', () => {
+    it('awards 5 pts for Files to Modify when present', () => {
+      const result = validatePrompt(emptyPrompt({ hasFilesToModify: true }));
+      expect(result.criteria.find(c => c.name === 'Files to Modify')!.points).toBe(5);
     });
 
-    it('maxScore is always 100', () => {
+    it('awards 3 pts for Tags / Labels when present', () => {
+      const result = validatePrompt(emptyPrompt({ hasTags: true }));
+      expect(result.criteria.find(c => c.name === 'Tags / Labels')!.points).toBe(3);
+    });
+
+    it('awards 5 pts for Environment when present', () => {
+      const result = validatePrompt(emptyPrompt({ hasEnvironment: true }));
+      expect(result.criteria.find(c => c.name === 'Environment')!.points).toBe(5);
+    });
+
+    it('awards 5 pts for Blocking Gate when present', () => {
+      const result = validatePrompt(emptyPrompt({ hasBlockingGate: true }));
+      expect(result.criteria.find(c => c.name === 'Blocking Gate')!.points).toBe(5);
+    });
+
+    it('awards 5 pts for Merge Gate when present', () => {
+      const result = validatePrompt(emptyPrompt({ hasMergeGate: true }));
+      expect(result.criteria.find(c => c.name === 'Merge Gate')!.points).toBe(5);
+    });
+
+    it('awards 2 pts for Dependencies when present', () => {
+      const result = validatePrompt(emptyPrompt({ depends: ['#1'] }));
+      expect(result.criteria.find(c => c.name === 'Dependencies')!.points).toBe(2);
+    });
+
+    it('awards 0 pts for all new fields when absent', () => {
       const result = validatePrompt(emptyPrompt());
-      expect(result.maxScore).toBe(100);
+      expect(result.criteria.find(c => c.name === 'Files to Modify')!.points).toBe(0);
+      expect(result.criteria.find(c => c.name === 'Tags / Labels')!.points).toBe(0);
+      expect(result.criteria.find(c => c.name === 'Environment')!.points).toBe(0);
+      expect(result.criteria.find(c => c.name === 'Blocking Gate')!.points).toBe(0);
+      expect(result.criteria.find(c => c.name === 'Merge Gate')!.points).toBe(0);
+      expect(result.criteria.find(c => c.name === 'Dependencies')!.points).toBe(0);
+    });
+  });
+
+  // ----- Aggregate scoring -----
+  describe('aggregate scoring', () => {
+    it('returns exactly 18 criteria', () => {
+      const result = validatePrompt(emptyPrompt());
+      expect(result.criteria).toHaveLength(18);
+    });
+
+    it('maxScore is always 125', () => {
+      const result = validatePrompt(emptyPrompt());
+      expect(result.maxScore).toBe(125);
     });
 
     it('percent is correctly computed from score/maxScore', () => {
