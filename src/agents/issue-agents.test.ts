@@ -36,6 +36,8 @@ function mockGitHub() {
     addLabels: vi.fn().mockResolvedValue(undefined),
     addComment: vi.fn().mockResolvedValue(undefined),
     assignIssue: vi.fn().mockResolvedValue(undefined),
+    assignCopilot: vi.fn().mockResolvedValue(undefined),
+    getIssue: vi.fn().mockResolvedValue({ number: 0, title: '', body: '', state: 'open', labels: [], assignees: [{ login: 'copilot' }], html_url: '', created_at: '', updated_at: '' }),
     removeLabel: vi.fn(),
     syncLabel: vi.fn(),
     listLabels: vi.fn(),
@@ -203,20 +205,26 @@ describe('copilotAssignmentAgent', () => {
   it('assigns Copilot to unassigned issues', async () => {
     const ctx = makeCtx();
     const gh = ctx.github as unknown as ReturnType<typeof mockGitHub>;
-    gh.listIssues.mockResolvedValue([
+    // First call: in-progress check → no in-progress issues
+    gh.listIssues.mockResolvedValueOnce([]);
+    // Second call: agent:copilot issues → one unassigned issue
+    gh.listIssues.mockResolvedValueOnce([
       makeIssue({ number: 10, labels: [{ name: 'agent:copilot' }] }),
     ]);
 
     const result = await copilotAssignmentAgent!.execute(ctx);
     expect(result.message).toContain('Assigned: 1');
-    expect(gh.assignIssue).toHaveBeenCalledWith('DaBigHomie', 'test-repo', 10, ['copilot']);
+    expect(gh.assignCopilot).toHaveBeenCalledWith('DaBigHomie', 'test-repo', 10);
     expect(gh.addLabels).toHaveBeenCalledWith('DaBigHomie', 'test-repo', 10, ['automation:in-progress']);
   });
 
   it('skips issues already assigned to Copilot', async () => {
     const ctx = makeCtx();
     const gh = ctx.github as unknown as ReturnType<typeof mockGitHub>;
-    gh.listIssues.mockResolvedValue([
+    // First call: in-progress check → no in-progress issues
+    gh.listIssues.mockResolvedValueOnce([]);
+    // Second call: agent:copilot issues → already-assigned issue
+    gh.listIssues.mockResolvedValueOnce([
       makeIssue({
         number: 11,
         labels: [{ name: 'agent:copilot' }],
@@ -226,13 +234,16 @@ describe('copilotAssignmentAgent', () => {
 
     const result = await copilotAssignmentAgent!.execute(ctx);
     expect(result.message).toContain('Assigned: 0');
-    expect(gh.assignIssue).not.toHaveBeenCalled();
+    expect(gh.assignCopilot).not.toHaveBeenCalled();
   });
 
   it('skips issues already in-progress', async () => {
     const ctx = makeCtx();
     const gh = ctx.github as unknown as ReturnType<typeof mockGitHub>;
-    gh.listIssues.mockResolvedValue([
+    // First call: in-progress check → no currently-in-progress issues (slot available)
+    gh.listIssues.mockResolvedValueOnce([]);
+    // Second call: agent:copilot issues → issue that already has in-progress label
+    gh.listIssues.mockResolvedValueOnce([
       makeIssue({
         number: 12,
         labels: [{ name: 'agent:copilot' }, { name: 'automation:in-progress' }],
@@ -241,29 +252,35 @@ describe('copilotAssignmentAgent', () => {
 
     const result = await copilotAssignmentAgent!.execute(ctx);
     expect(result.message).toContain('Assigned: 0');
-    expect(gh.assignIssue).not.toHaveBeenCalled();
+    expect(gh.assignCopilot).not.toHaveBeenCalled();
   });
 
   it('uses dryRun mode correctly', async () => {
     const ctx = makeCtx({ dryRun: true });
     const gh = ctx.github as unknown as ReturnType<typeof mockGitHub>;
-    gh.listIssues.mockResolvedValue([
+    // First call: in-progress check → no in-progress issues
+    gh.listIssues.mockResolvedValueOnce([]);
+    // Second call: agent:copilot issues → one unassigned issue
+    gh.listIssues.mockResolvedValueOnce([
       makeIssue({ number: 13, labels: [{ name: 'agent:copilot' }] }),
     ]);
 
     const result = await copilotAssignmentAgent!.execute(ctx);
     expect(result.message).toContain('Assigned: 1');
-    expect(gh.assignIssue).not.toHaveBeenCalled();
+    expect(gh.assignCopilot).not.toHaveBeenCalled();
     expect(gh.addLabels).not.toHaveBeenCalled();
   });
 
   it('reports errors when assignment fails', async () => {
     const ctx = makeCtx();
     const gh = ctx.github as unknown as ReturnType<typeof mockGitHub>;
-    gh.listIssues.mockResolvedValue([
+    // First call: in-progress check → no in-progress issues
+    gh.listIssues.mockResolvedValueOnce([]);
+    // Second call: agent:copilot issues → one unassigned issue
+    gh.listIssues.mockResolvedValueOnce([
       makeIssue({ number: 14, labels: [{ name: 'agent:copilot' }] }),
     ]);
-    gh.assignIssue.mockRejectedValue(new Error('Permission denied'));
+    gh.assignCopilot.mockRejectedValue(new Error('Permission denied'));
 
     const result = await copilotAssignmentAgent!.execute(ctx);
     expect(result.status).toBe('failed');
