@@ -10,7 +10,7 @@
  *   CLUSTERS.push(visualAuditCluster);
  */
 import { visualAuditAgents } from './agent.js';
-import type { Cluster } from './ugwtf-types.js';
+import type { Cluster } from '../types.js';
 
 export const visualAuditCluster: Cluster = {
   id: 'visual-audit',

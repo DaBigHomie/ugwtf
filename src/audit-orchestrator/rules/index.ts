@@ -107,7 +107,7 @@ export function buildAuditResult(ctx: AuditRuleContext, clusterFilter?: string):
   const bySeverity: Record<string, number> = { critical: 0, high: 0, medium: 0, low: 0 };
   const byCategory: Record<string, number> = {};
   for (const issue of issues) {
-    bySeverity[issue.severity]++;
+    bySeverity[issue.severity] = (bySeverity[issue.severity] ?? 0) + 1;
     byCategory[issue.category] = (byCategory[issue.category] ?? 0) + 1;
   }
 

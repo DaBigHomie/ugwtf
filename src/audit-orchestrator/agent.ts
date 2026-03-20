@@ -5,13 +5,11 @@
  *   - execute() → runs the rule and maps score to AgentResult
  *   - shouldRun() → checks framework support for the target repo
  *
- * Usage from UGWTF:
- *   import { visualAuditAgents } from '@dabighomie/audit-orchestrator/agent';
  */
 import { detectAdapter } from './adapters/index.js';
 import { RULES } from './rules/index.js';
 import type { AuditRuleContext } from './types.js';
-import type { Agent, AgentContext, AgentResult, AgentStatus } from './ugwtf-types.js';
+import type { Agent, AgentContext, AgentResult, AgentStatus } from '../types.js';
 
 // ── Rule metadata for agent wrapping ──────────────────────────────────────────
 

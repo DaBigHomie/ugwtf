@@ -63,8 +63,5 @@
     "files": [
         "dist",
         "templates"
-    ],
-    "dependencies": {
-        "@dabighomie/audit-orchestrator": "file:./packages/audit-orchestrator"
-    }
+    ]
 }

@@ -16,7 +16,7 @@ export const viteReactAdapter: FrameworkAdapter = {
       join(root, 'src', 'styles', 'globals.css'),
       join(root, 'src', 'app', 'globals.css'),
     ];
-    return candidates.find((c) => existsSync(c)) ?? candidates[0];
+    return candidates.find((c) => existsSync(c)) ?? candidates[0]!;
   },
 
   resolveConfig(root) {
@@ -25,7 +25,7 @@ export const viteReactAdapter: FrameworkAdapter = {
       join(root, 'tailwind.config.js'),
       join(root, 'tailwind.config.mjs'),
     ];
-    return candidates.find((c) => existsSync(c)) ?? candidates[0];
+    return candidates.find((c) => existsSync(c)) ?? candidates[0]!;
   },
 
   resolveLayout(root) {
@@ -34,7 +34,7 @@ export const viteReactAdapter: FrameworkAdapter = {
       join(root, 'src', 'App.jsx'),
       join(root, 'src', 'main.tsx'),
     ];
-    return candidates.find((c) => existsSync(c)) ?? candidates[0];
+    return candidates.find((c) => existsSync(c)) ?? candidates[0]!;
   },
 
   resolvePages(root) {
@@ -43,7 +43,7 @@ export const viteReactAdapter: FrameworkAdapter = {
       join(root, 'src', 'views'),
       join(root, 'src', 'routes'),
     ];
-    return candidates.find((c) => existsSync(c)) ?? candidates[0];
+    return candidates.find((c) => existsSync(c)) ?? candidates[0]!;
   },
 
   resolveComponents(root) {
@@ -52,7 +52,7 @@ export const viteReactAdapter: FrameworkAdapter = {
       join(root, 'src', 'shared', 'ui'),
       join(root, 'src', 'components'),
     ];
-    return candidates.find((c) => existsSync(c)) ?? candidates[0];
+    return candidates.find((c) => existsSync(c)) ?? candidates[0]!;
   },
 
   resolveSrc(root) {
