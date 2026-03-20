@@ -276,6 +276,32 @@ export function clearPromptScanCache(): void {
   scanCache.clear();
 }
 
+/**
+ * Filter prompts by --path flag (folder or single file).
+ * Returns the full set when no --path is provided.
+ */
+function filterByPath(
+  allPrompts: ParsedPrompt[],
+  localPath: string,
+  ctx: AgentContext,
+): { prompts: ParsedPrompt[]; scoped: boolean } {
+  if (!ctx.extras.path) return { prompts: allPrompts, scoped: false };
+
+  const target = join(localPath, ctx.extras.path);
+  // Try exact file match first; fall back to directory prefix match
+  const exactMatch = allPrompts.filter(p => p.filePath === target);
+  const filtered = exactMatch.length > 0
+    ? exactMatch
+    : allPrompts.filter(p => p.filePath.startsWith(target));
+
+  if (filtered.length === 0) {
+    ctx.logger.warn(`No prompts found in --path ${ctx.extras.path} (${allPrompts.length} total in repo)`);
+  } else {
+    ctx.logger.info(`Scoped to ${filtered.length} prompts from --path ${ctx.extras.path} (${allPrompts.length} total in repo)`);
+  }
+  return { prompts: filtered, scoped: true };
+}
+
 // ---------------------------------------------------------------------------
 // Time parsing — handles ranges, weeks, abbreviations, combined formats
 // ---------------------------------------------------------------------------
@@ -454,11 +480,17 @@ const promptScanner: Agent = {
     ctx.logger.group(`Scanning prompts in ${ctx.repoAlias}`);
 
     const allPrompts = await scanAllPrompts(localPath);
+    const { prompts, scoped } = filterByPath(allPrompts, localPath, ctx);
 
-    const completed = allPrompts.filter(p => p.status?.includes('COMPLETE'));
-    const actionable = allPrompts.filter(p => !p.status?.includes('COMPLETE'));
+    if (scoped && prompts.length === 0) {
+      ctx.logger.groupEnd();
+      return { agentId: this.id, status: 'skipped', repo: ctx.repoAlias, duration: Date.now() - start, message: `No prompts in ${ctx.extras.path}`, artifacts: [] };
+    }
 
-    ctx.logger.info(`Found ${allPrompts.length} prompt files (${allPrompts.filter(p => p.format === 'A').length} Format A, ${allPrompts.filter(p => p.format === 'B').length} Format B)`);
+    const completed = prompts.filter(p => p.status?.includes('COMPLETE'));
+    const actionable = prompts.filter(p => !p.status?.includes('COMPLETE'));
+
+    ctx.logger.info(`Found ${prompts.length} prompt files (${prompts.filter(p => p.format === 'A').length} Format A, ${prompts.filter(p => p.format === 'B').length} Format B)`);
     ctx.logger.info(`Actionable: ${actionable.length} | Completed: ${completed.length}`);
 
     for (const p of actionable) {
@@ -473,8 +505,8 @@ const promptScanner: Agent = {
       status: 'success',
       repo: ctx.repoAlias,
       duration: Date.now() - start,
-      message: `Found ${allPrompts.length} prompts (${actionable.length} actionable, ${completed.length} completed)`,
-      artifacts: allPrompts.map(p => `${p.format}:${p.priority ?? '-'}:${p.status ?? 'unknown'}:${p.fileName}`),
+      message: `Found ${prompts.length} prompts (${actionable.length} actionable, ${completed.length} completed)`,
+      artifacts: prompts.map(p => `${p.format}:${p.priority ?? '-'}:${p.status ?? 'unknown'}:${p.fileName}`),
     };
   },
 };
@@ -501,14 +533,15 @@ const promptValidator: Agent = {
     ctx.logger.group(`Validating prompts in ${ctx.repoAlias}`);
 
     const allPrompts = await scanAllPrompts(localPath);
+    const { prompts, scoped } = filterByPath(allPrompts, localPath, ctx);
 
-    if (allPrompts.length === 0) {
-      ctx.logger.info('No prompts found — skipping validation');
+    if (prompts.length === 0) {
+      ctx.logger.info(scoped ? `No prompts in --path ${ctx.extras.path}` : 'No prompts found — skipping validation');
       ctx.logger.groupEnd();
-      return { agentId: this.id, status: 'skipped', repo: ctx.repoAlias, duration: Date.now() - start, message: 'No prompts found', artifacts: [] };
+      return { agentId: this.id, status: 'skipped', repo: ctx.repoAlias, duration: Date.now() - start, message: scoped ? `No prompts in ${ctx.extras.path}` : 'No prompts found', artifacts: [] };
     }
 
-    const results: ValidationResult[] = allPrompts.map(p => validatePrompt(p));
+    const results: ValidationResult[] = prompts.map(p => validatePrompt(p));
     const avgScore = Math.round(results.reduce((s, r) => s + r.percent, 0) / results.length);
 
     const perfect = results.filter(r => r.percent === 100);
@@ -576,9 +609,16 @@ const promptIssueCreator: Agent = {
     ctx.logger.group(`Creating issues from prompts in ${ctx.repoAlias}`);
 
     const allPrompts = await scanAllPrompts(localPath);
+    const { prompts, scoped } = filterByPath(allPrompts, localPath, ctx);
+
+    if (scoped && prompts.length === 0) {
+      ctx.logger.warn(`No prompts in --path ${ctx.extras.path}`);
+      ctx.logger.groupEnd();
+      return { agentId: this.id, status: 'skipped', repo: ctx.repoAlias, duration: Date.now() - start, message: `No prompts in ${ctx.extras.path}`, artifacts: [] };
+    }
 
     // Filter to actionable prompts only
-    const actionable = allPrompts.filter(p => !p.status?.includes('COMPLETE'));
+    const actionable = prompts.filter(p => !p.status?.includes('COMPLETE'));
 
     if (actionable.length === 0) {
       ctx.logger.info('No actionable prompts — all complete or none found');
@@ -673,16 +713,17 @@ const promptForecaster: Agent = {
     ctx.logger.group(`30x Forecast for ${ctx.repoAlias}`);
 
     const allPrompts = await scanAllPrompts(localPath);
+    const { prompts, scoped } = filterByPath(allPrompts, localPath, ctx);
 
-    if (allPrompts.length === 0) {
-      ctx.logger.info('No prompts found');
+    if (prompts.length === 0) {
+      ctx.logger.info(scoped ? `No prompts in --path ${ctx.extras.path}` : 'No prompts found');
       ctx.logger.groupEnd();
-      return { agentId: this.id, status: 'skipped', repo: ctx.repoAlias, duration: Date.now() - start, message: 'No prompts', artifacts: [] };
+      return { agentId: this.id, status: 'skipped', repo: ctx.repoAlias, duration: Date.now() - start, message: scoped ? `No prompts in ${ctx.extras.path}` : 'No prompts', artifacts: [] };
     }
 
     // Categorize
-    const completed = allPrompts.filter(p => p.status?.includes('COMPLETE'));
-    const actionable = allPrompts.filter(p => !p.status?.includes('COMPLETE'));
+    const completed = prompts.filter(p => p.status?.includes('COMPLETE'));
+    const actionable = prompts.filter(p => !p.status?.includes('COMPLETE'));
     const withDB = actionable.filter(p => p.hasDatabaseSchema);
     const p0p1 = actionable.filter(p => p.priority && parseInt(p.priority.replace('P', '')) <= 1);
     const p2p3 = actionable.filter(p => p.priority && parseInt(p.priority.replace('P', '')) >= 2 && parseInt(p.priority.replace('P', '')) <= 3);
@@ -696,12 +737,12 @@ const promptForecaster: Agent = {
     }
 
     // Validate scores
-    const validations = allPrompts.map(p => validatePrompt(p));
+    const validations = prompts.map(p => validatePrompt(p));
     const avgScore = Math.round(validations.reduce((s, v) => s + v.percent, 0) / validations.length);
 
     // 30x metrics
-    const completionRate = allPrompts.length > 0
-      ? Math.round((completed.length / allPrompts.length) * 100)
+    const completionRate = prompts.length > 0
+      ? Math.round((completed.length / prompts.length) * 100)
       : 0;
 
     const readinessScore = Math.round(
@@ -722,7 +763,7 @@ const promptForecaster: Agent = {
     ctx.logger.info('║        30x DEPLOYMENT FORECAST        ║');
     ctx.logger.info('╚═══════════════════════════════════════╝');
     ctx.logger.info('');
-    ctx.logger.info(`Total Prompts:    ${allPrompts.length}`);
+    ctx.logger.info(`Total Prompts:    ${prompts.length}`);
     ctx.logger.info(`Completed:        ${completed.length} (${completionRate}%)`);
     ctx.logger.info(`Actionable:       ${actionable.length}`);
     ctx.logger.info(`  P0-P1 Critical: ${p0p1.length}`);
