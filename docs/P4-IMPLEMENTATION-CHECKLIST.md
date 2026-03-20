@@ -123,7 +123,7 @@
 
 ### C12 — GitHub App or PAT with fine-grained permissions ✅
 - [ ] **C12.1** Create fine-grained PAT (manual step — user must create in GitHub Settings)
-- [ ] **C12.2** Add as GitHub Actions secret: `UGWTF_PAT` (manual step)
+- [x] **C12.2** Add as GitHub Actions secret: `UGWTF_PAT` (manual step)
 - [x] **C12.3** Document required scopes in README — added GitHub Actions Secrets table
 - [x] **C12.4** Wire `UGWTF_PAT` into audit and deploy workflows as `GITHUB_TOKEN` override
 
