@@ -1,7 +1,7 @@
 # UGWTF — Test Coverage
 
 **Framework**: Vitest 3.2.4  
-**Total**: 410 tests across 21 files  
+**Total**: 400 tests across 21 files  
 **Status**: All passing  
 **Coverage threshold**: 60% lines
 

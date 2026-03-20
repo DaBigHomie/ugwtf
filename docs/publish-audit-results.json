@@ -1,0 +1,420 @@
+{
+  "timestamp": "2026-03-20T19:46:37.988Z",
+  "publishPlan": {
+    "total": 38,
+    "done": 26,
+    "partial": 7,
+    "notDone": 4,
+    "na": 1,
+    "score": 70
+  },
+  "carryover": {
+    "total": 16,
+    "done": 9,
+    "partial": 3,
+    "notDone": 0,
+    "deferred": 4
+  },
+  "tasks": [
+    {
+      "wave": "W1",
+      "task": "T1: Exclude test files from tsconfig",
+      "priority": "🔴 BLOCK",
+      "status": "✅ DONE",
+      "detail": "exclude: [\"node_modules\",\"dist\",\"src/**/*.test.ts\",\"src/__mocks__\"]"
+    },
+    {
+      "wave": "W1",
+      "task": "T2: No __mocks__ in dist",
+      "priority": "🔴 BLOCK",
+      "status": "❌ NOT DONE",
+      "detail": "dist/__mocks__ files: 4"
+    },
+    {
+      "wave": "W1",
+      "task": "T3: No test files in dist",
+      "priority": "🔴 BLOCK",
+      "status": "❌ NOT DONE",
+      "detail": "dist/**/*.test.* files: 42"
+    },
+    {
+      "wave": "W1",
+      "task": "T4: Tests pass after tsconfig change",
+      "priority": "🔴 BLOCK",
+      "status": "⚠️ PARTIAL",
+      "detail": "20 tests passed"
+    },
+    {
+      "wave": "W1",
+      "task": "T5: Publish dry-run clean",
+      "priority": "🔴 BLOCK",
+      "status": "⚠️ PARTIAL",
+      "detail": "Tarball: 198 files, 764.5 kB"
+    },
+    {
+      "wave": "W2",
+      "task": "T6-8: audit-orchestrator dep resolved",
+      "priority": "🔴 BLOCK",
+      "status": "✅ DONE",
+      "detail": "Current: \"NOT FOUND\" — file: link removed"
+    },
+    {
+      "wave": "W2",
+      "task": "T9: tsc --noEmit passes",
+      "priority": "🔴 BLOCK",
+      "status": "✅ DONE",
+      "detail": "0 TypeScript errors"
+    },
+    {
+      "wave": "W2",
+      "task": "T10: monorepo.test.ts updated",
+      "priority": "🔴 BLOCK",
+      "status": "✅ DONE",
+      "detail": "No file: references"
+    },
+    {
+      "wave": "W3",
+      "task": "T11: repo field in package.json",
+      "priority": "🔴 BLOCK",
+      "status": "✅ DONE",
+      "detail": "repository.url: git+https://github.com/DaBigHomie/ugwtf.git"
+    },
+    {
+      "wave": "W3",
+      "task": "T12: engines field",
+      "priority": "🟠 HIGH",
+      "status": "✅ DONE",
+      "detail": "engines.node: >=20.0.0"
+    },
+    {
+      "wave": "W3",
+      "task": "T13: bin entry clean",
+      "priority": "🟡 MED",
+      "status": "✅ DONE",
+      "detail": "bin.ugwtf: dist/index.js"
+    },
+    {
+      "wave": "W3",
+      "task": "T14: templates in files array",
+      "priority": "🟡 MED",
+      "status": "✅ DONE",
+      "detail": "files: [\"dist\",\"templates\"]"
+    },
+    {
+      "wave": "W3",
+      "task": "T15: publishConfig.access",
+      "priority": "🟡 MED",
+      "status": "✅ DONE",
+      "detail": "publishConfig: {\"access\":\"public\"}"
+    },
+    {
+      "wave": "W4",
+      "task": "T16: LICENSE file exists",
+      "priority": "🟠 HIGH",
+      "status": "✅ DONE",
+      "detail": "1067 bytes"
+    },
+    {
+      "wave": "W4",
+      "task": "T17: audit-orchestrator LICENSE",
+      "priority": "🟠 HIGH",
+      "status": "⚠️ PARTIAL",
+      "detail": "Missing — may not matter if bundled differently"
+    },
+    {
+      "wave": "W4",
+      "task": "T18: README license section matches MIT",
+      "priority": "🟡 MED",
+      "status": "✅ DONE",
+      "detail": "No \"Private\" in license section"
+    },
+    {
+      "wave": "W4",
+      "task": "T19: LICENSE in npm tarball",
+      "priority": "🟢 LOW",
+      "status": "✅ DONE",
+      "detail": "npm auto-includes LICENSE"
+    },
+    {
+      "wave": "W5",
+      "task": "T20: AGENTS.md test count = 383",
+      "priority": "🟠 HIGH",
+      "status": "✅ DONE",
+      "detail": "Has 383: true, Has stale 272: false"
+    },
+    {
+      "wave": "W5",
+      "task": "T21: copilot-instructions test count",
+      "priority": "🟠 HIGH",
+      "status": "✅ DONE",
+      "detail": "Has 383: true, Has stale 261: false"
+    },
+    {
+      "wave": "W5",
+      "task": "T22: 05-TESTING.md updated",
+      "priority": "🟠 HIGH",
+      "status": "⚠️ PARTIAL",
+      "detail": "Has 383: false, Has stale 261: false"
+    },
+    {
+      "wave": "W5",
+      "task": "T23: README test count = 383",
+      "priority": "🟠 HIGH",
+      "status": "✅ DONE",
+      "detail": "Has 383: true, Has stale 156: false"
+    },
+    {
+      "wave": "W5",
+      "task": "T24: README agent/cluster count",
+      "priority": "🟡 MED",
+      "status": "ℹ️ N/A",
+      "detail": "Found: \"no match\""
+    },
+    {
+      "wave": "W5",
+      "task": "T25: AUDIT-RESULTS.json no hardcoded paths",
+      "priority": "🟡 MED",
+      "status": "✅ DONE",
+      "detail": "Clean — no absolute paths"
+    },
+    {
+      "wave": "W5",
+      "task": "T26: 09-GAPS.md updated",
+      "priority": "🟡 MED",
+      "status": "⚠️ PARTIAL",
+      "detail": "2857 chars"
+    },
+    {
+      "wave": "W5",
+      "task": "T27: copilot-instructions stats aligned",
+      "priority": "🟡 MED",
+      "status": "✅ DONE",
+      "detail": "Agent count: 86, Test 383: true"
+    },
+    {
+      "wave": "W6",
+      "task": "T28: CHANGELOG.md exists",
+      "priority": "🟡 MED",
+      "status": "✅ DONE",
+      "detail": "706 bytes"
+    },
+    {
+      "wave": "W6",
+      "task": "T29: .npmignore exists",
+      "priority": "🟢 LOW",
+      "status": "✅ DONE",
+      "detail": "18 rules"
+    },
+    {
+      "wave": "W6",
+      "task": "T30: release.yml workflow",
+      "priority": "🟡 MED",
+      "status": "✅ DONE",
+      "detail": "Exists"
+    },
+    {
+      "wave": "W6",
+      "task": "T31: Version strategy",
+      "priority": "🟡 MED",
+      "status": "✅ DONE",
+      "detail": "Version: 1.0.0"
+    },
+    {
+      "wave": "W6",
+      "task": "T32: packages/ excluded from tarball",
+      "priority": "🟢 LOW",
+      "status": "✅ DONE",
+      "detail": "Excluded"
+    },
+    {
+      "wave": "W6",
+      "task": "T33: Global install (shebang)",
+      "priority": "🟡 MED",
+      "status": "✅ DONE",
+      "detail": "Has #!/usr/bin/env node"
+    },
+    {
+      "wave": "W7",
+      "task": "T34: CLAUDE.md exists",
+      "priority": "🟢 LOW",
+      "status": "❌ NOT DONE",
+      "detail": "Missing"
+    },
+    {
+      "wave": "W7",
+      "task": "T35: npm audit clean",
+      "priority": "🟡 MED",
+      "status": "✅ DONE",
+      "detail": "0 vulnerabilities"
+    },
+    {
+      "wave": "W7",
+      "task": "T36: dist exports correct",
+      "priority": "🟢 LOW",
+      "status": "✅ DONE",
+      "detail": "dist/index.js: true, dist/types.js: true"
+    },
+    {
+      "wave": "W7",
+      "task": "T37: No stray console.log",
+      "priority": "🟢 LOW",
+      "status": "⚠️ PARTIAL",
+      "detail": "105 occurrences in src/ (excl tests/mocks)"
+    },
+    {
+      "wave": "W7",
+      "task": "T38: All 5 repos registered",
+      "priority": "🟢 LOW",
+      "status": "✅ DONE",
+      "detail": "Found: damieus, 043, ffs, cae, maximus (5/5)"
+    },
+    {
+      "wave": "W8",
+      "task": "T39: Pre-publish checklist",
+      "priority": "🔴 BLOCK",
+      "status": "⚠️ PARTIAL",
+      "detail": "Not on npm yet"
+    },
+    {
+      "wave": "W8",
+      "task": "T40: npm publish",
+      "priority": "🔴 BLOCK",
+      "status": "❌ NOT DONE",
+      "detail": "Not published"
+    }
+  ],
+  "carryoverItems": [
+    {
+      "id": "C4",
+      "desc": "Audit results flow into SCOREBOARD.json",
+      "status": "✅ DONE",
+      "detail": "SCOREBOARD.json exists"
+    },
+    {
+      "id": "C6",
+      "desc": "README documents audit-orchestrator as plugin",
+      "status": "✅ DONE",
+      "detail": "Referenced in README"
+    },
+    {
+      "id": "C7",
+      "desc": "Version lock (file: vs npm)",
+      "status": "✅ DONE",
+      "detail": "Using: NOT FOUND"
+    },
+    {
+      "id": "C8",
+      "desc": "Integration test for audit-orchestrator cluster",
+      "status": "✅ DONE",
+      "detail": "2 test files reference audit-orchestrator"
+    },
+    {
+      "id": "C10",
+      "desc": "ugwtf-audit.yml nightly workflow",
+      "status": "✅ DONE",
+      "detail": "Exists"
+    },
+    {
+      "id": "C11",
+      "desc": "ugwtf-deploy.yml workflow",
+      "status": "✅ DONE",
+      "detail": "Exists"
+    },
+    {
+      "id": "C12",
+      "desc": "Fine-grained PAT for all repos",
+      "status": "🔶 DEFERRED",
+      "detail": "Requires manual setup"
+    },
+    {
+      "id": "C13",
+      "desc": "npx ugwtf deploy --all in CI",
+      "status": "🔶 DEFERRED",
+      "detail": "Needs C11 first"
+    },
+    {
+      "id": "C14",
+      "desc": "SCOREBOARD posted as PR comment",
+      "status": "⚠️ PARTIAL",
+      "detail": "CI exists but PR comment not confirmed"
+    },
+    {
+      "id": "C15",
+      "desc": "Slack/Discord on regression",
+      "status": "🔶 DEFERRED",
+      "detail": "Low priority — no webhook configured"
+    },
+    {
+      "id": "C17",
+      "desc": "Dependabot config",
+      "status": "✅ DONE",
+      "detail": "Exists"
+    },
+    {
+      "id": "C18",
+      "desc": "Branch protection on main",
+      "status": "🔶 DEFERRED",
+      "detail": "Requires GitHub API / Settings"
+    },
+    {
+      "id": "C19",
+      "desc": "Release workflow (tag → publish)",
+      "status": "✅ DONE",
+      "detail": "release.yml exists"
+    },
+    {
+      "id": "R1",
+      "desc": "file: link risk",
+      "status": "✅ DONE",
+      "detail": "No file: deps"
+    },
+    {
+      "id": "R2",
+      "desc": "gh CLI required — no fallback",
+      "status": "⚠️ PARTIAL",
+      "detail": "gh found on PATH but no graceful fallback"
+    },
+    {
+      "id": "R4",
+      "desc": ".env handling",
+      "status": "⚠️ PARTIAL",
+      "detail": ".env.example exists, no auto-load"
+    }
+  ],
+  "blocking": [
+    {
+      "task": "T2: No __mocks__ in dist",
+      "status": "❌ NOT DONE",
+      "detail": "dist/__mocks__ files: 4"
+    },
+    {
+      "task": "T3: No test files in dist",
+      "status": "❌ NOT DONE",
+      "detail": "dist/**/*.test.* files: 42"
+    },
+    {
+      "task": "T4: Tests pass after tsconfig change",
+      "status": "⚠️ PARTIAL",
+      "detail": "20 tests passed"
+    },
+    {
+      "task": "T5: Publish dry-run clean",
+      "status": "⚠️ PARTIAL",
+      "detail": "Tarball: 198 files, 764.5 kB"
+    },
+    {
+      "task": "T39: Pre-publish checklist",
+      "status": "⚠️ PARTIAL",
+      "detail": "Not on npm yet"
+    },
+    {
+      "task": "T40: npm publish",
+      "status": "❌ NOT DONE",
+      "detail": "Not published"
+    }
+  ],
+  "testCount": 20,
+  "tscErrors": 0,
+  "version": "1.0.0",
+  "published": false
+}

@@ -20,7 +20,7 @@ npx tsx src/index.ts <command> [repos...] [flags]
 | [02-AGENTS.md](docs/agent-guide/02-AGENTS.md) | All 86 agents by cluster |
 | [03-CLI.md](docs/agent-guide/03-CLI.md) | Full CLI reference + examples |
 | [04-SCRIPTS.md](docs/agent-guide/04-SCRIPTS.md) | Script + generator purpose index |
-| [05-TESTING.md](docs/agent-guide/05-TESTING.md) | 383 tests, fixtures, coverage gaps |
+| [05-TESTING.md](docs/agent-guide/05-TESTING.md) | 400 tests, fixtures, coverage gaps |
 | [06-VALIDATION.md](docs/agent-guide/06-VALIDATION.md) | 18-point gold standard scoring |
 | [07-POST-VALIDATION.md](docs/agent-guide/07-POST-VALIDATION.md) | Scoreboard, persist, JSON reporter outputs |
 | [08-APPROVAL-PIPELINE.md](docs/agent-guide/08-APPROVAL-PIPELINE.md) | 8-phase Copilot approval + DB firewall |
@@ -55,13 +55,13 @@ The `@dabighomie/audit-orchestrator` source is fully inlined into `src/audit-orc
 npx tsc --noEmit     # 0 errors
 npm run lint         # 0 errors  
 npm run build        # succeeds
-npx vitest run       # 383 tests pass
+npx vitest run       # 400 tests pass
 ```
 
 ## Stats
 
 - **86 agents** across **38 clusters**
-- **383 tests** across **20 test files**
+- **400 tests** across **21 test files**
 - **11 automation scripts** in `scripts/`
 - **7 YAML generators** in `src/generators/`
 - **6 registered repos** (damieus, 043, ffs, cae, maximus, ugwtf)
