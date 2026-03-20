@@ -1,7 +1,7 @@
 # UGWTF — Test Coverage
 
 **Framework**: Vitest 3.2.4  
-**Total**: 261 tests across 15 files  
+**Total**: 383 tests across 20 files  
 **Status**: All passing  
 **Coverage threshold**: 60% lines
 
@@ -9,16 +9,26 @@
 
 | File | Tests | What It Covers |
 |------|-------|---------------|
-| `src/agents/prompt-agents.test.ts` | 54 | 12-point validatePrompt scoring, parseDependencies, scanAllPrompts, agent metadata |
 | `src/index.test.ts` | 64 | CLI parseArgs, command dispatch, flag handling |
+| `src/agents/prompt-agents.test.ts` | 54 | 12-point validatePrompt scoring, parseDependencies, scanAllPrompts, agent metadata |
 | `src/monorepo.test.ts` | 36 | Multi-repo operations, orchestration |
-| `src/agents/chain-agents.test.ts` | 11 | Chain generator pipeline, Format B chaining |
+| `src/agents/chain-agents.test.ts` | 26 | Chain generator pipeline, Format B chaining |
+| `src/agents/issue-agents.test.ts` | 29 | Stalled detector, Copilot assign, auto-triage |
+| `src/agents/pr-agents.test.ts` | 25 | PR review, DB firewall, batch processor, completion tracker |
+| `src/agents/fix-agents.test.ts` | 25 | Auto-fix labels, workflows, quality issues |
+| `src/agents/audit-agents.test.ts` | 17 | Audit scoring, scoreboard generation |
+| `src/agents/label-agents.test.ts` | 15 | Label sync, repo-specific labels |
 | `src/utils/common.test.ts` | 14 | Shared utility functions |
-| `src/clusters/clusters.test.ts` | 11 | Cluster registry, agent registration |
 | `src/integration.test.ts` | 12 | Cross-module integration |
-| `src/clients/github.test.ts` | 2 | Octokit wrapper |
+| `src/config/repo-registry.test.ts` | 11 | Repo registry, alias resolution |
+| `src/clusters/clusters.test.ts` | 11 | Cluster registry, agent registration |
+| `src/utils/fs.test.ts` | 10 | File system utilities |
+| `src/swarm/executor.test.ts` | 8 | Swarm executor, parallel dispatch |
+| `src/utils/env.test.ts` | 7 | Environment variable handling |
+| `src/output/output.test.ts` | 6 | Output formatting, reporters |
 | `src/utils/logger.test.ts` | 6 | Logging utilities |
-| + 6 more files | ~51 | Various modules |
+| `src/orchestrator.test.ts` | 5 | Orchestrator dispatch |
+| `src/clients/github.test.ts` | 2 | Octokit wrapper |
 
 ## Running Tests
 
@@ -60,8 +70,7 @@ test-repo/
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
-| Agent execute() methods | Medium | Most agents tested via integration, not unit |
-| Generator output YAML | Low | Generators produce static templates |
+| Generator output YAML | Low | Generators produce static templates — no snapshot tests yet |
 | Plugin loader | Low | Extensibility feature, not yet used |
 
 ## Test Patterns

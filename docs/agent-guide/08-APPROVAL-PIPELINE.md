@@ -66,3 +66,37 @@ npx tsx src/index.ts deploy damieus --cluster copilot-automation
 # Or deploy all workflows
 npx tsx src/index.ts deploy damieus
 ```
+
+## Copilot Assignment Safety (March 2026)
+
+Five fixes prevent the 12-empty-PR failure mode discovered across o43/damieus/ffs:
+
+| Fix | What | Where |
+|-----|------|-------|
+| **Transport** | `assignCopilot()` uses `fetch` transport when `GITHUB_TOKEN`/`GH_TOKEN` is set; otherwise warns and falls back to `gh` CLI (which may silently fail for Copilot assignment) | `clients/github.ts` |
+| **Rate Limiting** | Max concurrent Copilot assignments (default 1) — prevents flooding | `issue-agents.ts`, `chain-agents.ts` |
+| **Verification** | After each `assignCopilot()`, `getIssue()` confirms Copilot is in assignees | `issue-agents.ts`, `chain-agents.ts` |
+| **PR Quality Gate** | Chain-advancer checks previous entry's PR has real changes (non-lockfile files > 0, additions >= 10) before advancing | `chain-agents.ts` |
+| **CLI Control** | `--max-copilot-concurrency N` and `--sequential-copilot` flags | `index.ts` |
+
+### New Client Methods
+
+```typescript
+// Uses fetch transport when GITHUB_TOKEN/GH_TOKEN is set;
+// otherwise warns and falls back to gh CLI (which may silently fail).
+await github.assignCopilot(owner, repo, issueNumber);
+
+// Verify assignment succeeded
+const issue = await github.getIssue(owner, repo, issueNumber);
+const verified = issue.assignees.some(a => a.login === 'copilot');
+```
+
+### Rate Limiting Flow
+
+```
+issues command → copilotAssignmentAgent
+  1. Count issues with automation:in-progress label
+  2. If count >= maxCopilotConcurrency → skip (log why)
+  3. Assign up to (max - inProgress) slots
+  4. Verify each assignment via getIssue()
+```
