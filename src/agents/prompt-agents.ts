@@ -278,21 +278,34 @@ export function clearPromptScanCache(): void {
 
 /**
  * Filter prompts by --path flag (folder or single file).
+ * Uses filesystem stat to determine if the path is a file or directory —
+ * no heuristics, no extension checks.
  * Returns the full set when no --path is provided.
  */
-function filterByPath(
+async function filterByPath(
   allPrompts: ParsedPrompt[],
   localPath: string,
   ctx: AgentContext,
-): { prompts: ParsedPrompt[]; scoped: boolean } {
+): Promise<{ prompts: ParsedPrompt[]; scoped: boolean }> {
   if (!ctx.extras.path) return { prompts: allPrompts, scoped: false };
 
   const target = join(localPath, ctx.extras.path);
-  // Try exact file match first; fall back to directory prefix match
-  const exactMatch = allPrompts.filter(p => p.filePath === target);
-  const filtered = exactMatch.length > 0
-    ? exactMatch
-    : allPrompts.filter(p => p.filePath.startsWith(target));
+
+  let filtered: ParsedPrompt[];
+  try {
+    const st = await stat(target);
+    if (st.isFile()) {
+      filtered = allPrompts.filter(p => p.filePath === target);
+    } else if (st.isDirectory()) {
+      const dirPrefix = target.endsWith('/') ? target : target + '/';
+      filtered = allPrompts.filter(p => p.filePath.startsWith(dirPrefix));
+    } else {
+      filtered = [];
+    }
+  } catch {
+    ctx.logger.warn(`--path ${ctx.extras.path} does not exist on disk`);
+    filtered = [];
+  }
 
   if (filtered.length === 0) {
     ctx.logger.warn(`No prompts found in --path ${ctx.extras.path} (${allPrompts.length} total in repo)`);
@@ -480,7 +493,7 @@ const promptScanner: Agent = {
     ctx.logger.group(`Scanning prompts in ${ctx.repoAlias}`);
 
     const allPrompts = await scanAllPrompts(localPath);
-    const { prompts, scoped } = filterByPath(allPrompts, localPath, ctx);
+    const { prompts, scoped } = await filterByPath(allPrompts, localPath, ctx);
 
     if (scoped && prompts.length === 0) {
       ctx.logger.groupEnd();
@@ -533,7 +546,7 @@ const promptValidator: Agent = {
     ctx.logger.group(`Validating prompts in ${ctx.repoAlias}`);
 
     const allPrompts = await scanAllPrompts(localPath);
-    const { prompts, scoped } = filterByPath(allPrompts, localPath, ctx);
+    const { prompts, scoped } = await filterByPath(allPrompts, localPath, ctx);
 
     if (prompts.length === 0) {
       ctx.logger.info(scoped ? `No prompts in --path ${ctx.extras.path}` : 'No prompts found — skipping validation');
@@ -609,7 +622,7 @@ const promptIssueCreator: Agent = {
     ctx.logger.group(`Creating issues from prompts in ${ctx.repoAlias}`);
 
     const allPrompts = await scanAllPrompts(localPath);
-    const { prompts, scoped } = filterByPath(allPrompts, localPath, ctx);
+    const { prompts, scoped } = await filterByPath(allPrompts, localPath, ctx);
 
     if (scoped && prompts.length === 0) {
       ctx.logger.warn(`No prompts in --path ${ctx.extras.path}`);
@@ -713,7 +726,7 @@ const promptForecaster: Agent = {
     ctx.logger.group(`30x Forecast for ${ctx.repoAlias}`);
 
     const allPrompts = await scanAllPrompts(localPath);
-    const { prompts, scoped } = filterByPath(allPrompts, localPath, ctx);
+    const { prompts, scoped } = await filterByPath(allPrompts, localPath, ctx);
 
     if (prompts.length === 0) {
       ctx.logger.info(scoped ? `No prompts in --path ${ctx.extras.path}` : 'No prompts found');
