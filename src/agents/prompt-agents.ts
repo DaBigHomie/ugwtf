@@ -93,12 +93,22 @@ export function parseDependencies(content: string): string[] {
 function parseFormatB(content: string, filePath: string): ParsedPrompt {
   const lines = content.split('\n');
   const titleMatch = content.match(/^#\s+(?:PROMPT:\s*)?(.+)/m);
-  const priorityMatch = content.match(/\*\*Priority\*\*:\s*(P\d)/i);
-  const statusMatch = content.match(/\*\*Status\*\*:\s*(?:🔄|✅|⏳|❌)?\s*\*?\*?([A-Z ]+)\*?\*?/i);
-  const timeMatch = content.match(/\*\*Estimated Time\*\*:\s*(.+)/i);
-  const agentMatch = content.match(/\*\*Agent Type\*\*:\s*(.+)/i);
-  const revenueMatch = content.match(/\*\*Revenue Impact\*\*:\s*(.+)/i);
-  const objectiveMatch = content.match(/## Objective\s+(.+?)(?=\n---|\n##)/s);
+  // Dual-format extraction: inline (**Field**: val) AND table (| **Field** | val |)
+  const extractField = (field: string, valPattern: string = '.+'): string | null => {
+    const inline = content.match(new RegExp(`\\*\\*${field}\\*\\*:\\s*(${valPattern})`, 'i'));
+    if (inline) return inline[1]!.trim();
+    const table = content.match(new RegExp(`\\|\\s*\\*\\*${field}\\*\\*\\s*\\|\\s*(${valPattern})\\s*\\|`, 'i'));
+    if (table) return table[1]!.trim();
+    return null;
+  };
+
+  const priorityRaw = extractField('Priority', 'P\\d');
+  const statusRaw = extractField('Status');
+  const timeRaw = extractField('Estimated (?:Time|Hours)');
+  const agentRaw = extractField('Agent Type');
+  const revenueRaw = extractField('Revenue Impact');
+  const objectiveMatch = content.match(/## Objective\s+(.+?)(?=\n---|\n##)/s)
+    ?? content.match(/## Implementation Plan\s+(.+?)(?=\n---|\n##)/s);
 
   const sections = [...content.matchAll(/^## (.+)/gm)].map(m => m[1]!);
   const checklistItems = (content.match(/- \[[ x~]\]/g) ?? []).length;
@@ -108,14 +118,14 @@ function parseFormatB(content: string, filePath: string): ParsedPrompt {
     fileName: basename(filePath),
     format: 'B',
     title: titleMatch?.[1]?.replace(/\s*\(P\d\)\s*$/, '').trim() ?? basename(filePath, '.prompt.md'),
-    priority: priorityMatch?.[1] ?? null,
-    status: statusMatch?.[1]?.trim() ?? null,
-    estimatedTime: timeMatch?.[1]?.trim() ?? null,
-    agentType: agentMatch?.[1]?.trim() ?? null,
-    revenueImpact: revenueMatch?.[1]?.trim() ?? null,
+    priority: priorityRaw ?? null,
+    status: statusRaw?.replace(/\*+/g, '').trim() ?? null,
+    estimatedTime: timeRaw ?? null,
+    agentType: agentRaw ?? null,
+    revenueImpact: revenueRaw ?? null,
     objective: objectiveMatch?.[1]?.trim() ?? null,
-    hasSuccessCriteria: /## Success Criteria/i.test(content),
-    hasTestingChecklist: /## Testing Checklist/i.test(content),
+    hasSuccessCriteria: /## Success Criteria/i.test(content) || /## Quality Gate/i.test(content),
+    hasTestingChecklist: /## Testing Checklist/i.test(content) || /## Quality Gate/i.test(content),
     hasDatabaseSchema: /## Database Schema/i.test(content) || /CREATE TABLE|ALTER TABLE/i.test(content),
     hasReferenceImpl: /Reference Implementation/i.test(content),
     hasCodeExamples: /```(?:typescript|tsx?|javascript|jsx?|sql|bash)/i.test(content),
@@ -215,7 +225,11 @@ async function scanDirectoryAuto(dirPath: string): Promise<ParsedPrompt[]> {
     for (const file of promptFiles) {
       try {
         const fullPath = join(dirPath, file);
-        const content = await readFile(fullPath, 'utf-8');
+        const raw = await readFile(fullPath, 'utf-8');
+        // Strip ```prompt wrapper before format detection
+        let content = raw;
+        const wrapperMatch = raw.match(/^````?prompt\s*\n([\s\S]*?)````?\s*$/m);
+        if (wrapperMatch) content = wrapperMatch[1]!;
         const format = content.trimStart().startsWith('---') ? 'A' : 'B';
         const parsed = format === 'B'
           ? parseFormatB(content, fullPath)
