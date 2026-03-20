@@ -73,6 +73,25 @@ export function createMockGitHubClient(): GitHubClient & { calls: Array<{ method
       track('assignIssue', [owner, repo, issueNumber, assignees]);
     },
 
+    async assignCopilot(owner, repo, issueNumber) {
+      track('assignCopilot', [owner, repo, issueNumber]);
+    },
+
+    async getIssue(owner, repo, issueNumber) {
+      track('getIssue', [owner, repo, issueNumber]);
+      return {
+        number: issueNumber,
+        title: '',
+        body: '',
+        state: 'open',
+        labels: [],
+        assignees: [{ login: 'copilot' }],
+        html_url: `https://github.com/${owner}/${repo}/issues/${issueNumber}`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as GitHubIssue;
+    },
+
     async listWorkflowRuns(owner, repo) {
       track('listWorkflowRuns', [owner, repo]);
       return [] as GitHubWorkflowRun[];
