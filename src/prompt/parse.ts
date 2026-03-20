@@ -19,8 +19,8 @@ import type { ParsedPrompt } from './types.js';
 export function normalizeContent(raw: string): string {
   let content = raw;
 
-  // Strip ```prompt ... ``` wrapper
-  const promptBlockMatch = content.match(/^````?prompt\s*\n([\s\S]*?)````?\s*$/m);
+  // Strip ```prompt ... ``` wrapper (greedy to skip internal code fences)
+  const promptBlockMatch = content.match(/^````?prompt\s*\n([\s\S]*)````?\s*$/m);
   if (promptBlockMatch) {
     content = promptBlockMatch[1]!;
   }
