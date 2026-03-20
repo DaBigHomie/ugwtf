@@ -181,7 +181,7 @@ async function scanDirectory(dirPath: string, format: 'A' | 'B'): Promise<Parsed
       }
     }
 
-    // Recurse into immediate subdirectories (one level deep)
+    // Recurse into subdirectories (full directory tree)
     for (const entry of entries) {
       if (entry.startsWith('.') || entry === 'node_modules') continue;
       try {
@@ -201,8 +201,53 @@ async function scanDirectory(dirPath: string, format: 'A' | 'B'): Promise<Parsed
   return prompts;
 }
 
+/**
+ * Scans a directory tree once, auto-detecting format per file.
+ * Files with YAML frontmatter (starting with ---) are parsed as Format A;
+ * all others are parsed as Format B.
+ */
+async function scanDirectoryAuto(dirPath: string): Promise<ParsedPrompt[]> {
+  const prompts: ParsedPrompt[] = [];
+  try {
+    const entries = await readdir(dirPath);
+    const promptFiles = entries.filter(f => f.endsWith('.prompt.md'));
+
+    for (const file of promptFiles) {
+      try {
+        const fullPath = join(dirPath, file);
+        const content = await readFile(fullPath, 'utf-8');
+        const format = content.trimStart().startsWith('---') ? 'A' : 'B';
+        const parsed = format === 'B'
+          ? parseFormatB(content, fullPath)
+          : parseFormatA(content, fullPath);
+        prompts.push(parsed);
+      } catch {
+        // Skip unreadable files
+      }
+    }
+
+    // Recurse into subdirectories (full directory tree)
+    for (const entry of entries) {
+      if (entry.startsWith('.') || entry === 'node_modules') continue;
+      try {
+        const subPath = join(dirPath, entry);
+        const info = await stat(subPath);
+        if (info.isDirectory()) {
+          const subPrompts = await scanDirectoryAuto(subPath);
+          prompts.push(...subPrompts);
+        }
+      } catch {
+        // Skip inaccessible subdirectories
+      }
+    }
+  } catch {
+    // Directory doesn't exist — that's fine
+  }
+  return prompts;
+}
+
 // ---------------------------------------------------------------------------
-// Shared scan cache — avoids 4x redundant directory reads per cluster run
+// Shared scan cache — avoids redundant directory reads per cluster run
 // ---------------------------------------------------------------------------
 
 const scanCache = new Map<string, ParsedPrompt[]>();
@@ -213,17 +258,12 @@ export async function scanAllPrompts(localPath: string): Promise<ParsedPrompt[]>
 
   const formatA = await scanDirectory(join(localPath, '.github', 'prompts'), 'A');
   const formatB = await scanDirectory(join(localPath, 'docs', 'agent-prompts'), 'B');
-  const formatBExtra = await scanDirectory(join(localPath, 'docs', 'prompts'), 'B');
-  // Also scan docs/prompts/ subdirectories as Format A (YAML frontmatter prompts)
-  const formatAExtra = await scanDirectory(join(localPath, 'docs', 'prompts'), 'A');
-  // Deduplicate by filePath (same file found by both A and B scanners)
+  // Scan docs/prompts once, auto-detecting format per file via frontmatter
+  const docsPrompts = await scanDirectoryAuto(join(localPath, 'docs', 'prompts'));
+  // Deduplicate by filePath (in case paths overlap across scan roots)
   const byPath = new Map<string, ParsedPrompt>();
-  for (const p of [...formatA, ...formatB, ...formatBExtra, ...formatAExtra]) {
-    // Prefer Format A parse if file has YAML frontmatter, else keep first found
-    const existing = byPath.get(p.filePath);
-    if (!existing || (p.format === 'A' && p.objective)) {
-      byPath.set(p.filePath, p);
-    }
+  for (const p of [...formatA, ...formatB, ...docsPrompts]) {
+    byPath.set(p.filePath, p);
   }
   const all = [...byPath.values()];
 

@@ -32,9 +32,9 @@ npx tsx src/index.ts <command> [repos...] [flags]
 --verbose, -v    Debug output
 --concurrency N  Parallel repos (default: 3)
 --cluster ID     Target specific cluster
---path <dir>     Override repo path
---no-cache       Skip prompt scan cache
---output <file>  Write chain to file
+--path <dir>     Scope prompt scanning to path
+--no-cache       Disable repo unchanged-skip cache
+--output <fmt>   Report format: json|markdown|summary
 ```
 
 ## Quality Gates (Before Commit)

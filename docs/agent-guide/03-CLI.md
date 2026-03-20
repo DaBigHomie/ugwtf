@@ -45,9 +45,9 @@ If built: `ugwtf <command> [repos...] [flags]`
 | `--verbose`, `-v` | boolean | false | Debug output |
 | `--concurrency` | number | 3 | Max parallel repos |
 | `--cluster` | string | — | Target specific cluster (repeatable) |
-| `--path` | string | — | Override repo path (generate-chain) |
-| `--no-cache` | boolean | false | Skip prompt scan cache |
-| `--output` | string | — | Write output to file |
+| `--path` | string | — | Scope prompt scanning to path (generate-chain) |
+| `--no-cache` | boolean | false | Disable repo unchanged-skip cache |
+| `--output` | string | — | Report format: json\|markdown\|summary |
 
 ## Repo Aliases
 

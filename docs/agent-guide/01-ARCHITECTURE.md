@@ -106,13 +106,13 @@ interface Agent {
 }
 
 interface AgentContext {
-  repo: { owner: string; name: string; path: string };
+  repoAlias: string;
+  repoSlug: string;
   github: Octokit;
+  localPath: string;
   dryRun: boolean;
-  verbose: boolean;
-  extras: Record<string, unknown>;
-  noCache?: boolean;
-  output?: string;
+  logger: Logger;
+  extras: Record<string, string>;
 }
 
 interface AgentResult {
