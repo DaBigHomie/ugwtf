@@ -551,24 +551,51 @@ function resolveDeps(
   promptMap: Map<string, string>,     // fileName (no ext) → promptId
   gapToId: Map<string, string>,       // "#N" → promptId  (gap number = file prefix number)
 ): string[] {
-  const resolved: string[] = [];
+  const resolved = new Set<string>();
+  const unresolved: string[] = [];
+  const knownIds = new Set(promptMap.values());
+
   for (const dep of deps) {
+    let matched = false;
+
     // Direct prompt ID (FI-01 style)
-    if (/^[A-Z]+-\d+$/.test(dep) && [...promptMap.values()].includes(dep)) {
-      resolved.push(dep);
-      continue;
+    if (/^[A-Z]+-\d+$/.test(dep)) {
+      if (knownIds.has(dep)) {
+        resolved.add(dep);
+        matched = true;
+      }
     }
+
     // Gap number (#20 → look up which prompt has prefix 20)
-    if (dep.startsWith('#')) {
+    if (!matched && dep.startsWith('#')) {
       const id = gapToId.get(dep);
-      if (id) resolved.push(id);
-      continue;
+      if (id) {
+        resolved.add(id);
+        matched = true;
+      }
     }
+
     // Filename ref (01-supabase-client-setup)
-    const id = promptMap.get(dep);
-    if (id) resolved.push(id);
+    if (!matched) {
+      const id = promptMap.get(dep);
+      if (id) {
+        resolved.add(id);
+        matched = true;
+      }
+    }
+
+    if (!matched) {
+      unresolved.push(dep);
+    }
   }
-  return [...new Set(resolved)];
+
+  if (unresolved.length > 0) {
+    console.warn(
+      `[chain-agents] Dependency references could not be resolved and were skipped. Please verify dependency references: ${unresolved.join(', ')}`,
+    );
+  }
+
+  return [...resolved];
 }
 
 /**

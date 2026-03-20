@@ -140,6 +140,7 @@ export function parseArgs(argv: string[]): OrchestratorOptions | null {
   let dryRun = false;
   let verbose = false;
   let concurrency = 3;
+  let noCache = false;
   let output: OutputFormat | undefined;
   const extras: Record<string, string> = {};
 
@@ -187,7 +188,7 @@ export function parseArgs(argv: string[]): OrchestratorOptions | null {
       }
       extras.path = p;
     } else if (arg === '--no-cache') {
-      extras.__noCache = '1';
+      noCache = true;
     } else if (arg?.startsWith('--')) {
       console.error(`Unknown option: ${arg}`);
       process.exit(1);
@@ -208,7 +209,7 @@ export function parseArgs(argv: string[]): OrchestratorOptions | null {
     verbose,
     concurrency,
     output,
-    noCache: extras.__noCache === '1',
+    noCache,
     extras,
   };
 }
