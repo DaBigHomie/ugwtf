@@ -1,6 +1,6 @@
-# UGWTF — 12-Point Gold Standard Scoring
+# UGWTF — 18-Point Gold Standard Scoring
 
-The `validatePrompt()` function in `prompt-agents.ts` scores each `.prompt.md` file against 12 criteria (100 points max).
+The `validatePrompt()` function in `src/prompt/score.ts` scores each `.prompt.md` file against 18 criteria (125 points max).
 
 ## Scoring Table
 
@@ -18,6 +18,12 @@ The `validatePrompt()` function in `prompt-agents.ts` scores each `.prompt.md` f
 | 10 | Checklists | 5 | ≥3 items | 1-2 items (3pts) | 0 items |
 | 11 | Reference Impl | 5 | Present | — | Missing |
 | 12 | Content Depth | 5 | ≥100 lines | 50-99 lines (3pts) | <50 lines (1pt) |
+| 13 | Files to Modify | 5 | `## Files to Modify/Create/Touch` present | — | Missing |
+| 14 | Tags / Labels | 3 | `**Tags**` or `**Labels**` present | — | Missing |
+| 15 | Environment | 5 | `## Environment` present | — | Missing |
+| 16 | Blocking Gate | 5 | `## Blocking Gate` present | — | Missing |
+| 17 | Merge Gate | 5 | `## Merge Gate` present | — | Missing |
+| 18 | Dependencies | 2 | `depends` has ≥1 ref | — | Empty |
 
 ## Pass/Fail Threshold
 

@@ -31,7 +31,7 @@
 | `migration` | 2 | migration-agents.ts | Database migration safety |
 | `monitoring` | 2 | monitoring-agents.ts | Runtime monitoring checks |
 | `performance` | 2 | performance-agents.ts | Performance/bundle analysis |
-| `prompts` | 4 | prompt-agents.ts | 12-point prompt validation + forecasting |
+| `prompts` | 4 | prompt-agents.ts | 18-point prompt validation + forecasting |
 | `prs` | 3 | pr-agents.ts | PR review, DB migration firewall, stale drafts |
 | `quality` | 4 | quality-agents.ts | Quality gate enforcement |
 | `routing` | 2 | routing-agents.ts | Route validation |
@@ -47,7 +47,7 @@
 
 ### Prompt Pipeline (`prompt-agents.ts`)
 - `prompt-scanner` — Discovers all `.prompt.md` files in repo
-- `prompt-validator` — Scores each prompt against 12-point gold standard (FAILS if avg < 80%)
+- `prompt-validator` — Scores each prompt against 18-point gold standard (FAILS if avg < 80%)
 - `prompt-issue-creator` — Creates GitHub issues for low-scoring prompts
 - `prompt-forecaster` — Calculates 30x execution readiness score
 

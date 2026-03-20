@@ -95,9 +95,9 @@ See `src/existing/pattern.ts` for the established pattern this prompt follows.
 
 ---
 
-## 12-Criterion Scoring (100 points max)
+## 18-Criterion Scoring (125 points max)
 
-The UGWTF validator scores every prompt against these 12 criteria.
+The UGWTF validator scores every prompt against these 18 criteria.
 Prompts must score **≥99.9%** to pass the quality gate.
 
 | # | Criterion | Points | What It Checks |
@@ -114,8 +114,14 @@ Prompts must score **≥99.9%** to pass the quality gate.
 | 10 | **Checklists** | 5 | ≥3 `- [ ]` items — granular acceptance criteria |
 | 11 | **Reference Impl** | 5 | "Reference Implementation" mentioned — points agent at patterns |
 | 12 | **Content Depth** | 5 | ≥100 lines — deeper prompts produce better results |
+| 13 | **Files to Modify** | 5 | `## Files to Modify/Create/Touch` section — scopes agent work |
+| 14 | **Tags / Labels** | 3 | `**Tags**` or `**Labels**` present — enables auto-labeling |
+| 15 | **Environment** | 5 | `## Environment` section — tools, versions, runtime context |
+| 16 | **Blocking Gate** | 5 | `## Blocking Gate` section — hard prerequisite check |
+| 17 | **Merge Gate** | 5 | `## Merge Gate` section — conditions that must pass before merge |
+| 18 | **Dependencies** | 2 | `**Dependencies**` lists specific prompt/issue refs |
 
-**Total: 100 points**
+**Total: 125 points**
 
 ### Validation Command
 

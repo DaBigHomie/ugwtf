@@ -21,7 +21,7 @@ npx tsx src/index.ts <command> [repos...] [flags]
 | [03-CLI.md](docs/agent-guide/03-CLI.md) | Full CLI reference + examples |
 | [04-SCRIPTS.md](docs/agent-guide/04-SCRIPTS.md) | Script + generator purpose index |
 | [05-TESTING.md](docs/agent-guide/05-TESTING.md) | 383 tests, fixtures, coverage gaps |
-| [06-VALIDATION.md](docs/agent-guide/06-VALIDATION.md) | 12-point gold standard scoring |
+| [06-VALIDATION.md](docs/agent-guide/06-VALIDATION.md) | 18-point gold standard scoring |
 | [07-POST-VALIDATION.md](docs/agent-guide/07-POST-VALIDATION.md) | Scoreboard, persist, JSON reporter outputs |
 | [08-APPROVAL-PIPELINE.md](docs/agent-guide/08-APPROVAL-PIPELINE.md) | 8-phase Copilot approval + DB firewall |
 | [09-GAPS.md](docs/agent-guide/09-GAPS.md) | Known test/feature/doc gaps + next steps |

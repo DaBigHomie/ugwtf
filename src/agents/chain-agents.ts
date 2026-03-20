@@ -9,7 +9,7 @@
 import type { Agent, AgentContext, AgentResult } from '../types.js';
 import { readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { join, basename, relative } from 'node:path';
-import { scanAllPrompts, validatePrompt, type ParsedPrompt } from './prompt-agents.js';
+import { scanAllPrompts, validatePrompt, type ParsedPrompt } from '../prompt/index.js';
 import { writeFile } from '../utils/fs.js';
 import { getRepo } from '../config/repo-registry.js';
 

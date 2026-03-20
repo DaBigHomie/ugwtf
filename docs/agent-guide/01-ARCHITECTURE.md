@@ -10,7 +10,7 @@ ugwtf/
 │   ├── orchestrator.ts       # Swarm orchestration + extras/noCache passthrough
 │   │
 │   ├── agents/               # 34 agent files (~85 agents total)
-│   │   ├── prompt-agents.ts  # Prompt scanner/validator/forecaster (12-point scoring)
+│   │   ├── prompt-agents.ts  # Prompt scanner/validator/forecaster (18-point scoring)
 │   │   ├── chain-agents.ts   # generate-chain pipeline
 │   │   ├── issue-agents.ts   # Stalled detection, Copilot assign, auto-triage
 │   │   ├── pr-agents.ts      # PR review, DB migration firewall
@@ -18,6 +18,13 @@ ugwtf/
 │   │   ├── audit-agents.ts   # Health audit + scoreboard
 │   │   ├── fix-agents.ts     # Auto-fix pipeline
 │   │   └── ... (27 more)     # Domain-specific agents
+│   │
+│   ├── prompt/               # Shared prompt parsing/scoring module
+│   │   ├── types.ts          # ParsedPrompt, CriterionResult, ValidationResult
+│   │   ├── parse.ts          # normalizeContent, extractField, parseFormatA/B, parseDependencies
+│   │   ├── score.ts          # validatePrompt (18 criteria, 125 max)
+│   │   ├── scan.ts           # scanAllPrompts, scanDirectory, clearPromptScanCache
+│   │   └── index.ts          # Barrel re-export
 │   │
 │   ├── clusters/
 │   │   └── index.ts          # Cluster registry — maps cluster IDs to agent arrays
