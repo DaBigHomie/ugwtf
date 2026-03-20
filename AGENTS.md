@@ -20,11 +20,33 @@ npx tsx src/index.ts <command> [repos...] [flags]
 | [02-AGENTS.md](docs/agent-guide/02-AGENTS.md) | All 86 agents by cluster |
 | [03-CLI.md](docs/agent-guide/03-CLI.md) | Full CLI reference + examples |
 | [04-SCRIPTS.md](docs/agent-guide/04-SCRIPTS.md) | Script + generator purpose index |
-| [05-TESTING.md](docs/agent-guide/05-TESTING.md) | 272 tests, fixtures, coverage gaps |
+| [05-TESTING.md](docs/agent-guide/05-TESTING.md) | 383 tests, fixtures, coverage gaps |
 | [06-VALIDATION.md](docs/agent-guide/06-VALIDATION.md) | 12-point gold standard scoring |
 | [07-POST-VALIDATION.md](docs/agent-guide/07-POST-VALIDATION.md) | Scoreboard, persist, JSON reporter outputs |
 | [08-APPROVAL-PIPELINE.md](docs/agent-guide/08-APPROVAL-PIPELINE.md) | 8-phase Copilot approval + DB firewall |
 | [09-GAPS.md](docs/agent-guide/09-GAPS.md) | Known test/feature/doc gaps + next steps |
+
+## Copilot Assignment Safety (March 2026)
+
+Five fixes prevent the 12-empty-PR failure. Agents must use these APIs:
+
+| API | Purpose |
+|-----|---------|
+| `github.assignCopilot(owner, repo, issueNumber)` | Forces `fetch` transport — `gh` CLI silently fails |
+| `github.getIssue(owner, repo, issueNumber)` | Post-assignment verification — confirm `copilot` in assignees |
+| `--max-copilot-concurrency N` | Rate limit concurrent Copilot assignments (default: 1) |
+| `--sequential-copilot` | Alias for `--max-copilot-concurrency 1` |
+
+**Chain-advancer** also checks previous entry's PR has real changes before advancing.
+
+See [08-APPROVAL-PIPELINE.md](docs/agent-guide/08-APPROVAL-PIPELINE.md) for full details.
+
+## Dependency: audit-orchestrator
+
+`@dabighomie/audit-orchestrator` is bundled inside ugwtf at `packages/audit-orchestrator/`.
+- Dependency: `"file:./packages/audit-orchestrator"` in package.json (local monorepo link)
+- Used by: `src/clusters/index.ts` → `visualAuditCluster`
+- The `packages/audit-orchestrator/` directory IS the production dependency
 
 ## Build & Validate
 
@@ -32,12 +54,12 @@ npx tsx src/index.ts <command> [repos...] [flags]
 npx tsc --noEmit     # 0 errors
 npm run lint         # 0 errors  
 npm run build        # succeeds
-npx vitest run       # 272 tests pass
+npx vitest run       # 383 tests pass
 ```
 
 ## Stats
 
-- **86 agents** across **35 clusters**
+- **86 agents** across **34 clusters**
 - **383 tests** across **20 test files**
 - **11 automation scripts** in `scripts/`
 - **7 YAML generators** in `src/generators/`

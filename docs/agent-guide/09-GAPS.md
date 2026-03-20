@@ -7,9 +7,10 @@ Identified during 30x deep dive audit (March 2026).
 | Gap | Severity | Status | Notes |
 |-----|----------|--------|-------|
 | `prompt-agents.test.ts` | ~~High~~ | ✅ Fixed | 54 unit tests added — covers validatePrompt, parseDependencies, scanAllPrompts |
+| Copilot assignment failures | ~~Critical~~ | ✅ Fixed | 5 fixes: fetch transport, rate limiting, verification, PR quality gate, CLI flags |
 | Real chain file tests | ~~Medium~~ | ✅ Fixed | 11 tests validate `projects/o43/prompt-chain.json` structure, deps, waves |
-| `pr-agents.test.ts` | Medium | Open | PR review, DB firewall, batch processor, completion tracker — no unit tests |
-| `issue-agents.test.ts` | Medium | Open | Stalled detector, Copilot assign, auto-triage — no unit tests |
+| `pr-agents.test.ts` | ~~Medium~~ | ✅ Fixed | 25 unit tests — PR review, DB firewall, batch processor, completion tracker |
+| `issue-agents.test.ts` | ~~Medium~~ | ✅ Fixed | 29 unit tests — stalled detector, Copilot assign, auto-triage |
 | Generator output tests | Low | Open | YAML generators produce static templates, low risk of regression |
 | Plugin loader tests | Low | Open | Extensibility feature not yet used in production |
 
@@ -18,12 +19,12 @@ Identified during 30x deep dive audit (March 2026).
 | Agent File | Has Tests? | Test Count |
 |------------|-----------|------------|
 | `prompt-agents.ts` | ✅ | 54 |
-| `chain-agents.ts` | ✅ | 22 |
-| `pr-agents.ts` | ❌ | 0 |
-| `issue-agents.ts` | ❌ | 0 |
-| `label-agents.ts` | ❌ | 0 |
-| `audit-agents.ts` | ❌ | 0 |
-| `fix-agents.ts` | ❌ | 0 |
+| `chain-agents.ts` | ✅ | 26 |
+| `issue-agents.ts` | ✅ | 29 |
+| `pr-agents.ts` | ✅ | 25 |
+| `fix-agents.ts` | ✅ | 25 |
+| `audit-agents.ts` | ✅ | 17 |
+| `label-agents.ts` | ✅ | 15 |
 
 ## Integration Gaps (Closed)
 
@@ -52,7 +53,5 @@ Identified during 30x deep dive audit (March 2026).
 
 ## Recommended Next Steps
 
-1. **Write `pr-agents.test.ts`** — Mock Octokit, test DB migration detection + label logic
-2. **Write `issue-agents.test.ts`** — Test keyword matching, stalled detection logic
-3. **Document `.ugwtfrc` format** — Show example RC file with all fields
-4. **Add generator snapshot tests** — Snapshot YAML output to catch template drift
+1. **Document `.ugwtfrc` format** — Show example RC file with all fields
+2. **Add generator snapshot tests** — Snapshot YAML output to catch template drift
