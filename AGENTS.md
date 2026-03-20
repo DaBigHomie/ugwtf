@@ -41,13 +41,13 @@ Five fixes prevent the 12-empty-PR failure. Agents must use these APIs:
 
 See [08-APPROVAL-PIPELINE.md](docs/agent-guide/08-APPROVAL-PIPELINE.md) for full details.
 
-## Monorepo: audit-orchestrator
+## Dependency: audit-orchestrator
 
-`@dabighomie/audit-orchestrator` is bundled as a local package at `packages/audit-orchestrator/`.
-- Dependency: `"file:./packages/audit-orchestrator"` in package.json
-- After `npm install`, it symlinks into `node_modules/@dabighomie/audit-orchestrator`
+`@dabighomie/audit-orchestrator` is published to npm as a portable package.
+- Dependency: `"^1.1.0"` in package.json (installed from npm registry)
+- Source repo: `DaBigHomie/audit-orchestrator` (published on git tag `v*`)
 - Used by: `src/clusters/index.ts` → `visualAuditCluster`
-- **If missing**: Run `npm install` from ugwtf root — the `file:` protocol handles linking
+- `packages/audit-orchestrator/` is a dev copy — the production dependency comes from npm
 
 ## Build & Validate
 

@@ -29,8 +29,7 @@
         "test:watch": "vitest",
         "test:coverage": "vitest run --coverage",
         "lint": "tsc --noEmit",
-        "prepublishOnly": "npm run build",
-        "prepare": "cd packages/audit-orchestrator && npm run build"
+        "prepublishOnly": "npm run build"
     },
     "keywords": [
         "github",
@@ -56,6 +55,6 @@
         "templates"
     ],
     "dependencies": {
-        "@dabighomie/audit-orchestrator": "file:./packages/audit-orchestrator"
+        "@dabighomie/audit-orchestrator": "^1.1.0"
     }
 }
