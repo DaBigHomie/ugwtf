@@ -32,7 +32,7 @@ Five fixes prevent the 12-empty-PR failure. Agents must use these APIs:
 
 | API | Purpose |
 |-----|---------|
-| `github.assignCopilot(owner, repo, issueNumber)` | Forces `fetch` transport — `gh` CLI silently fails |
+| `github.assignCopilot(owner, repo, issueNumber)` | Uses `fetch` transport when `GITHUB_TOKEN`/`GH_TOKEN` is set; otherwise warns and falls back to `gh` CLI (which may silently fail) |
 | `github.getIssue(owner, repo, issueNumber)` | Post-assignment verification — confirm `copilot` in assignees |
 | `--max-copilot-concurrency N` | Rate limit concurrent Copilot assignments (default: 1) |
 | `--sequential-copilot` | Alias for `--max-copilot-concurrency 1` |
@@ -59,7 +59,7 @@ npx vitest run       # 383 tests pass
 
 ## Stats
 
-- **86 agents** across **34 clusters**
+- **86 agents** across **38 clusters**
 - **383 tests** across **20 test files**
 - **11 automation scripts** in `scripts/`
 - **7 YAML generators** in `src/generators/`
