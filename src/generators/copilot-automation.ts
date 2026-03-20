@@ -433,6 +433,9 @@ jobs:
       all_checks_passed: \${{ steps.summary.outputs.passed }}
       has_db_migration: \${{ steps.detect-db.outputs.has_db }}
       linked_issue: \${{ steps.detect-db.outputs.linked_issue }}
+      tsc_errors: \${{ steps.typescript.outputs.errors }}
+      lint_errors: \${{ steps.eslint.outputs.errors }}
+      build_errors: \${{ steps.build.outputs.errors }}
 
     steps:
       - name: Checkout PR code
@@ -472,17 +475,53 @@ jobs:
 
       - name: Run TypeScript check
         id: typescript
-        run: npx tsc --noEmit
+        run: |
+          set +e
+          TSC_OUTPUT=$(npx tsc --noEmit 2>&1)
+          TSC_EXIT=$?
+          set -e
+          echo "$TSC_OUTPUT"
+          TSC_ERRORS=$(echo "$TSC_OUTPUT" | grep -E "error TS" | head -20)
+          {
+            echo "errors<<UGWTF_EOF"
+            echo "$TSC_ERRORS"
+            echo "UGWTF_EOF"
+          } >> $GITHUB_OUTPUT
+          exit $TSC_EXIT
         continue-on-error: true
 
       - name: Run ESLint
         id: eslint
-        run: npm run lint
+        run: |
+          set +e
+          LINT_OUTPUT=$(npm run lint 2>&1)
+          LINT_EXIT=$?
+          set -e
+          echo "$LINT_OUTPUT"
+          LINT_ERRORS=$(echo "$LINT_OUTPUT" | grep -E "[0-9]+ error|[0-9]+ warning" | head -20)
+          {
+            echo "errors<<UGWTF_EOF"
+            echo "$LINT_ERRORS"
+            echo "UGWTF_EOF"
+          } >> $GITHUB_OUTPUT
+          exit $LINT_EXIT
         continue-on-error: true
 
       - name: Run Build
         id: build
-        run: npm run build
+        run: |
+          set +e
+          BUILD_OUTPUT=$(npm run build 2>&1)
+          BUILD_EXIT=$?
+          set -e
+          echo "$BUILD_OUTPUT"
+          BUILD_ERRORS=$(echo "$BUILD_OUTPUT" | grep -Ei "error|failed" | head -20)
+          {
+            echo "errors<<UGWTF_EOF"
+            echo "$BUILD_ERRORS"
+            echo "UGWTF_EOF"
+          } >> $GITHUB_OUTPUT
+          exit $BUILD_EXIT
         continue-on-error: true
 
       - name: Determine overall status
@@ -738,7 +777,7 @@ ${e2eJob}
 
   # =========================================================================
   # PHASE 7: FAILURE HANDLING → RE-ASSIGN COPILOT (self-healing)
-  # Quality checks failed → notify + re-trigger Copilot to fix
+  # Quality checks failed → count retries, provide error context, or escalate
   # =========================================================================
   handle-failure:
     name: "Phase 7: Failure Handling & Auto-Retry"
@@ -750,14 +789,77 @@ ${e2eJob}
       issues: write
 
     steps:
-      - name: Re-assign Copilot to fix failures
+      - name: Count previous fix attempts
+        id: count-attempts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              per_page: 100
+            });
+            const attempts = comments.filter(c =>
+              c.body && c.body.includes('UGWTF Fix Attempt')
+            ).length;
+            core.setOutput('attempt_number', String(attempts + 1));
+            core.setOutput('should_give_up', attempts >= 2 ? 'true' : 'false');
+
+      - name: Escalate to human (max retries exceeded)
+        if: steps.count-attempts.outputs.should_give_up == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: [
+                '## Phase 7: Max Retries Exceeded — Human Review Required',
+                '',
+                'Copilot has attempted **3 fix cycles** but quality checks still fail.',
+                '',
+                '**Automated self-healing has been disabled for this PR.**',
+                '',
+                'A human developer must review and resolve the remaining issues.',
+                '',
+                '*UGWTF 30x Pipeline — Phase 7: escalated to human*'
+              ].join('\\n')
+            });
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                name: 'automation:in-progress'
+              });
+            } catch (e) {}
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              labels: ['needs-review', 'needs-human-review']
+            });
+
+      - name: Post structured fix request and re-assign Copilot
+        if: steps.count-attempts.outputs.should_give_up == 'false'
         uses: actions/github-script@v7
         env:
           LINKED_ISSUE: \${{ needs.validate-pr.outputs.linked_issue }}
+          TSC_ERRORS: \${{ needs.validate-pr.outputs.tsc_errors }}
+          LINT_ERRORS: \${{ needs.validate-pr.outputs.lint_errors }}
+          BUILD_ERRORS: \${{ needs.validate-pr.outputs.build_errors }}
+          ATTEMPT: \${{ steps.count-attempts.outputs.attempt_number }}
         with:
           script: |
             const prNumber = context.payload.pull_request.number;
             const linkedIssue = process.env.LINKED_ISSUE;
+            const attempt = process.env.ATTEMPT;
+            const tscErrors = process.env.TSC_ERRORS || '';
+            const lintErrors = process.env.LINT_ERRORS || '';
+            const buildErrors = process.env.BUILD_ERRORS || '';
 
             if (linkedIssue) {
               try {
@@ -772,27 +874,37 @@ ${e2eJob}
               }
             }
 
+            const sections = [];
+            if (tscErrors.trim()) {
+              sections.push('### TypeScript Errors\\n<pre>' + tscErrors + '</pre>');
+            }
+            if (lintErrors.trim()) {
+              sections.push('### ESLint Errors\\n<pre>' + lintErrors + '</pre>');
+            }
+            if (buildErrors.trim()) {
+              sections.push('### Build Errors\\n<pre>' + buildErrors + '</pre>');
+            }
+            if (sections.length === 0) {
+              sections.push('*No specific error output captured — check workflow logs.*');
+            }
+
+            const isLastAttempt = attempt === '2';
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
               body: [
-                '## Phase 7: Quality Checks Failed — Self-Healing',
+                \`## UGWTF Fix Attempt \${attempt}/3 — Quality Checks Failed\`,
                 '',
-                'Automated quality checks did not pass.',
+                'The following errors must be fixed:',
                 '',
-                '**Auto-retry:** Copilot coding agent has been re-assigned to fix the issues.',
+                ...sections,
                 '',
-                '**What happens next:**',
-                '1. Copilot analyzes the TypeScript / ESLint / Build errors',
-                '2. Copilot pushes fix commits to this PR branch',
-                '3. Quality checks re-run automatically (Phase 3)',
-                '4. If all pass → auto-merge proceeds (Phase 5)',
+                \`**Retry \${attempt} of 3** — Copilot has been re-assigned to fix.\`,
+                isLastAttempt ? '**Last automatic attempt** — next failure escalates to human review.' : '',
                 '',
-                'If Copilot cannot fix automatically, manual review is required.',
-                '',
-                '*UGWTF 30x Pipeline — Phase 7: self-healing loop activated*'
-              ].join('\\n')
+                '*UGWTF 30x Pipeline — Phase 7: self-healing loop*'
+              ].filter(Boolean).join('\\n')
             });
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
