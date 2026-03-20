@@ -4,7 +4,7 @@
 
 ## Overview
 
-UGWTF orchestrates **~85 agents** across **34 clusters** to manage labels, issues, PRs, workflows, audits, and domain-specific scans for a multi-repo portfolio. Each agent is a self-contained unit with `shouldRun()` and `execute()` methods, coordinated by a swarm executor.
+UGWTF orchestrates **86 agents** across **35 clusters** to manage labels, issues, PRs, workflows, audits, and domain-specific scans for a multi-repo portfolio. Each agent is a self-contained unit with `shouldRun()` and `execute()` methods, coordinated by a swarm executor.
 
 ## Quick Start
 
@@ -76,7 +76,7 @@ src/
 ├── index.ts               # CLI entry point + argument parser
 ├── orchestrator.ts        # Maps commands → clusters, runs swarm
 ├── types.ts               # All TypeScript interfaces
-├── agents/                # ~85 agent implementations (36 files)
+├── agents/                # 86 agent implementations (36 files)
 │   ├── label-agents.ts
 │   ├── issue-agents.ts
 │   ├── pr-agents.ts
@@ -256,7 +256,7 @@ npm run build
 ## Testing
 
 - **Framework**: Vitest
-- **156 tests** across 12 test files
+- **383 tests** across 20 test files
 - **Coverage threshold**: 60% lines
 
 ```
@@ -275,4 +275,4 @@ src/integration.test.ts          12 tests
 
 ## License
 
-Private — DaBigHomie
+MIT — see [LICENSE](LICENSE) for details.

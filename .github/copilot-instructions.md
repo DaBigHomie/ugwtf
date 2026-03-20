@@ -11,7 +11,7 @@
 ```bash
 cd ~/management-git/ugwtf
 npx tsx src/index.ts <command> [repos...] [flags]
-npx vitest run                           # 261+ tests
+npx vitest run                           # 383 tests
 npx tsc --noEmit                         # 0 errors required
 ```
 
@@ -98,7 +98,7 @@ Title (10) · Priority (10) · Objective (15) · Sections (10) · Success Criter
 
 ## Testing
 
-- **261+ tests** across 15 files, all passing
+- **383 tests** across 20 files, all passing
 - Fixtures: `tests/fixtures/test-repo/` (7 Format B + 1 Format A prompts)
 - Coverage: v8, 60% line threshold
 - Run: `npx vitest run` or `npx vitest run src/agents/chain-agents.test.ts`

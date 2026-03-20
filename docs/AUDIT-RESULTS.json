@@ -90,7 +90,7 @@
       "category": "dark-mode",
       "description": "No .dark, [data-theme=\"dark\"], or prefers-color-scheme selectors found in stylesheet",
       "affectedFiles": [
-        "/Users/dame/management-git/ugwtf/src/app/globals.css"
+        "src/app/globals.css"
       ],
       "completionPct": 0
     },
@@ -101,7 +101,7 @@
       "category": "dark-mode",
       "description": "Expected --heading-color, --eyebrow-color, --body-muted, or --text-primary not found",
       "affectedFiles": [
-        "/Users/dame/management-git/ugwtf/src/app/globals.css"
+        "src/app/globals.css"
       ],
       "completionPct": 0
     },
@@ -112,7 +112,7 @@
       "category": "accessibility",
       "description": "Found 0 data-testid attributes (target: 50+ for reliable E2E testing)",
       "affectedFiles": [
-        "/Users/dame/management-git/ugwtf/src"
+        "src"
       ],
       "completionPct": 0
     },
@@ -123,7 +123,7 @@
       "category": "accessibility",
       "description": "Found 7 aria- attributes across source files (target: 30+)",
       "affectedFiles": [
-        "/Users/dame/management-git/ugwtf/src"
+        "src"
       ],
       "completionPct": 23
     },
@@ -134,7 +134,7 @@
       "category": "accessibility",
       "description": "No focus-trap, FocusTrap, or useFocusTrap references found",
       "affectedFiles": [
-        "/Users/dame/management-git/ugwtf/src"
+        "src"
       ],
       "completionPct": 0
     },
@@ -145,7 +145,7 @@
       "category": "accessibility",
       "description": "Found 0 alt= attributes across source files (target: 10+)",
       "affectedFiles": [
-        "/Users/dame/management-git/ugwtf/src"
+        "src"
       ],
       "completionPct": 0
     },
@@ -156,7 +156,7 @@
       "category": "design",
       "description": "Found 0 CSS custom properties in stylesheet (target: 10+)",
       "affectedFiles": [
-        "/Users/dame/management-git/ugwtf/src/app/globals.css"
+        "src/app/globals.css"
       ],
       "completionPct": 0
     },
@@ -176,7 +176,7 @@
       "category": "design",
       "description": "Found 3 Framer Motion references but no imports from a shared animations module",
       "affectedFiles": [
-        "/Users/dame/management-git/ugwtf/src"
+        "src"
       ],
       "completionPct": 0
     },
@@ -187,7 +187,7 @@
       "category": "mobile",
       "description": "Found sm:1 md:4 lg:1 responsive classes (target: 20+ total)",
       "affectedFiles": [
-        "/Users/dame/management-git/ugwtf/src"
+        "src"
       ],
       "completionPct": 30
     },
@@ -198,7 +198,7 @@
       "category": "mobile",
       "description": "No mobile menu, hamburger menu files or references found",
       "affectedFiles": [
-        "/Users/dame/management-git/ugwtf/src"
+        "src"
       ],
       "completionPct": 0
     },
@@ -209,7 +209,7 @@
       "category": "mobile",
       "description": "Found 0 explicit touch target sizing patterns (target: 5+)",
       "affectedFiles": [
-        "/Users/dame/management-git/ugwtf/src"
+        "src"
       ],
       "completionPct": 0
     },
@@ -238,7 +238,7 @@
       "category": "functionality",
       "description": "No ShippingMethod or shippingMethod references found",
       "affectedFiles": [
-        "/Users/dame/management-git/ugwtf/src"
+        "src"
       ],
       "completionPct": 0
     },
@@ -253,6 +253,6 @@
     }
   ],
   "timestamp": "2026-03-20T18:23:54.700Z",
-  "cwd": "/Users/dame/management-git/ugwtf",
+  "cwd": ".",
   "framework": "nextjs"
 }

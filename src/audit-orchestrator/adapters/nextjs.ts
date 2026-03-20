@@ -16,7 +16,7 @@ export const nextjsAdapter: FrameworkAdapter = {
       join(root, 'src', 'styles', 'globals.css'),
       join(root, 'styles', 'globals.css'),
     ];
-    return candidates.find((c) => existsSync(c)) ?? candidates[0];
+    return candidates.find((c) => existsSync(c)) ?? candidates[0]!;
   },
 
   resolveConfig(root) {
@@ -25,7 +25,7 @@ export const nextjsAdapter: FrameworkAdapter = {
       join(root, 'tailwind.config.js'),
       join(root, 'tailwind.config.mjs'),
     ];
-    return candidates.find((c) => existsSync(c)) ?? candidates[0];
+    return candidates.find((c) => existsSync(c)) ?? candidates[0]!;
   },
 
   resolveLayout(root) {
@@ -33,7 +33,7 @@ export const nextjsAdapter: FrameworkAdapter = {
       join(root, 'src', 'app', 'layout.tsx'),
       join(root, 'app', 'layout.tsx'),
     ];
-    return candidates.find((c) => existsSync(c)) ?? candidates[0];
+    return candidates.find((c) => existsSync(c)) ?? candidates[0]!;
   },
 
   resolvePages(root) {
@@ -41,7 +41,7 @@ export const nextjsAdapter: FrameworkAdapter = {
       join(root, 'src', 'app'),
       join(root, 'app'),
     ];
-    return candidates.find((c) => existsSync(c)) ?? candidates[0];
+    return candidates.find((c) => existsSync(c)) ?? candidates[0]!;
   },
 
   resolveComponents(root) {
@@ -50,12 +50,12 @@ export const nextjsAdapter: FrameworkAdapter = {
       join(root, 'src', 'components', 'ui'),
       join(root, 'components', 'ui'),
     ];
-    return candidates.find((c) => existsSync(c)) ?? candidates[0];
+    return candidates.find((c) => existsSync(c)) ?? candidates[0]!;
   },
 
   resolveSrc(root) {
     const candidates = [join(root, 'src'), root];
-    return candidates.find((c) => existsSync(c)) ?? candidates[0];
+    return candidates.find((c) => existsSync(c)) ?? candidates[0]!;
   },
 
   detectFramework(root) {

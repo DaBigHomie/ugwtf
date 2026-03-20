@@ -24,7 +24,7 @@ import { prAgents } from '../agents/pr-agents.js';
 import { auditAgents } from '../agents/audit-agents.js';
 import { promptAgents } from '../agents/prompt-agents.js';
 import { chainAgents, chainGeneratorAgents } from '../agents/chain-agents.js';
-import { visualAuditCluster } from '@dabighomie/audit-orchestrator/cluster';
+import { visualAuditCluster } from '../audit-orchestrator/cluster.js';
 
 // --- 21 new domain clusters ---
 import { fsdAgents } from '../agents/fsd-agents.js';

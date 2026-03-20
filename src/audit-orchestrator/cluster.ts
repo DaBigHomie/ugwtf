@@ -6,11 +6,11 @@
  *   - DAG dependency: runs after 'quality' cluster
  *
  * Usage from UGWTF clusters/index.ts:
- *   import { visualAuditCluster } from '@dabighomie/audit-orchestrator/cluster';
+ *   import { visualAuditCluster } from '../audit-orchestrator/cluster.js';
  *   CLUSTERS.push(visualAuditCluster);
  */
 import { visualAuditAgents } from './agent.js';
-import type { Cluster } from './ugwtf-types.js';
+import type { Cluster } from '../types.js';
 
 export const visualAuditCluster: Cluster = {
   id: 'visual-audit',
