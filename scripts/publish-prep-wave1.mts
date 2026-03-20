@@ -5,7 +5,7 @@
  *
  * Run: npx tsx scripts/publish-prep-wave1.mts
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -119,14 +119,13 @@ step('Rebuild dist', () => {
 
 // --- Verify: 0 test files in dist ---
 step('Verify no test files in dist', () => {
-  const testFiles = execSync('find dist -name "*.test.*" 2>/dev/null || true', {
-    cwd: ROOT, encoding: 'utf-8',
-  }).trim();
-  const mockDirs = execSync('find dist -name "__mocks__" 2>/dev/null || true', {
-    cwd: ROOT, encoding: 'utf-8',
-  }).trim();
-  if (testFiles || mockDirs) {
-    console.error(`\n❌ Found test artifacts in dist/:\n${testFiles}\n${mockDirs}`);
+  const distPath = join(ROOT, 'dist');
+  if (!existsSync(distPath)) return;
+  const allEntries = readdirSync(distPath, { recursive: true, encoding: 'utf-8' }) as string[];
+  const testFiles = allEntries.filter(f => /\.test\.[^/\\]+$/.test(f));
+  const mockDirs = allEntries.filter(f => f.split(/[/\\]/).includes('__mocks__'));
+  if (testFiles.length > 0 || mockDirs.length > 0) {
+    console.error(`\n❌ Found test artifacts in dist/:\n${testFiles.join('\n')}\n${mockDirs.join('\n')}`);
     process.exit(1);
   }
 });
