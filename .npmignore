@@ -1,0 +1,17 @@
+src/
+docs/
+scripts/
+packages/
+tests/
+*.test.ts
+__mocks__/
+.github/
+.env*
+vitest.config.ts
+tsconfig.json
+AGENTS.md
+CLAUDE.md
+SCOREBOARD.json
+*.prompt.md
+reports/
+projects/

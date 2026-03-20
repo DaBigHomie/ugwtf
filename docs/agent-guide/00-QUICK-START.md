@@ -43,7 +43,7 @@ npx tsx src/index.ts <command> [repos...] [flags]
 npx tsc --noEmit     # 0 errors
 npm run lint         # 0 errors
 npm run build        # succeeds
-npx vitest run       # 261 tests pass
+npx vitest run       # 383 tests pass
 ```
 
 ## Registered Repos

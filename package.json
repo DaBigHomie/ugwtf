@@ -8,7 +8,7 @@
         "./types": "./dist/types.js"
     },
     "bin": {
-        "ugwtf": "./dist/index.js"
+        "ugwtf": "dist/index.js"
     },
     "scripts": {
         "build": "rm -rf dist && tsc",
