@@ -81,6 +81,30 @@ export const UNIVERSAL_LABELS: LabelDef[] = [
   { name: 'safe-migration', color: '2da44e', description: 'Migration validated as safe' },
   { name: 'destructive-migration', color: 'b60205', description: 'Migration contains destructive ops' },
   { name: 'types-update', color: '1d76db', description: 'Auto-generated type update' },
+
+  // Naming convention (type prefix for PRs/issues/commits)
+  { name: 'type:feat', color: '1d76db', description: 'New feature' },
+  { name: 'type:fix', color: 'd73a4a', description: 'Bug fix' },
+  { name: 'type:chore', color: 'bfdadc', description: 'Maintenance task' },
+  { name: 'type:docs', color: '0075ca', description: 'Documentation change' },
+  { name: 'type:refactor', color: 'c5def5', description: 'Code refactoring' },
+  { name: 'type:test', color: 'bfd4f2', description: 'Test updates' },
+  { name: 'type:ci', color: 'e6e6e6', description: 'CI/CD changes' },
+
+  // Scope labels
+  { name: 'scope:ci', color: 'e6e6e6', description: 'CI/CD workflow scope' },
+  { name: 'scope:db', color: '059669', description: 'Database scope' },
+  { name: 'scope:ui', color: 'f9a8d4', description: 'UI/frontend scope' },
+  { name: 'scope:api', color: '0ea5e9', description: 'API scope' },
+  { name: 'scope:auth', color: 'f97316', description: 'Authentication scope' },
+
+  // Copilot readiness
+  { name: 'copilot:ready', color: '2563eb', description: 'Ready for Copilot assignment' },
+
+  // Issue layers
+  { name: 'prompt-spec', color: 'c5def5', description: 'Prompt specification issue' },
+  { name: 'chain-tracker', color: 'bfd4f2', description: 'Chain tracking issue' },
+  { name: 'prompt-chain', color: '7c3aed', description: 'PR from prompt chain' },
 ];
 
 // ---------------------------------------------------------------------------
