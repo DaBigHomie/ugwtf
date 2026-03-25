@@ -132,6 +132,7 @@ export type OrchestratorCommand =
   | 'fix'         // Auto-fix drift
   | 'audit'       // Full audit of all repos
   | 'status'      // Show current state
+  | 'checks'      // Run quality gates for a repo (tsc, lint, build, test)
   | 'generate-chain' // Auto-generate prompt-chain.json from scanned prompts
   // Domain scans
   | 'scan'        // Run all domain-scan clusters (fsd, security, a11y, etc.)

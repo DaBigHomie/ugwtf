@@ -50,7 +50,7 @@ type UtilityCommand = typeof UTILITY_COMMANDS[number];
 const WATCH_COMMAND = 'watch' as const;
 
 const VALID_COMMANDS: OrchestratorCommand[] = [
-  'deploy', 'install', 'validate', 'fix', 'labels', 'issues', 'prs', 'audit', 'status', 'prompts', 'chain',
+  'deploy', 'install', 'validate', 'fix', 'labels', 'issues', 'prs', 'audit', 'status', 'checks', 'prompts', 'chain',
   'generate-chain',
   'scan', 'security', 'performance', 'a11y', 'seo', 'docs', 'commerce',
   'scenarios', 'design-system', 'supabase', 'gateway',
@@ -77,6 +77,7 @@ function printUsage(): void {
     fix        Auto-fix labels, workflows, and quality
     audit      Full audit of all repos with scoreboard
     status     Quick health check
+    checks     Run quality gates for a repo (tsc, lint, build, test)
     generate-chain  Auto-generate prompt-chain.json from scanned prompts
 
   Domain Scans:

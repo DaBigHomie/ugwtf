@@ -28,6 +28,7 @@ const COMMAND_CLUSTER_MAP: Record<string, string[]> = {
   prs:         ['prs'],
   audit:       ['audit', 'visual-audit'],
   status:      ['audit'],
+  checks:      ['quality'],
   prompts:     ['prompts'],
   chain:       ['chain'],
   'generate-chain': ['generate-chain'],

@@ -26,14 +26,34 @@ export interface RepoConfig {
   nodeVersion: string;
   /** Default branch */
   defaultBranch: string;
-  /** Whether repo has E2E tests */
+  /** @deprecated Use ci.e2e instead. Whether repo has E2E tests */
   hasE2E: boolean;
-  /** E2E command (if hasE2E) */
+  /** @deprecated Use ci.e2e.command instead. E2E command (if hasE2E) */
   e2eCommand: string | null;
   /** Extra labels beyond the universal set */
   extraLabels: LabelDef[];
   /** Absolute local path (for validation / file writing) */
   localPath: string;
+
+  // CI configuration — UGWTF owns the full CI pipeline per repo
+  ci: {
+    /** Command for linting. null = skip lint step */
+    lintCommand: string | null;
+    /** Command for type checking. null = skip */
+    typeCheckCommand: string | null;
+    /** Command for building. null = skip */
+    buildCommand: string | null;
+    /** Command for unit tests. null = skip */
+    unitTestCommand: string | null;
+    /** E2E test runner. null = no E2E */
+    e2e: {
+      command: string;
+      /** Install command for browser binaries */
+      installCommand: string;
+      /** Whether E2E failure should block merge */
+      blocking: boolean;
+    } | null;
+  };
 }
 
 export interface LabelDef {
@@ -130,6 +150,17 @@ export const REPOS: Record<string, RepoConfig> = {
       { name: 'persona-implementation', color: 'c2185b', description: 'Persona page implementation' },
     ],
     localPath: `${HOME}/management-git/damieus-com-migration`,
+    ci: {
+      lintCommand: 'eslint .',
+      typeCheckCommand: 'tsc --noEmit',
+      buildCommand: 'vite build',
+      unitTestCommand: 'vitest run',
+      e2e: {
+        command: 'npx playwright test',
+        installCommand: 'npx playwright install --with-deps chromium',
+        blocking: false,
+      },
+    },
   },
 
   ffs: {
@@ -149,6 +180,17 @@ export const REPOS: Record<string, RepoConfig> = {
       { name: 'checkout', color: '457b9d', description: 'Checkout flow features' },
     ],
     localPath: `${HOME}/management-git/flipflops-sundays-reboot`,
+    ci: {
+      lintCommand: 'eslint .',
+      typeCheckCommand: null,
+      buildCommand: 'vite build',
+      unitTestCommand: null,
+      e2e: {
+        command: 'npx playwright test',
+        installCommand: 'npx playwright install --with-deps chromium',
+        blocking: false,
+      },
+    },
   },
 
   '043': {
@@ -174,6 +216,17 @@ export const REPOS: Record<string, RepoConfig> = {
       { name: 'social', color: '7c2d12', description: 'Social sharing features' },
     ],
     localPath: `${HOME}/management-git/one4three-co-next-app`,
+    ci: {
+      lintCommand: 'next lint',
+      typeCheckCommand: 'tsc --noEmit',
+      buildCommand: 'next build --turbopack',
+      unitTestCommand: 'vitest run',
+      e2e: {
+        command: 'npx playwright test',
+        installCommand: 'npx playwright install --with-deps chromium',
+        blocking: false,
+      },
+    },
   },
 
   maximus: {
@@ -193,6 +246,17 @@ export const REPOS: Record<string, RepoConfig> = {
       { name: 'payments', color: '84cc16', description: 'Stripe payment features' },
     ],
     localPath: `${HOME}/management-git/maximus-ai`,
+    ci: {
+      lintCommand: 'eslint',
+      typeCheckCommand: 'tsc --noEmit',
+      buildCommand: 'next build',
+      unitTestCommand: 'vitest run',
+      e2e: {
+        command: 'npx playwright test',
+        installCommand: 'npx playwright install --with-deps chromium',
+        blocking: false,
+      },
+    },
   },
 
   cae: {
@@ -212,6 +276,13 @@ export const REPOS: Record<string, RepoConfig> = {
       { name: 'conversion', color: 'dc2626', description: 'Conversion optimization' },
     ],
     localPath: `${HOME}/management-git/cae-luxury-hair`,
+    ci: {
+      lintCommand: null,
+      typeCheckCommand: null,
+      buildCommand: 'vite build',
+      unitTestCommand: null,
+      e2e: null,
+    },
   },
 
   ugwtf: {
@@ -231,6 +302,13 @@ export const REPOS: Record<string, RepoConfig> = {
       { name: 'dogfood', color: '8b5cf6', description: 'Self-validation (UGWTF on UGWTF)' },
     ],
     localPath: `${HOME}/management-git/ugwtf`,
+    ci: {
+      lintCommand: null,
+      typeCheckCommand: 'tsc --noEmit',
+      buildCommand: 'npm run build',
+      unitTestCommand: 'vitest run',
+      e2e: null,
+    },
   },
 };
 
@@ -287,6 +365,13 @@ export function registerReposFromRC(repos: Partial<RepoConfig>[]): void {
       e2eCommand: partial.e2eCommand ?? null,
       extraLabels: partial.extraLabels ?? [],
       localPath: partial.localPath ?? `${HOME}/${partial.alias}`,
+      ci: partial.ci ?? {
+        lintCommand: null,
+        typeCheckCommand: null,
+        buildCommand: null,
+        unitTestCommand: null,
+        e2e: null,
+      },
     };
 
     REPOS[config.alias] = config;

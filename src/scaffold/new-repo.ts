@@ -41,6 +41,13 @@ function generateRepoConfig(opts: NewRepoOptions): string {
     e2eCommand: null,
     extraLabels: [],
     localPath: \`${HOME}/management-git/${repoName}\`,
+    ci: {
+      lintCommand: null,
+      typeCheckCommand: null,
+      buildCommand: null,
+      unitTestCommand: null,
+      e2e: null,
+    },
   },`;
 }
 
