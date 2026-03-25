@@ -12,6 +12,7 @@ import { generateSecurityAudit } from '../generators/security-audit.js';
 import { generateDependabotAutoMerge } from '../generators/dependabot-auto-merge.js';
 import { generateSupabaseMigration } from '../generators/supabase-migration.js';
 import { generateVisualAudit } from '../generators/visual-audit.js';
+import { instructionSyncAgent } from './instruction-sync-agent.js';
 import { writeFile, repoPath } from '../utils/fs.js';
 
 interface WorkflowSpec {
@@ -121,5 +122,6 @@ const validateWorkflowsAgent: Agent = {
 
 export const workflowAgents: Agent[] = [
   ...WORKFLOW_SPECS.map(makeDeployAgent),
+  instructionSyncAgent,
   validateWorkflowsAgent,
 ];

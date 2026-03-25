@@ -18,7 +18,8 @@ import { getRepo } from './config/repo-registry.js';
 
 // Map orchestrator commands to cluster IDs
 const COMMAND_CLUSTER_MAP: Record<string, string[]> = {
-  // Core pipeline
+  // Setup (one-time per repo)
+  install:     ['labels', 'workflows'],
   deploy:      ['labels', 'workflows'],
   validate:    ['quality'],
   fix:         ['labels', 'workflows', 'quality', 'fix'],

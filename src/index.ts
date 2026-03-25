@@ -50,7 +50,7 @@ type UtilityCommand = typeof UTILITY_COMMANDS[number];
 const WATCH_COMMAND = 'watch' as const;
 
 const VALID_COMMANDS: OrchestratorCommand[] = [
-  'deploy', 'validate', 'fix', 'labels', 'issues', 'prs', 'audit', 'status', 'prompts', 'chain',
+  'deploy', 'install', 'validate', 'fix', 'labels', 'issues', 'prs', 'audit', 'status', 'prompts', 'chain',
   'generate-chain',
   'scan', 'security', 'performance', 'a11y', 'seo', 'docs', 'commerce',
   'scenarios', 'design-system', 'supabase', 'gateway',
@@ -62,17 +62,24 @@ function printUsage(): void {
 
   Usage: ugwtf <command> [repos...] [options]
 
-  Commands:
-    deploy     Write workflows + sync labels to repos
-    validate   Run quality checks (tsc, lint, build)
-    fix        Auto-fix labels, workflows, and quality
-    labels     Sync GitHub labels only
+  Primary Pipeline (e2e orchestration):
+    prompts    Scan, validate, and create issues from .prompt.md files
     issues     Detect stalled issues, assign Copilot, auto-triage
     prs        Review Copilot PRs, enforce DB firewall
+    chain      Manage prompt-chain lifecycle (load, create issues, advance)
+
+  Setup (one-time per repo):
+    install    Sync labels + deploy workflows (alias: deploy)
+    labels     Sync GitHub labels only
+
+  Quality & Support:
+    validate   Run quality checks (tsc, lint, build)
+    fix        Auto-fix labels, workflows, and quality
     audit      Full audit of all repos with scoreboard
     status     Quick health check
-    prompts    Scan, validate, and create issues from .prompt.md files
-    chain      Manage prompt-chain lifecycle (load, create issues, advance)
+    generate-chain  Auto-generate prompt-chain.json from scanned prompts
+
+  Domain Scans:
     scan       Run all domain-scan clusters (fsd, security, a11y, etc.)
     security   Security scanning + secret leak detection
     performance Bundle size + heavy dependency detection
@@ -108,7 +115,7 @@ function printUsage(): void {
   Repos: ${allAliases().join(', ')}
 
   Examples:
-    ugwtf deploy damieus ffs
+    ugwtf install damieus ffs
     ugwtf audit --dry-run
     ugwtf prs damieus --verbose
     ugwtf labels --concurrency 5

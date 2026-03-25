@@ -25,7 +25,7 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
-      - name: Deploy to all repos
+      - name: Install to all repos
         env:
           GITHUB_TOKEN: ${{ secrets.UGWTF_PAT }}
-        run: npx tsx src/index.ts deploy --all
+        run: npx tsx src/index.ts install --all

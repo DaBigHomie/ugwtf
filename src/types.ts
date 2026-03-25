@@ -118,17 +118,20 @@ export interface SwarmSummary {
 // ---------------------------------------------------------------------------
 
 export type OrchestratorCommand =
-  // Core pipeline
-  | 'deploy'      // Write workflows + configs to repos
-  | 'validate'    // Check repo state against expected
-  | 'fix'         // Auto-fix drift
-  | 'labels'      // Sync GitHub labels
+  // Primary pipeline (e2e orchestration)
+  | 'prompts'     // Scan, validate, forecast, and create issues from .prompt.md files
   | 'issues'      // Create/manage issues
   | 'prs'         // Review/manage PRs
+  | 'chain'       // Manage prompt-chain lifecycle: load, create issues, advance
+  // Setup (one-time per repo)
+  | 'install'     // Sync labels + deploy workflows (alias: deploy)
+  | 'deploy'      // Backward-compatible alias for install
+  | 'labels'      // Sync GitHub labels
+  // Quality & Support
+  | 'validate'    // Check repo state against expected
+  | 'fix'         // Auto-fix drift
   | 'audit'       // Full audit of all repos
   | 'status'      // Show current state
-  | 'prompts'     // Scan, validate, forecast, and create issues from .prompt.md files
-  | 'chain'       // Manage prompt-chain lifecycle: load, create issues, advance
   | 'generate-chain' // Auto-generate prompt-chain.json from scanned prompts
   // Domain scans
   | 'scan'        // Run all domain-scan clusters (fsd, security, a11y, etc.)
