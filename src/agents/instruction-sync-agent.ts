@@ -20,6 +20,7 @@ const SYNC_MAPPINGS: Array<{ source: string; target: string }> = [
   { source: 'agent-reference.md', target: '.github/instructions/ugwtf-workflow.instructions.md' },
   { source: 'ci-instructions.md', target: '.github/instructions/ci-instructions.md' },
   { source: 'chain-instructions.md', target: '.github/instructions/chain-instructions.md' },
+  { source: 'testing-instructions.md', target: '.github/instructions/testing-instructions.md' },
 ];
 
 export const instructionSyncAgent: Agent = {
