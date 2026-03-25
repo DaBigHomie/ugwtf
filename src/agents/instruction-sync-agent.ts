@@ -1,8 +1,8 @@
 /**
  * Instruction Sync Agent
  *
- * Syncs the UGWTF agent-reference doc (source of truth) to target repos.
- * Writes to .github/instructions/ugwtf-workflow.instructions.md
+ * Syncs UGWTF instruction docs (source of truth) to target repos.
+ * Each doc in SYNC_MAPPINGS is written to .github/instructions/ with applyTo frontmatter.
  */
 import type { Agent, AgentResult } from '../types.js';
 import { getRepo } from '../config/repo-registry.js';
@@ -12,14 +12,20 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SOURCE_DOC = resolve(__dirname, '../../docs/agent-reference.md');
+const DOCS_DIR = resolve(__dirname, '../../docs');
 const FRONTMATTER = `---\napplyTo: "**"\n---\n\n`;
-const TARGET_PATH = '.github/instructions/ugwtf-workflow.instructions.md';
+
+/** Source doc (relative to docs/) → target path (relative to repo root) */
+const SYNC_MAPPINGS: Array<{ source: string; target: string }> = [
+  { source: 'agent-reference.md', target: '.github/instructions/ugwtf-workflow.instructions.md' },
+  { source: 'ci-instructions.md', target: '.github/instructions/ci-instructions.md' },
+  { source: 'chain-instructions.md', target: '.github/instructions/chain-instructions.md' },
+];
 
 export const instructionSyncAgent: Agent = {
   id: 'instruction-sync',
   name: 'Sync UGWTF Instructions',
-  description: 'Copy agent-reference.md from UGWTF to target repo instructions',
+  description: 'Copy instruction docs from UGWTF to target repo .github/instructions/',
   clusterId: 'workflows',
 
   shouldRun(ctx) {
@@ -35,26 +41,46 @@ export const instructionSyncAgent: Agent = {
       return { agentId: this.id, status: 'failed', repo: ctx.repoAlias, duration: 0, message: 'No config', artifacts: [] };
     }
 
-    let sourceContent: string;
-    try {
-      sourceContent = readFileSync(SOURCE_DOC, 'utf-8');
-    } catch {
-      return { agentId: this.id, status: 'failed', repo: ctx.repoAlias, duration: Date.now() - start, message: 'Cannot read docs/agent-reference.md', artifacts: [] };
+    const artifacts: string[] = [];
+    const messages: string[] = [];
+
+    for (const mapping of SYNC_MAPPINGS) {
+      const sourcePath = resolve(DOCS_DIR, mapping.source);
+
+      let sourceContent: string;
+      try {
+        sourceContent = readFileSync(sourcePath, 'utf-8');
+      } catch {
+        ctx.logger.warn(`Cannot read docs/${mapping.source} — skipping`);
+        continue;
+      }
+
+      // Strip any existing frontmatter from source, prepend target frontmatter
+      const contentWithoutFrontmatter = sourceContent.replace(/^---[\s\S]*?---\s*\n/, '');
+      const output = FRONTMATTER + contentWithoutFrontmatter;
+
+      const dest = repoPath(repo, mapping.target);
+
+      if (ctx.dryRun) {
+        ctx.logger.info(`[DRY RUN] Would write ${dest} (${output.length} bytes)`);
+        messages.push(`DRY RUN: ${mapping.target}`);
+        artifacts.push(dest);
+        continue;
+      }
+
+      const result = writeFile(dest, output);
+      ctx.logger.success(`${result.action}: ${mapping.target}`);
+      messages.push(`${result.action}: ${mapping.target}`);
+      artifacts.push(dest);
     }
 
-    // Strip any existing frontmatter from source, prepend target frontmatter
-    const contentWithoutFrontmatter = sourceContent.replace(/^---[\s\S]*?---\s*\n/, '');
-    const output = FRONTMATTER + contentWithoutFrontmatter;
-
-    const dest = repoPath(repo, TARGET_PATH);
-
-    if (ctx.dryRun) {
-      ctx.logger.info(`[DRY RUN] Would write ${dest} (${output.length} bytes)`);
-      return { agentId: this.id, status: 'success', repo: ctx.repoAlias, duration: Date.now() - start, message: `DRY RUN: ${TARGET_PATH}`, artifacts: [dest] };
-    }
-
-    const result = writeFile(dest, output);
-    ctx.logger.success(`${result.action}: ${TARGET_PATH}`);
-    return { agentId: this.id, status: 'success', repo: ctx.repoAlias, duration: Date.now() - start, message: `${result.action}: ${TARGET_PATH}`, artifacts: [dest] };
+    return {
+      agentId: this.id,
+      status: artifacts.length > 0 ? 'success' : 'failed',
+      repo: ctx.repoAlias,
+      duration: Date.now() - start,
+      message: messages.join('; '),
+      artifacts,
+    };
   },
 };
