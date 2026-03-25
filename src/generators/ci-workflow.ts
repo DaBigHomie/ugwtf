@@ -15,9 +15,9 @@ export function generateCI(repo: RepoConfig): string {
 
   // Build quality gate steps - only include non-null commands
   const qualitySteps: string[] = [];
-  if (ci.typeCheckCommand) qualitySteps.push(`      - name: TypeScript check\n        run: npx ${ci.typeCheckCommand}`);
-  if (ci.lintCommand) qualitySteps.push(`      - name: Lint\n        run: npx ${ci.lintCommand}`);
-  if (ci.buildCommand) qualitySteps.push(`      - name: Build\n        run: npx ${ci.buildCommand}`);
+  if (ci.typeCheckCommand) qualitySteps.push(`      - name: Type check\n        run: npm run type-check`);
+  if (ci.lintCommand) qualitySteps.push(`      - name: Lint\n        run: npm run lint`);
+  if (ci.buildCommand) qualitySteps.push(`      - name: Build\n        run: npm run build`);
 
   // Build jobs
   let jobs = `  quality-gates:
@@ -46,8 +46,8 @@ ${qualitySteps.join('\n')}`;
           node-version: '${repo.nodeVersion}'
           cache: 'npm'
       - run: npm ci
-      - name: Run unit tests
-        run: npx ${ci.unitTestCommand}`;
+      - name: Unit tests
+        run: npm test`;
   }
 
   if (ci.e2e) {
