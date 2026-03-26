@@ -197,6 +197,8 @@ export interface GitHubClient {
   assignCopilot(owner: string, repo: string, issueNumber: number): Promise<void>;
   /** Get a single issue by number */
   getIssue(owner: string, repo: string, issueNumber: number): Promise<GitHubIssue>;
+  /** Close an issue with state_reason: completed */
+  closeIssue(owner: string, repo: string, issueNumber: number): Promise<void>;
   /** List workflow runs */
   listWorkflowRuns(owner: string, repo: string): Promise<GitHubWorkflowRun[]>;
   /** Get file contents from repo */

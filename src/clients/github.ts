@@ -323,6 +323,13 @@ export function createGitHubClient(logger: Logger, dryRun = false): GitHubClient
       return parseJSON<GitHubIssue>(raw);
     },
 
+    async closeIssue(owner, repo, issueNumber) {
+      await ghApi('PATCH', `/repos/${owner}/${repo}/issues/${issueNumber}`, {
+        state: 'closed',
+        state_reason: 'completed',
+      } as Record<string, string>);
+    },
+
     async getFileContents(owner, repo, path) {
       if (dryRun) return '';
       const raw = await ghApi('GET', `/repos/${owner}/${repo}/contents/${path}`);

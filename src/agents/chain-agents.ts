@@ -254,6 +254,31 @@ const chainAdvancer: Agent = {
     const openIssues = await ctx.github.listIssues(owner, repo, 'open', config.labels);
     const openIssueNumbers = new Set(openIssues.map(i => i.number));
 
+    // SP↔CH cross-reference: if a CH issue is open but its specIssue is closed,
+    // the work is done — auto-close the CH issue to unblock the chain.
+    for (const entry of config.chain) {
+      if (entry.issue && entry.specIssue && openIssueNumbers.has(entry.issue)) {
+        try {
+          const specIssue = await ctx.github.getIssue(owner, repo, entry.specIssue);
+          if (specIssue.state === 'closed') {
+            ctx.logger.warn(`CH #${entry.issue} open but SP #${entry.specIssue} closed — auto-closing CH issue`);
+            if (!ctx.dryRun) {
+              await ctx.github.addComment(owner, repo, entry.issue,
+                `## Auto-Close — SP↔CH Bridge\n\nSpec issue #${entry.specIssue} is closed (work complete). ` +
+                `Closing this chain-tracker issue to unblock chain advancement.\n\n` +
+                `_Automated by UGWTF chain-advancer SP↔CH bridge_`
+              );
+              await ctx.github.closeIssue(owner, repo, entry.issue);
+              await ctx.github.addLabels(owner, repo, entry.issue, ['automation:completed']);
+              openIssueNumbers.delete(entry.issue);
+            }
+          }
+        } catch {
+          // specIssue may not exist or be inaccessible — skip
+        }
+      }
+    }
+
     // Find the first chain entry whose issue is still open (next in sequence)
     const nextEntry = config.chain
       .sort((a, b) => a.position - b.position)

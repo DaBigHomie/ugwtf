@@ -5,6 +5,8 @@
  */
 import type { Agent, AgentResult } from '../types.js';
 import { getRepo } from '../config/repo-registry.js';
+import { resolveChainPath, type ChainConfig, type ChainEntry } from './chain-types.js';
+import { readFileSync } from 'node:fs';
 
 function parseSlug(slug: string): { owner: string; repo: string } {
   const parts = slug.split('/');
@@ -31,11 +33,36 @@ const stalledIssueDetector: Agent = {
 
     const stalled: number[] = [];
 
+    // Load chain config to check specIssue cross-references
+    let chainEntries: ChainEntry[] = [];
+    if (ctx.localPath) {
+      const chainPath = resolveChainPath(ctx.localPath);
+      if (chainPath) {
+        try {
+          const config = JSON.parse(readFileSync(chainPath, 'utf-8')) as ChainConfig;
+          chainEntries = config.chain;
+        } catch { /* no chain config — skip cross-ref */ }
+      }
+    }
+
     for (const issue of issues) {
-      // Check if there's a PR linked to this issue
-      const linkedPR = prs.find(pr =>
+      // Check if there's a PR linked to this issue (direct or via specIssue)
+      let linkedPR = prs.find(pr =>
         pr.body?.includes(`#${issue.number}`) ?? false
       );
+
+      // SP↔CH bridge: if no direct PR link, check if the specIssue has a linked PR
+      if (!linkedPR) {
+        const chainEntry = chainEntries.find(e => e.issue === issue.number);
+        if (chainEntry?.specIssue) {
+          linkedPR = prs.find(pr =>
+            pr.body?.includes(`#${chainEntry.specIssue}`) ?? false
+          );
+          if (linkedPR) {
+            ctx.logger.info(`CH #${issue.number} linked via SP #${chainEntry.specIssue} → PR #${linkedPR.number}`);
+          }
+        }
+      }
 
       if (!linkedPR) {
         stalled.push(issue.number);

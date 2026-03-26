@@ -110,3 +110,25 @@ npm run dogfood:full      # setup + verify combined
 - ❌ Do not manually inspect orchestration internals when a dry-run command proves behavior
 
 Manual exploration in a repeatable path wastes context/tokens and introduces avoidable drift.
+
+## Anti-Bypass Rule (Critical)
+
+> **⛔ ALL Copilot assignment, issue management, and PR operations MUST go through UGWTF CLI.**
+
+Agents MUST NOT:
+- ❌ Use `github-assign_copilot_to_issue` MCP tool for chain issues
+- ❌ Use `github-issue_write` to close/modify chain-tracker issues directly
+- ❌ Use `github-push_files` to modify `prompt-chain.json` without `generate-chain`
+- ❌ Assign Copilot to SP (spec) issues — always use CH (chain-tracker) issues
+- ❌ Skip pipeline steps (`prompts` → `generate-chain` → `chain` → `issues` → `prs`)
+
+Agents MUST:
+- ✅ Use `node dist/index.js chain <alias> --no-cache` to advance the chain
+- ✅ Use `node dist/index.js issues <alias> --no-cache` to detect and fix stalled issues
+- ✅ Use `node dist/index.js prs <alias> --no-cache` to review and label PRs
+- ✅ Include `Closes #CH_NUM` in PR bodies (not just `Fixes #SP_NUM`)
+- ✅ Run `ugwtf labels <alias>` before first chain run
+
+**Why**: UGWTF's 5 Copilot safety fixes (forced fetch transport, rate limiting, post-assignment
+verification, PR quality gates, sequential advancement) are bypassed when raw GitHub API or
+MCP tools are used directly. This causes stalled chains, missing labels, and orphaned issues.

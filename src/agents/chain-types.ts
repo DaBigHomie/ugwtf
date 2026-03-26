@@ -20,6 +20,7 @@ export interface ChainEntry {
   severity: 'critical' | 'high' | 'medium' | 'low';
   depends: string[];
   issue: number | null;
+  specIssue?: number | null;  // SP (spec) issue number — bridges CH↔SP layers
   scope?: string;   // from prompt YAML frontmatter (e.g. "shop", "marketing")
   type?: string;    // from prompt YAML frontmatter (e.g. "feat", "fix", "perf")
 }

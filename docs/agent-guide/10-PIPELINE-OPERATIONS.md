@@ -257,6 +257,79 @@ node dist/index.js install 043 --no-cache
 
 ---
 
+## Known Loopholes & Anti-Bypass Rules
+
+> **⛔ CRITICAL: All Copilot/issue/PR operations MUST go through UGWTF CLI.**  
+> Using raw GitHub API, MCP tools (github-assign_copilot_to_issue), or gh CLI directly
+> bypasses UGWTF's 5 safety fixes and causes chain stalls.
+
+### Loophole 1: External Copilot Assignment (BLOCKED)
+
+**Problem**: Agents can use `github-assign_copilot_to_issue` MCP tool or raw GitHub API
+to assign Copilot to issues, bypassing UGWTF's rate limiting, verification, and label management.
+
+**Impact**: PRs created without `automation:copilot` label, chain-tracker issues not linked,
+rate limiter counts wrong, stalled detector can't find linked PRs.
+
+**Rule**: ⛔ NEVER use `github-assign_copilot_to_issue` MCP tool for chain issues.
+Always use `node dist/index.js chain <alias> --no-cache` to advance the chain.
+
+### Loophole 2: SP↔CH Issue Disconnect
+
+**Problem**: Copilot gets assigned to SP (spec) issues instead of CH (chain-tracker) issues.
+PRs reference SP issues ("Fixes #253") but not CH issues. When PRs merge, CH issues stay open.
+Chain-advancer sees CH issues still open → chain never advances.
+
+**Impact**: Permanent chain stall. Rate limiter blocks all advancement.
+
+**Rule**: ⛔ Copilot MUST be assigned to CH (chain-tracker) issues, not SP (spec) issues.
+The `ugwtf chain` command handles this correctly. If manual intervention is needed,
+always reference BOTH issues: `Fixes #SP_NUM` + `Closes #CH_NUM`.
+
+**Fix (v1.0.1)**: Chain-advancer now checks `specIssue` field. If a CH issue is open
+but its specIssue is closed, the chain-advancer auto-closes the CH issue.
+
+### Loophole 3: Rate Limiter Scope Too Broad
+
+**Problem**: The rate limiter counts ALL `automation:in-progress` issues, including
+issues not in the current chain. If unrelated issues get this label, the chain stalls.
+
+**Impact**: Chain blocked by unrelated in-progress issues.
+
+**Mitigation**: The rate limiter intentionally uses a global scope for safety.
+To override: `--max-copilot-concurrency N` (default: 1). For Wave 1 parallel execution,
+use `--max-copilot-concurrency 6`.
+
+### Loophole 4: Stalled Detector Doesn't Auto-Recover
+
+**Problem**: The stalled detector adds `stalled` + `needs-pr` labels but doesn't
+remove `automation:in-progress`. The issue stays in-progress forever.
+
+**Impact**: Accumulating stalled issues that block the rate limiter.
+
+**Fix (v1.0.1)**: Stalled detector now checks `specIssue` cross-references.
+If a CH issue has no direct PR but its specIssue does, it's NOT flagged as stalled.
+
+### Loophole 5: Sequential-Only Chain Advancement
+
+**Problem**: Chain-advancer finds the first open entry by position. Even though
+Wave 1 may have 6 independent items, it only processes 1 at a time.
+
+**Mitigation**: Use `--max-copilot-concurrency N` to allow parallel Wave 1 execution.
+Run `chain` multiple times (chain-advancer assigns one per run, respecting rate limit).
+
+### Anti-Bypass Enforcement Checklist
+
+Before ANY issue/PR operation, verify:
+
+- [ ] Using UGWTF CLI (`node dist/index.js`) — NOT raw GitHub API or MCP tools
+- [ ] Operating on CH (chain-tracker) issues — NOT SP (spec) issues
+- [ ] Labels exist (`ugwtf labels <alias>` ran first)
+- [ ] Pipeline order followed: `prompts` → `generate-chain` → `chain` → `issues` → `prs`
+- [ ] PR body includes `Closes #CH_NUM` (not just `Fixes #SP_NUM`)
+
+---
+
 ## Agent Clusters (All 34)
 
 <details>
