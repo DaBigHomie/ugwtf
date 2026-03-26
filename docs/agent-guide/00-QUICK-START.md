@@ -8,22 +8,35 @@
 
 ```bash
 cd ~/management-git/ugwtf
+# Preferred (full output, no TTY issues):
+node dist/index.js <command> [repos...] [flags]
+
+# Alternative (may lose output to spinner):
 npx tsx src/index.ts <command> [repos...] [flags]
 ```
 
+> **Tip**: Always rebuild before running: `npm run build`  
+> **Tip**: Always use `--no-cache` after making changes
+
 ## Key Commands
 
+### Pipeline (run in order for new chains)
+| Step | Command | Purpose |
+|------|---------|---------|
+| 1 | `prompts` | Scan .prompt.md files → create spec issues |
+| 2 | `generate-chain` | Build prompt-chain.json from prompts |
+| 3 | `chain` | Create chain issues → assign Copilot |
+| 4 | `issues` | Triage stalled, re-assign, auto-label |
+| 5 | `prs` | Review Copilot PRs, DB migration firewall |
+
+### Setup & Maintenance
 | Command | Purpose |
 |---------|---------|
-| `labels` | Sync label definitions to GitHub repos |
-| `deploy` | Labels + CI/CD workflow deployment |
-| `validate` | Quality gates (tsc, lint, build, config) |
-| `issues` | Stale detection, Copilot assign, auto-triage |
-| `prs` | Copilot PR review, DB migration firewall |
-| `audit` | Full repo health audit + scoreboard |
-| `fix` | Auto-fix labels, workflows, quality issues |
-| `status` | Quick health snapshot |
-| `generate-chain` | Build prompt execution chain from docs/ |
+| `install` | Sync labels + deploy CI workflows |
+| `fix` | Auto-fix labels, workflows, quality |
+| `status` | Quick health audit (5-domain score) |
+| `audit` | Full audit + cross-repo scoreboard |
+| `validate` | Quality gates (tsc, lint, build) |
 
 ## Flags
 
@@ -58,8 +71,9 @@ npx vitest run       # 383 tests pass
 
 ## Next Steps
 
+- **[10-PIPELINE-OPERATIONS.md](10-PIPELINE-OPERATIONS.md)** — Full pipeline runbook (start here for operations)
 - [01-ARCHITECTURE.md](01-ARCHITECTURE.md) — File tree + layers
-- [02-AGENTS.md](02-AGENTS.md) — All 85+ agents by cluster
+- [02-AGENTS.md](02-AGENTS.md) — All 94 agents by cluster
 - [03-CLI.md](03-CLI.md) — Full CLI reference
 - [04-SCRIPTS.md](04-SCRIPTS.md) — Script purpose index
 - [05-TESTING.md](05-TESTING.md) — Test files + coverage
