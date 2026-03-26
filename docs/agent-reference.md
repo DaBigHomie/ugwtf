@@ -58,6 +58,8 @@ UGWTF exposes **25 commands** organized by pipeline hierarchy.
 | `issues` | Detect stalled issues, assign Copilot, auto-triage |
 | `prs` | Review Copilot PRs, enforce DB firewall |
 | `chain` | Manage prompt-chain lifecycle (load, create issues, advance) |
+| `cleanup` | Close orphan PRs, strip labels, re-assign Copilot |
+| `dry-run` | E2E pipeline validation without side effects |
 
 ### Setup (one-time per repo)
 
@@ -257,7 +259,12 @@ UGWTF deploys **6 workflows** to each repo via `ugwtf install` (previously `depl
 | Workflow File | Purpose |
 |---|---|
 | `ci.yml` | Lint, type-check, build, test on push/PR |
-| `copilot-full-automation.yml` | End-to-end Copilot agent automation pipeline |
+| `copilot-assign.yml` | Phase 1: Assign Copilot on `repository_dispatch: chain-next` |
+| `copilot-pr-promote.yml` | Phase 2: Draft → ready, request Copilot review |
+| `copilot-pr-validate.yml` | Phase 3+5+6+7: Validate, merge, DB firewall, retry |
+| `copilot-pr-review.yml` | Phase 4: Re-assign on changes_requested |
+| `copilot-pr-merged.yml` | Phase 8: Close issues, dispatch chain-next |
+| `copilot-chain-advance.yml` | Phase 9: Advance chain on issue close |
 | `security-audit.yml` | Scheduled and on-demand security audits |
 | `dependabot-auto-merge.yml` | Auto-merge passing Dependabot PRs |
 | `supabase-migration-automation.yml` | Automate Supabase migration checks and deployment |

@@ -8,11 +8,8 @@
 
 ```bash
 cd ~/management-git/ugwtf
-# Preferred (full output, no TTY issues):
+export GITHUB_TOKEN=$(gh auth token)
 node dist/index.js <command> [repos...] [flags]
-
-# Alternative (may lose output to spinner):
-npx tsx src/index.ts <command> [repos...] [flags]
 ```
 
 > **Tip**: Always rebuild before running: `npm run build`  
@@ -28,6 +25,8 @@ npx tsx src/index.ts <command> [repos...] [flags]
 | 3 | `chain` | Create chain issues → assign Copilot |
 | 4 | `issues` | Triage stalled, re-assign, auto-label |
 | 5 | `prs` | Review Copilot PRs, DB migration firewall |
+| 6 | `cleanup` | Reset: close orphan PRs, strip labels |
+| 7 | `dry-run` | E2E validation without side effects |
 
 ### Setup & Maintenance
 | Command | Purpose |
@@ -48,6 +47,7 @@ npx tsx src/index.ts <command> [repos...] [flags]
 --path <dir>     Scope prompt scanning to path
 --no-cache       Disable repo unchanged-skip cache
 --output <fmt>   Report format: json|markdown|summary
+--max-copilot-concurrency N  Max simultaneous Copilot issues (default: 1)
 ```
 
 ## Quality Gates (Before Commit)
@@ -56,7 +56,7 @@ npx tsx src/index.ts <command> [repos...] [flags]
 npx tsc --noEmit     # 0 errors
 npm run lint         # 0 errors
 npm run build        # succeeds
-npx vitest run       # 383 tests pass
+npx vitest run       # 400 tests pass
 ```
 
 ## Registered Repos
@@ -66,15 +66,13 @@ npx vitest run       # 383 tests pass
 | `damieus` | damieus-com-migration |
 | `043` | one4three-co-next-app |
 | `ffs` | flipflops-sundays-reboot |
-| `cae` | cae-luxury-hair |
+| `cae` | Cae |
 | `maximus` | maximus-ai |
+| `ugwtf` | ugwtf |
 
 ## Next Steps
 
 - **[10-PIPELINE-OPERATIONS.md](10-PIPELINE-OPERATIONS.md)** — Full pipeline runbook (start here for operations)
 - [01-ARCHITECTURE.md](01-ARCHITECTURE.md) — File tree + layers
-- [02-AGENTS.md](02-AGENTS.md) — All 94 agents by cluster
+- [02-AGENTS.md](02-AGENTS.md) — All agents by cluster
 - [03-CLI.md](03-CLI.md) — Full CLI reference
-- [04-SCRIPTS.md](04-SCRIPTS.md) — Script purpose index
-- [05-TESTING.md](05-TESTING.md) — Test files + coverage
-- [06-VALIDATION.md](06-VALIDATION.md) — Gold standard scoring

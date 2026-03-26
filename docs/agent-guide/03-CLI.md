@@ -3,85 +3,95 @@
 ## Usage
 
 ```bash
-npx tsx src/index.ts <command> [repos...] [flags]
+node dist/index.js <command> [repos...] [flags]
 ```
-
-If built: `ugwtf <command> [repos...] [flags]`
 
 ## Commands
 
-### Operational
+### Pipeline
+
+| Command | Args | Description |
+|---------|------|-------------|
+| `prompts <repos>` | repo aliases | Scan .prompt.md → create spec issues |
+| `generate-chain <repos>` | repo aliases | Build prompt-chain.json (toposort + waves) |
+| `chain <repos>` | repo aliases | Create chain issues, assign Copilot |
+| `issues <repos>` | repo aliases | Triage, stalled detection, Copilot assign |
+| `prs <repos>` | repo aliases | Review Copilot PRs, DB migration firewall |
+| `cleanup <repos>` | repo aliases | Close orphan PRs, strip labels, re-assign |
+| `dry-run <repos>` | repo aliases | E2E validation without side effects |
+
+### Setup & Quality
 
 | Command | Args | Description |
 |---------|------|-------------|
 | `labels <repos>` | repo aliases | Sync label definitions to GitHub |
 | `deploy <repos>` | repo aliases | Labels + deploy CI/CD workflow YAML |
+| `install <repos>` | repo aliases | Alias for deploy |
 | `validate <repos>` | repo aliases | Run quality gates (tsc, lint, build) |
-| `issues <repos>` | repo aliases | Triage, stalled detection, Copilot assign |
-| `prs <repos>` | repo aliases | Review Copilot PRs, DB migration firewall |
-| `audit <repos>` | repo aliases | Full health audit + scoreboard (target 80%+) |
 | `fix <repos>` | repo aliases | Auto-fix labels, workflows, quality |
 | `status <repos>` | repo aliases | Quick health snapshot |
+| `audit <repos>` | repo aliases | Full health audit + scoreboard |
 
-### Generation
+### Domain Scans
 
-| Command | Args | Description |
-|---------|------|-------------|
-| `generate-chain <repos>` | repo aliases | Build prompt execution chain from docs/ |
+| Command | Description |
+|---------|-------------|
+| `scan` | Full scan (all domain clusters) |
+| `security` | Vulnerability scan + secret detection |
+| `performance` | Bundle size + heavy deps |
+| `a11y` | Accessibility (WCAG) |
+| `seo` | Meta tags, sitemaps |
+| `docs` | Documentation coverage |
+| `commerce` | E-commerce features |
+| `design-system` | Tokens, components, responsive |
+| `supabase` | Supabase + FSD compliance |
 
 ### Utility
 
-| Command | Args | Description |
-|---------|------|-------------|
-| `list` | — | List all agents and clusters |
-| `scaffold-agent` | — | Generate new agent boilerplate |
-| `scaffold-repo` | — | Register new repo |
+| Command | Description |
+|---------|-------------|
+| `list` | List all agents and clusters |
+| `scaffold-agent` | Generate new agent boilerplate |
+| `scaffold-repo` | Register new repo |
 
 ## Flags
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--dry-run` | boolean | false | Preview changes without executing |
+| `--dry-run` | boolean | false | Preview without executing |
 | `--verbose`, `-v` | boolean | false | Debug output |
 | `--concurrency` | number | 3 | Max parallel repos |
-| `--cluster` | string | — | Target specific cluster (repeatable) |
-| `--path` | string | — | Scope prompt scanning to path (generate-chain) |
-| `--no-cache` | boolean | false | Disable repo unchanged-skip cache |
-| `--output` | string | — | Report format: json\|markdown\|summary |
-| `--max-copilot-concurrency` | number | 1 | Max issues assigned to Copilot at once |
-| `--sequential-copilot` | boolean | false | Alias for `--max-copilot-concurrency 1` |
+| `--cluster` | string | — | Target specific cluster |
+| `--path` | string | — | Scope prompt scanning to path |
+| `--no-cache` | boolean | false | Skip repo cache |
+| `--output` | string | summary | json, markdown, summary |
+| `--max-copilot-concurrency` | number | 1 | Max Copilot issues at once |
 
 ## Repo Aliases
 
-Repos are registered in `src/config/repo-registry.ts`:
-
-| Alias | GitHub Repo | Supabase ID |
-|-------|-------------|-------------|
-| `damieus` | DaBigHomie/damieus-com-migration | okonslamwxtcoekuhmtm |
-| `043` | DaBigHomie/one4three-co-next-app | bgqjgpvzokonkyiljasj |
-| `ffs` | DaBigHomie/flipflops-sundays-reboot | tyeusfguqqznvxgloobb |
-| `cae` | DaBigHomie/cae-luxury-hair | — |
-| `maximus` | DaBigHomie/maximus-ai | ycqtigpjjiqhkdecwiqt |
+| Alias | GitHub Repo |
+|-------|-------------|
+| `damieus` | DaBigHomie/damieus-com-migration |
+| `043` | DaBigHomie/one4three-co-next-app |
+| `ffs` | DaBigHomie/flipflops-sundays-reboot |
+| `cae` | DaBigHomie/Cae |
+| `maximus` | DaBigHomie/maximus-ai |
+| `ugwtf` | DaBigHomie/ugwtf |
 
 ## Examples
 
 ```bash
-# Sync labels to one repo
-npx tsx src/index.ts labels damieus
+# Start a chain
+node dist/index.js chain 043 --no-cache --verbose
 
-# Audit all repos (dry run)
-npx tsx src/index.ts audit damieus 043 ffs cae maximus --dry-run -v
+# Validate pipeline without side effects
+node dist/index.js dry-run 043 --no-cache
 
-# Generate prompt chain for damieus
-npx tsx src/index.ts generate-chain damieus --output chain.json
+# Reset after failed chain
+node dist/index.js cleanup 043 --no-cache --verbose
 
-# Fix all issues in flipflops
-npx tsx src/index.ts fix ffs
-
-# Weekly maintenance (all repos)
-npx tsx src/index.ts deploy damieus 043 ffs cae maximus && \
-npx tsx src/index.ts issues damieus 043 ffs cae maximus && \
-npx tsx src/index.ts prs damieus 043 ffs cae maximus && \
-npx tsx src/index.ts validate damieus 043 ffs cae maximus && \
-npx tsx src/index.ts audit damieus 043 ffs cae maximus
+# Weekly maintenance
+node dist/index.js deploy damieus 043 ffs && \
+node dist/index.js issues damieus 043 ffs && \
+node dist/index.js prs damieus 043 ffs
 ```

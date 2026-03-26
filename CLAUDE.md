@@ -10,7 +10,8 @@
 
 ```bash
 cd ~/management-git/ugwtf
-npx tsx src/index.ts <command> [repos...] [flags]
+export GITHUB_TOKEN=$(gh auth token)
+node dist/index.js <command> [repos...] [flags]
 npx vitest run       # 400 tests, all passing
 npx tsc --noEmit     # 0 errors required
 ```
@@ -30,104 +31,85 @@ src/
 ├── index.ts               # CLI parser → orchestrate()
 ├── orchestrator.ts        # COMMAND_CLUSTER_MAP → executeSwarm()
 ├── types.ts               # Agent, Cluster, SwarmConfig, AgentContext
-├── agents/                # ~86 agent implementations (36 files)
-├── clusters/index.ts      # 35 cluster definitions
-├── config/repo-registry.ts# 5 registered repos
+├── agents/                # Agent implementations
+│   ├── chain-agents.ts    # Config-loader, issue-creator, chain-advancer
+│   ├── cleanup-agents.ts  # Close orphan PRs, strip labels, assign Copilot
+│   ├── dry-run-agents.ts  # E2E validation without side effects
+│   └── ...
+├── clusters/index.ts      # Cluster definitions
+├── config/repo-registry.ts# 6 registered repos
 ├── swarm/executor.ts      # Parallel/sequential cluster runner
-├── clients/github.ts      # Octokit wrapper
+├── clients/github.ts      # GitHub API client (gh CLI + fetch)
 ├── audit-orchestrator/    # Inlined frontend audit engine
 └── utils/                 # Logger, filesystem, env helpers
 ```
 
-**Import direction (one-way):**
-```
-index → orchestrator → swarm → clusters → agents
-All may import: types, utils/*, clients/*
-```
-
 ## Commands
 
-### Core Pipeline
+### Pipeline (run in order for new chains)
 
-| Command | Clusters | Purpose |
-|---------|----------|---------|
-| `deploy` | labels, workflows | Sync labels + deploy CI/CD workflows |
-| `validate` | quality | Run quality gates (tsc, lint, build, config) |
-| `fix` | labels, workflows, quality, fix | Auto-fix labels + workflows + quality issues |
-| `labels` | labels | Sync universal + repo-specific labels |
-| `issues` | issues | Triage, assign Copilot, detect stalled |
-| `prs` | prs | Review Copilot PRs, DB migration firewall |
-| `audit` | audit, visual-audit | Full audit with scoreboard |
-| `status` | audit | Quick health snapshot |
-| `prompts` | prompts | Scan/validate/forecast `.prompt.md` files |
-| `chain` | chain | Manage prompt-chain lifecycle (load, create issues, advance) |
-| `generate-chain` | generate-chain | Scan prompts → toposort → wave assignment |
+| Command | Purpose |
+|---------|---------|
+| `prompts` | Scan .prompt.md → create spec issues |
+| `generate-chain` | Build prompt-chain.json |
+| `chain` | Create chain issues, assign Copilot |
+| `issues` | Triage stalled, re-assign |
+| `prs` | Review PRs, DB firewall |
+| `cleanup` | Reset: close orphan PRs, strip labels, re-assign |
+| `dry-run` | E2E validation without side effects |
+
+### Setup & Quality
+
+| Command | Purpose |
+|---------|---------|
+| `deploy`/`install` | Sync labels + deploy workflows |
+| `validate` | Quality gates (tsc, lint, build) |
+| `fix` | Auto-fix labels, workflows, quality |
+| `status` | Quick health audit |
+| `audit` | Full audit + scoreboard |
 
 ### Domain Scans
 
-| Command | Clusters | Purpose |
-|---------|----------|---------|
-| `security` | security | Vulnerability scan + secret leak detection |
-| `performance` | performance | Bundle size + heavy dependency detection |
-| `a11y` | a11y | Accessibility validation (WCAG) |
-| `seo` | seo | Meta tags, sitemaps, optimization |
-| `docs` | docs, context | Documentation coverage + context analysis |
-| `commerce` | commerce | E-commerce feature validation |
-| `scenarios` | scenarios | User flow discovery + acceptance criteria |
-| `design-system` | design-system | Design tokens, component contracts, responsive audit |
-| `supabase` | supabase-fsd | Supabase + FSD architecture compliance |
-| `gateway` | ai-gateway | AI gateway integration + prompt validation |
-| `scan` | *(all 27 domain clusters)* | Comprehensive full scan — runs everything |
-
-### Scaffold Commands
-
-| Command | Usage | Purpose |
-|---------|-------|---------|
-| `new-agent` | `ugwtf new-agent <id> --cluster <cid>` | Generate agent boilerplate + register |
-| `new-repo` | `ugwtf new-repo <alias> --slug O/R --framework fw` | Generate repo config entry |
-
-### Utility Commands
-
-| Command | Usage | Purpose |
-|---------|-------|---------|
-| `list` | `ugwtf list [clusters\|agents\|repos]` | Show all clusters/agents/repos |
-| `run` | `ugwtf run <agent-id> [repos...] [flags]` | Execute single agent (debugging) |
-| `watch` | `ugwtf watch [repos...] --command <CMD>` | Watch for file changes, re-run |
+`scan`, `security`, `performance`, `a11y`, `seo`, `docs`, `commerce`, `scenarios`, `design-system`, `supabase`, `gateway`
 
 ## Global Flags
 
-| Flag | Type | Default | Purpose |
-|------|------|---------|---------|
-| `--dry-run` | boolean | false | Preview without executing |
-| `--verbose`, `-v` | boolean | false | Debug output |
-| `--concurrency <N>` | number | 3 | Max parallel repos |
-| `--cluster <ID>` | string | — | Run specific cluster (repeatable) |
-| `--output <FMT>` | enum | summary | Output: `json`, `markdown`, `summary` |
-| `--path <PATH>` | string | — | Path to folder or prompt file |
-| `--max-copilot-concurrency <N>` | number | — | Max simultaneous Copilot issues |
-| `--sequential-copilot` | boolean | false | Alias for `--max-copilot-concurrency 1` |
-| `--no-cache` | boolean | false | Skip repo cache, force full run |
-| `--help`, `-h` | boolean | false | Show help |
+| Flag | Default | Purpose |
+|------|---------|---------|
+| `--dry-run` | false | Preview without executing |
+| `--verbose`, `-v` | false | Debug output |
+| `--concurrency N` | 3 | Max parallel repos |
+| `--cluster ID` | — | Target specific cluster |
+| `--path PATH` | — | Scope prompt scanning |
+| `--max-copilot-concurrency N` | 1 | Max simultaneous Copilot issues |
+| `--no-cache` | false | Skip repo cache |
+| `--output FMT` | summary | `json`, `markdown`, `summary` |
+
+## Copilot Assignment
+
+- Assignee: `copilot-swe-agent[bot]` (NOT `copilot`)
+- Requires `GITHUB_TOKEN` env (user PAT, not GHA token)
+- Chain-advancer calls `assignCopilot()` directly
+- Removes all assignee variants before re-adding
 
 ## Registered Repos
 
-| Alias | Slug | Framework |
-|-------|------|-----------|
-| `damieus` | DaBigHomie/damieus-com-migration | vite-react |
-| `ffs` | DaBigHomie/flipflops-sundays-reboot | vite-react |
-| `043` | DaBigHomie/one4three-co-next-app | nextjs |
-| `maximus` | DaBigHomie/maximus-ai | nextjs |
-| `cae` | DaBigHomie/Cae | vite-react |
-| `ugwtf` | DaBigHomie/ugwtf | node |
+| Alias | Slug |
+|-------|------|
+| `damieus` | DaBigHomie/damieus-com-migration |
+| `ffs` | DaBigHomie/flipflops-sundays-reboot |
+| `043` | DaBigHomie/one4three-co-next-app |
+| `maximus` | DaBigHomie/maximus-ai |
+| `cae` | DaBigHomie/Cae |
+| `ugwtf` | DaBigHomie/ugwtf |
 
 ## Conventions
 
-- Agent IDs: `kebab-case` (e.g. `chain-generator`)
-- Cluster IDs: `kebab-case` (e.g. `generate-chain`)
+- Agent IDs: `kebab-case`
+- Cluster IDs: `kebab-case`
 - Tests co-located: `src/**/*.test.ts`
 - Portable paths only — NEVER `/Users/dame/...`
-- No `git reset` — use `git rm --cached` instead
 
 ## Deep Docs
 
-See [AGENTS.md](AGENTS.md) → links to `docs/agent-guide/` (10 files covering architecture, all 86 agents, CLI reference, testing, scoring, gaps).
+See [AGENTS.md](AGENTS.md) → links to `docs/agent-guide/` (10 files).
