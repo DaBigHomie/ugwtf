@@ -250,8 +250,8 @@ const chainAdvancer: Agent = {
     const owner = parts[0]!;
     const repo = parts[1]!;
 
-    // Fetch all open issues to determine which chain entries are still open
-    const openIssues = await ctx.github.listIssues(owner, repo, 'open', config.labels);
+    // Fetch all open chain-tracker issues (reliable label, not config.labels which may drift)
+    const openIssues = await ctx.github.listIssues(owner, repo, 'open', ['chain-tracker', 'agent:copilot']);
     const openIssueNumbers = new Set(openIssues.map(i => i.number));
 
     // SP↔CH cross-reference: if a CH issue is open but its specIssue is closed,

@@ -289,10 +289,11 @@ export function createGitHubClient(logger: Logger, dryRun = false): GitHubClient
         logger.debug(`[DRY RUN] Would assign Copilot to #${issueNumber}`);
         return;
       }
-      // Copilot coding agent requires:
-      //   assignees: ["copilot-swe-agent[bot]"]
-      //   agent_assignment: { target_repo, base_branch }
-      // Using "copilot" silently succeeds but does NOT start a session.
+      // Remove existing assignment first (re-add is a no-op and won't start a session)
+      await ghApiSafe404('DELETE', `/repos/${owner}/${repo}/issues/${issueNumber}/assignees`,
+        { assignees: ['copilot-swe-agent[bot]'] } as unknown as Record<string, string>);
+
+      // Copilot coding agent requires copilot-swe-agent[bot] + agent_assignment
       const payload = {
         assignees: ['copilot-swe-agent[bot]'],
         agent_assignment: {
