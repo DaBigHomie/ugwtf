@@ -289,14 +289,21 @@ export function createGitHubClient(logger: Logger, dryRun = false): GitHubClient
         logger.debug(`[DRY RUN] Would assign Copilot to #${issueNumber}`);
         return;
       }
-      // Force fetch transport — gh CLI silently fails for Copilot assignment.
-      // The REST API via fetch + GITHUB_TOKEN is the reliable transport.
+      // Copilot coding agent requires:
+      //   assignees: ["copilot-swe-agent[bot]"]
+      //   agent_assignment: { target_repo, base_branch }
+      // Using "copilot" silently succeeds but does NOT start a session.
+      const payload = {
+        assignees: ['copilot-swe-agent[bot]'],
+        agent_assignment: {
+          target_repo: `${owner}/${repo}`,
+          base_branch: 'main',
+        },
+      };
       const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN ?? '';
       if (!token) {
-        logger.warn('No GITHUB_TOKEN — falling back to gh CLI for Copilot assignment (may silently fail)');
-        await ghApi('POST', `/repos/${owner}/${repo}/issues/${issueNumber}/assignees`, {
-          assignees: ['copilot'] as unknown as string,
-        });
+        logger.warn('No GITHUB_TOKEN — falling back to gh CLI for Copilot assignment');
+        await ghApi('POST', `/repos/${owner}/${repo}/issues/${issueNumber}/assignees`, payload as unknown as Record<string, string>);
         return;
       }
       const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/issues/${issueNumber}/assignees`;
@@ -309,7 +316,7 @@ export function createGitHubClient(logger: Logger, dryRun = false): GitHubClient
           'Content-Type': 'application/json',
           'User-Agent': 'ugwtf/1.0.0',
         },
-        body: JSON.stringify({ assignees: ['copilot'] }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const text = await res.text().catch(() => '');
