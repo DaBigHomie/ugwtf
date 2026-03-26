@@ -330,6 +330,23 @@ export function createGitHubClient(logger: Logger, dryRun = false): GitHubClient
       } as Record<string, string>);
     },
 
+    async closePR(owner, repo, prNumber) {
+      await ghApi('PATCH', `/repos/${owner}/${repo}/pulls/${prNumber}`, {
+        state: 'closed',
+      } as Record<string, string>);
+    },
+
+    async deleteBranch(owner, repo, branch) {
+      await ghApiSafe404('DELETE', `/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(branch)}`);
+    },
+
+    async dispatchWorkflow(owner, repo, eventType, payload) {
+      await ghApi('POST', `/repos/${owner}/${repo}/dispatches`, {
+        event_type: eventType,
+        client_payload: payload,
+      } as Record<string, unknown>);
+    },
+
     async getFileContents(owner, repo, path) {
       if (dryRun) return '';
       const raw = await ghApi('GET', `/repos/${owner}/${repo}/contents/${path}`);

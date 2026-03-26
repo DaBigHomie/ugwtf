@@ -127,7 +127,7 @@ const copilotAssignmentAgent: Agent = {
         break;
       }
 
-      const hasCopilot = issue.assignees.some(a => a.login === 'copilot');
+      const hasCopilot = issue.assignees.some(a => a.login.toLowerCase() === 'copilot');
       if (hasCopilot) continue;
 
       // Skip if already has automation:in-progress label
@@ -146,7 +146,7 @@ const copilotAssignmentAgent: Agent = {
 
         // Fix 3: Verify assignment took effect
         const updated = await ctx.github.getIssue(owner, repo, issue.number);
-        const verified = updated.assignees.some(a => a.login === 'copilot');
+        const verified = updated.assignees.some(a => a.login.toLowerCase() === 'copilot');
         if (!verified) {
           ctx.logger.error(`Assignment verification FAILED for #${issue.number} — Copilot not in assignees`);
           errors.push(`#${issue.number}: Assignment verification failed`);

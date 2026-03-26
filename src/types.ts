@@ -199,6 +199,12 @@ export interface GitHubClient {
   getIssue(owner: string, repo: string, issueNumber: number): Promise<GitHubIssue>;
   /** Close an issue with state_reason: completed */
   closeIssue(owner: string, repo: string, issueNumber: number): Promise<void>;
+  /** Close a PR */
+  closePR(owner: string, repo: string, prNumber: number): Promise<void>;
+  /** Delete a branch */
+  deleteBranch(owner: string, repo: string, branch: string): Promise<void>;
+  /** Dispatch a repository_dispatch event */
+  dispatchWorkflow(owner: string, repo: string, eventType: string, payload: Record<string, unknown>): Promise<void>;
   /** List workflow runs */
   listWorkflowRuns(owner: string, repo: string): Promise<GitHubWorkflowRun[]>;
   /** Get file contents from repo */

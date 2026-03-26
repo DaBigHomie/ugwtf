@@ -110,6 +110,7 @@ function printUsage(): void {
     --output FMT     Output format: json, markdown, summary (default: summary)
     --max-copilot-concurrency N  Max issues assigned to Copilot at once (default: 1)
     --sequential-copilot         Alias for --max-copilot-concurrency 1
+    --reset                      Chain reset: close orphaned PRs, unblock stalled CH issues
     --debounce N     Watch-mode debounce interval in ms (default: 1000)
     --help, -h       Show this help
 
@@ -209,6 +210,8 @@ export function parseArgs(argv: string[]): OrchestratorOptions | null {
     } else if (arg === '--sequential-copilot') {
       extras.sequentialCopilot = 'true';
       extras.maxCopilotConcurrency = '1';
+    } else if (arg === '--reset') {
+      extras.reset = 'true';
     } else if (arg === '--no-cache') {
       noCache = true;
     } else if (arg?.startsWith('--')) {
