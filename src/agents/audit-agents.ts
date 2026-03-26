@@ -107,9 +107,11 @@ async function auditIssues(ctx: AgentContext): Promise<AuditDomain> {
     findings.push(`${unassigned.length} unassigned issues`);
   }
 
-  // Check for stalled items
+  // Check for stalled items (explicitly stalled label only)
+  // automation:in-progress = actively being worked → not stalled
   const stalled = issues.filter(i =>
-    i.labels.some(l => l.name === 'stalled' || l.name === 'automation:in-progress')
+    i.labels.some(l => l.name === 'stalled') &&
+    !i.labels.some(l => l.name === 'automation:in-progress')
   );
   if (stalled.length > 0) {
     findings.push(`${stalled.length} potentially stalled issues`);
@@ -218,14 +220,19 @@ async function auditBranches(ctx: AgentContext): Promise<AuditDomain> {
   const findings: string[] = [];
 
   // Detect copilot/* branches that should have been cleaned up
-  const copilotBranches = branches.filter(b => b.name.startsWith('copilot/'));
+  // copilot/issue-NNN branches tied to open issues are expected — exclude them
+  const copilotBranches = branches.filter(b =>
+    b.name.startsWith('copilot/') && !b.name.match(/^copilot\/issue-\d+$/)
+  );
   if (copilotBranches.length > 3) {
     findings.push(`${copilotBranches.length} copilot/* branches — consider cleanup`);
   }
 
-  // Detect total branch count (>20 is noisy)
+  // Detect total branch count (>20 is noisy) — exclude protected + active copilot/issue-* branches
   const protectedBranches = ['main', 'master', 'develop', 'staging'];
-  const featureBranches = branches.filter(b => !protectedBranches.includes(b.name));
+  const featureBranches = branches.filter(b =>
+    !protectedBranches.includes(b.name) && !b.name.match(/^copilot\/issue-\d+$/)
+  );
   if (featureBranches.length > 20) {
     findings.push(`${featureBranches.length} non-protected branches — stale branch accumulation`);
   }
