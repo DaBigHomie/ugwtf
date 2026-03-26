@@ -95,7 +95,7 @@ const cleanupAgent: Agent = {
       } catch { /* issue may not exist */ }
     }
 
-    // Step 3: Dispatch chain-next for first open chain issue
+    // Step 3: Assign Copilot to first open chain issue
     let dispatched = '';
     const sorted = [...config.chain].sort((a, b) => a.position - b.position);
     for (const entry of sorted) {
@@ -104,15 +104,13 @@ const cleanupAgent: Agent = {
         const issue = await ctx.github.getIssue(owner, repo, entry.issue);
         if (issue.state !== 'open') continue;
 
-        ctx.logger.info(`Dispatching chain-next for ${entry.prompt} (#${entry.issue})`);
+        ctx.logger.info(`Assigning Copilot to ${entry.prompt} (#${entry.issue})`);
         if (!ctx.dryRun) {
           await ctx.github.addLabels(owner, repo, entry.issue, ['automation:in-progress']);
-          await ctx.github.dispatchWorkflow(owner, repo, 'chain-next', {
-            issue_number: entry.issue,
-          });
+          await ctx.github.assignCopilot(owner, repo, entry.issue);
         }
         dispatched = `#${entry.issue}`;
-        artifacts.push(`dispatched:${dispatched}`);
+        artifacts.push(`assigned:${dispatched}`);
         break;
       } catch { /* skip */ }
     }
@@ -122,7 +120,7 @@ const cleanupAgent: Agent = {
       status: 'success',
       repo: ctx.repoAlias,
       duration: Date.now() - start,
-      message: `Cleanup: ${closedPRs} PRs closed, ${resetCount} issues reset, dispatched ${dispatched || 'none'}`,
+      message: `Cleanup: ${closedPRs} PRs closed, ${resetCount} issues reset, assigned ${dispatched || 'none'}`,
       artifacts,
     };
   },

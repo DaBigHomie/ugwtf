@@ -407,12 +407,10 @@ const chainAdvancer: Agent = {
       await ctx.github.addComment(owner, repo, nextEntry.issue!, contextComment);
       await ctx.github.addLabels(owner, repo, nextEntry.issue!, ['automation:in-progress']);
 
-      // Dispatch chain-next event to copilot-full-automation.yml Phase 1
-      // GHA can assign Copilot reliably (REST API from external CLI cannot)
-      await ctx.github.dispatchWorkflow(owner, repo, 'chain-next', {
-        issue_number: nextEntry.issue!,
-      });
-      ctx.logger.success(`Dispatched chain-next for ${nextEntry.prompt} (#${nextEntry.issue})`);
+      // Assign Copilot directly — requires user token (PAT via gh CLI).
+      // GHA's GITHUB_TOKEN can't start coding agent sessions.
+      await ctx.github.assignCopilot(owner, repo, nextEntry.issue!);
+      ctx.logger.success(`Assigned Copilot to ${nextEntry.prompt} (#${nextEntry.issue})`);
 
       return {
         agentId: 'chain-advancer',
