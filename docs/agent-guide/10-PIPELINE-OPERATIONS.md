@@ -8,10 +8,15 @@
 
 ## TL;DR — The Pipeline in 5 Commands
 
+> **⛔ CRITICAL RULE: Never skip steps. Run ALL 5 commands in order.**  
+> Skipping `prompts` before `chain` results in missing spec issues.  
+> Skipping `generate-chain` before `chain` results in no chain config.  
+> Every step depends on the previous step's output.
+
 ```bash
 cd ~/management-git/ugwtf
 
-# Step 1: Create spec issues from .prompt.md files
+# Step 1: Create spec issues from .prompt.md files (REQUIRED FIRST)
 node dist/index.js prompts <alias> --no-cache --path <dir>
 
 # Step 2: Generate the execution chain config
@@ -178,9 +183,12 @@ Fix critical production bugs that block revenue...
 ## Common Operations
 
 ### Start a New Chain from Scratch
+
+> **⛔ Do NOT skip any step. Each step depends on the previous step's output.**
+
 ```bash
 # 1. Write .prompt.md files in docs/prompts/pending/
-# 2. Create spec issues
+# 2. REQUIRED: Create spec issues (must run BEFORE generate-chain)
 node dist/index.js prompts 043 --no-cache --path docs/prompts/pending
 # 3. Generate chain config
 node dist/index.js generate-chain 043 --no-cache --path docs/prompts/pending

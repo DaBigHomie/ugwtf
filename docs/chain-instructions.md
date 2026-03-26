@@ -11,6 +11,10 @@ The prompt chain is UGWTF's **primary e2e pipeline**:
 ```
 
 Each step is owned by a UGWTF command:
+
+> **⛔ CRITICAL: Never skip steps. Run ALL commands in sequence 1→5.**  
+> Each step depends on the previous step's output.
+
 1. **`prompts`** — Scans `.prompt.md` files, validates, creates spec issues
 2. **`generate-chain`** — Builds `prompt-chain.json` from scanned prompts
 3. **`chain`** — Creates chain-tracker issues, assigns Copilot, advances the chain
