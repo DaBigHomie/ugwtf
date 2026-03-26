@@ -51,7 +51,7 @@ const WATCH_COMMAND = 'watch' as const;
 
 const VALID_COMMANDS: OrchestratorCommand[] = [
   'deploy', 'install', 'validate', 'fix', 'labels', 'issues', 'prs', 'audit', 'status', 'checks', 'prompts', 'chain',
-  'generate-chain', 'cleanup',
+  'generate-chain', 'cleanup', 'dry-run',
   'scan', 'security', 'performance', 'a11y', 'seo', 'docs', 'commerce',
   'scenarios', 'design-system', 'supabase', 'gateway',
 ];
@@ -68,6 +68,7 @@ function printUsage(): void {
     prs        Review Copilot PRs, enforce DB firewall
     chain      Manage prompt-chain lifecycle (load, create issues, advance)
     cleanup    Reset chain state: close orphan PRs, strip labels, re-dispatch
+    dry-run    Validate full e2e pipeline without making changes
 
   Setup (one-time per repo):
     install    Sync labels + deploy workflows (alias: deploy)

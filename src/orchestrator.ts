@@ -32,6 +32,7 @@ const COMMAND_CLUSTER_MAP: Record<string, string[]> = {
   prompts:     ['prompts'],
   chain:       ['chain'],
   cleanup:     ['cleanup'],
+  'dry-run':   ['dry-run'],
   'generate-chain': ['generate-chain'],
 
   // Domain scans — individual

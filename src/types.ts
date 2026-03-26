@@ -147,7 +147,8 @@ export type OrchestratorCommand =
   | 'design-system' // Design tokens, component contracts, responsive audit
   | 'supabase'    // Migration safety, RLS, type freshness, query patterns
   | 'gateway'    // Prompt validation, instruction scoring, token budgets
-  | 'cleanup';   // Reset chain state: close orphan PRs, strip labels, re-dispatch
+  | 'cleanup'    // Reset chain state: close orphan PRs, strip labels, re-dispatch
+  | 'dry-run';   // E2E pipeline validation without making changes
 
 export type OutputFormat = 'json' | 'markdown' | 'summary';
 

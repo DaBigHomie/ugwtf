@@ -26,6 +26,7 @@ import { promptAgents } from '../agents/prompt-agents.js';
 import { chainAgents } from '../agents/chain-agents.js';
 import { chainGeneratorAgents } from '../agents/chain-generator.js';
 import { cleanupAgents } from '../agents/cleanup-agents.js';
+import { dryRunAgents } from '../agents/dry-run-agents.js';
 import { visualAuditCluster } from '../audit-orchestrator/cluster.js';
 
 // --- 21 new domain clusters ---
@@ -123,6 +124,13 @@ export const CLUSTERS: Cluster[] = [
     name: 'Chain Cleanup',
     description: 'Reset chain state: close orphan PRs, strip labels, re-dispatch',
     agents: cleanupAgents,
+    dependsOn: [],
+  },
+  {
+    id: 'dry-run',
+    name: 'E2E Dry-Run',
+    description: 'Validate full chain pipeline without making changes',
+    agents: dryRunAgents,
     dependsOn: [],
   },
   {
