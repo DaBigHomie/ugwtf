@@ -105,17 +105,26 @@ Trigger when ANY of these change:
 
 ## CI Pipeline Integration
 
-The UGWTF-generated `ci.yml` runs:
+The `ci.yml` workflow runs:
 1. **quality-gates** (blocking): `type-check` → `lint` → `build`
 2. **unit-tests** (blocking): `npm test`
-3. **e2e** (non-blocking by default): `npm run test:e2e`
+3. **e2e** (non-blocking, **scoped**): runs only relevant specs
 
-For PR-specific test targeting, agents should add comments:
-```
-/test:critical   → runs test:e2e:critical only
-/test:cart       → runs test:e2e:cart only
-/test:full       → runs all test suites
-```
+### Smart E2E Scoping (043)
+
+The E2E job detects changed files via `git diff` and maps to specific Playwright specs:
+
+| Changed Path Pattern | Specs Run |
+|---------------------|-----------|
+| `entities/cart/`, `features/checkout/`, `widgets/CartDrawer` | `cart` + `checkout-flow` |
+| `entities/product/`, `pages/shop/` | `cart` |
+| `app/*page.*`, `app/*layout.*` | `route-health` + `navigation` |
+| `shared/ui/`, `.css`, `tailwind.config` | `visual-regression` + `accessibility` |
+| `e2e/specs/*.spec.ts` | The changed spec directly |
+| No match | `@critical` tag only (fast sanity) |
+| Docs/config-only (`.md`, `.json`, `.instructions`) | **Skip E2E entirely** |
+
+This uses existing Playwright features: `TEST_GREP` env var for tag filtering, file-based spec selection, and `--project=chromium` to skip mobile/firefox.
 
 ## Per-Repo Test Inventory
 
