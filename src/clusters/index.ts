@@ -25,6 +25,7 @@ import { auditAgents } from '../agents/audit-agents.js';
 import { promptAgents } from '../agents/prompt-agents.js';
 import { chainAgents } from '../agents/chain-agents.js';
 import { chainGeneratorAgents } from '../agents/chain-generator.js';
+import { cleanupAgents } from '../agents/cleanup-agents.js';
 import { visualAuditCluster } from '../audit-orchestrator/cluster.js';
 
 // --- 21 new domain clusters ---
@@ -116,6 +117,13 @@ export const CLUSTERS: Cluster[] = [
     description: 'Load, validate, create issues, and advance the prompt execution chain',
     agents: chainAgents,
     dependsOn: ['prompts'],
+  },
+  {
+    id: 'cleanup',
+    name: 'Chain Cleanup',
+    description: 'Reset chain state: close orphan PRs, strip labels, re-dispatch',
+    agents: cleanupAgents,
+    dependsOn: [],
   },
   {
     id: 'generate-chain',

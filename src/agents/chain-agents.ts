@@ -162,7 +162,7 @@ const chainIssueCreator: Agent = {
         .replace(/-/g, ' ');                // dashes to spaces
       const title = `${commitType}(${scope}): ${description} — chain ${entry.position}/${config.chain.length} [CH-${chNum}]`;
       const body = buildChainIssueBody(entry, config);
-      const labels = [...config.labels, severityToLabel(entry.severity), 'chain-tracker', 'prompt-chain'];
+      const labels = [...config.labels, severityToLabel(entry.severity), 'chain-tracker'];
 
       try {
         if (ctx.dryRun) {
@@ -405,7 +405,7 @@ const chainAdvancer: Agent = {
       ].join('\n');
 
       await ctx.github.addComment(owner, repo, nextEntry.issue!, contextComment);
-      await ctx.github.addLabels(owner, repo, nextEntry.issue!, ['automation:in-progress', 'copilot:ready']);
+      await ctx.github.addLabels(owner, repo, nextEntry.issue!, ['automation:in-progress']);
 
       // Dispatch chain-next event to copilot-full-automation.yml Phase 1
       // GHA can assign Copilot reliably (REST API from external CLI cannot)
@@ -436,108 +436,8 @@ const chainAdvancer: Agent = {
   },
 };
 
-// ---------------------------------------------------------------------------
-// Agent 4: Chain Reset — closes orphaned PRs, resets stalled CH issues
-// ---------------------------------------------------------------------------
-
-const chainReset: Agent = {
-  id: 'chain-reset',
-  name: 'Chain Reset',
-  description: 'Closes orphaned PRs created from wrong issues, resets stalled CH labels, unblocks chain',
-  clusterId: 'chain',
-
-  shouldRun(ctx: AgentContext): boolean {
-    return ctx.extras?.['reset'] === 'true';
-  },
-
-  async execute(ctx: AgentContext): Promise<AgentResult> {
-    const start = Date.now();
-    const chainPath = resolveChainPath(ctx.localPath);
-
-    if (!chainPath) {
-      return {
-        agentId: 'chain-reset', status: 'skipped', repo: ctx.repoAlias,
-        duration: Date.now() - start, message: 'No chain config found', artifacts: [],
-      };
-    }
-
-    const config = JSON.parse(readFileSync(chainPath, 'utf-8')) as ChainConfig;
-    const [owner, repo] = config.repo.split('/') as [string, string];
-    const artifacts: string[] = [];
-
-    const openPRs = await ctx.github.listPRs(owner, repo, 'open');
-    const chainIssueNumbers = new Set(config.chain.map(e => e.issue).filter(Boolean) as number[]);
-    const specIssueNumbers = new Set(config.chain.map(e => e.specIssue).filter(Boolean) as number[]);
-    const allChainNumbers = new Set([...chainIssueNumbers, ...specIssueNumbers]);
-
-    // 1. Close orphaned Copilot draft PRs that reference any chain issue
-    let closedPRs = 0;
-    for (const pr of openPRs) {
-      if (!pr.draft || pr.user.login.toLowerCase() !== 'copilot') continue;
-      if (!pr.body) continue;
-
-      const refsChainIssue = [...allChainNumbers].some(n =>
-        pr.body!.includes(`#${n}`)
-      );
-      if (!refsChainIssue) continue;
-
-      ctx.logger.warn(`Closing orphaned draft PR #${pr.number}: ${pr.title}`);
-      if (!ctx.dryRun) {
-        await ctx.github.addComment(owner, repo, pr.number,
-          `## Chain Reset — Closing Orphaned PR\n\n` +
-          `This PR was created outside the UGWTF chain pipeline.\n` +
-          `Work will be re-created when chain-advancer assigns Copilot to the correct CH issue.\n\n` +
-          `_Automated by UGWTF chain-reset agent_`
-        );
-        await ctx.github.closePR(owner, repo, pr.number);
-        try { await ctx.github.deleteBranch(owner, repo, pr.head.ref); } catch { /* ok */ }
-      }
-      closedPRs++;
-      artifacts.push(`CLOSED_PR: #${pr.number}`);
-    }
-
-    // 2. Reset ALL in-progress chain CH issues (remove blocking labels)
-    let resetIssues = 0;
-    for (const entry of config.chain) {
-      if (!entry.issue || !chainIssueNumbers.has(entry.issue)) continue;
-
-      try {
-        const issue = await ctx.github.getIssue(owner, repo, entry.issue);
-        if (issue.state !== 'open') continue;
-
-        const hasInProgress = issue.labels.some(l => l.name === 'automation:in-progress');
-        if (!hasInProgress) continue;
-
-        ctx.logger.warn(`Resetting CH #${entry.issue} (${entry.prompt})`);
-        if (!ctx.dryRun) {
-          await ctx.github.removeLabel(owner, repo, entry.issue, 'automation:in-progress');
-          await ctx.github.removeLabel(owner, repo, entry.issue, 'stalled');
-          await ctx.github.removeLabel(owner, repo, entry.issue, 'needs-pr');
-          await ctx.github.removeLabel(owner, repo, entry.issue, 'needs-review');
-          await ctx.github.addComment(owner, repo, entry.issue,
-            `## Chain Reset\n\nLabels cleared. Re-queued for chain-advancer assignment.\n\n` +
-            `_Automated by UGWTF chain-reset agent_`
-          );
-        }
-        resetIssues++;
-        artifacts.push(`RESET: #${entry.issue} (${entry.prompt})`);
-      } catch { /* issue may not exist */ }
-    }
-
-    return {
-      agentId: 'chain-reset',
-      status: 'success',
-      repo: ctx.repoAlias,
-      duration: Date.now() - start,
-      message: `Reset: ${closedPRs} orphaned PRs closed, ${resetIssues} CH issues unblocked`,
-      artifacts,
-    };
-  },
-};
-
 export const chainAgents: Agent[] = [
   chainConfigLoader,
   chainIssueCreator,
   chainAdvancer,
-  chainReset,
 ];

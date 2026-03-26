@@ -31,6 +31,7 @@ const COMMAND_CLUSTER_MAP: Record<string, string[]> = {
   checks:      ['quality'],
   prompts:     ['prompts'],
   chain:       ['chain'],
+  cleanup:     ['cleanup'],
   'generate-chain': ['generate-chain'],
 
   // Domain scans — individual

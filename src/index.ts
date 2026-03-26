@@ -51,7 +51,7 @@ const WATCH_COMMAND = 'watch' as const;
 
 const VALID_COMMANDS: OrchestratorCommand[] = [
   'deploy', 'install', 'validate', 'fix', 'labels', 'issues', 'prs', 'audit', 'status', 'checks', 'prompts', 'chain',
-  'generate-chain',
+  'generate-chain', 'cleanup',
   'scan', 'security', 'performance', 'a11y', 'seo', 'docs', 'commerce',
   'scenarios', 'design-system', 'supabase', 'gateway',
 ];
@@ -67,6 +67,7 @@ function printUsage(): void {
     issues     Detect stalled issues, assign Copilot, auto-triage
     prs        Review Copilot PRs, enforce DB firewall
     chain      Manage prompt-chain lifecycle (load, create issues, advance)
+    cleanup    Reset chain state: close orphan PRs, strip labels, re-dispatch
 
   Setup (one-time per repo):
     install    Sync labels + deploy workflows (alias: deploy)
@@ -109,8 +110,6 @@ function printUsage(): void {
     --cluster ID     Run specific cluster(s) (repeatable)
     --output FMT     Output format: json, markdown, summary (default: summary)
     --max-copilot-concurrency N  Max issues assigned to Copilot at once (default: 1)
-    --sequential-copilot         Alias for --max-copilot-concurrency 1
-    --reset                      Chain reset: close orphaned PRs, unblock stalled CH issues
     --debounce N     Watch-mode debounce interval in ms (default: 1000)
     --help, -h       Show this help
 
@@ -207,11 +206,6 @@ export function parseArgs(argv: string[]): OrchestratorOptions | null {
         process.exit(1);
       }
       extras.maxCopilotConcurrency = String(val);
-    } else if (arg === '--sequential-copilot') {
-      extras.sequentialCopilot = 'true';
-      extras.maxCopilotConcurrency = '1';
-    } else if (arg === '--reset') {
-      extras.reset = 'true';
     } else if (arg === '--no-cache') {
       noCache = true;
     } else if (arg?.startsWith('--')) {

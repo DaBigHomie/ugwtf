@@ -146,7 +146,8 @@ export type OrchestratorCommand =
   | 'scenarios'   // User flow discovery + acceptance criteria coverage
   | 'design-system' // Design tokens, component contracts, responsive audit
   | 'supabase'    // Migration safety, RLS, type freshness, query patterns
-  | 'gateway';    // Prompt validation, instruction scoring, token budgets
+  | 'gateway'    // Prompt validation, instruction scoring, token budgets
+  | 'cleanup';   // Reset chain state: close orphan PRs, strip labels, re-dispatch
 
 export type OutputFormat = 'json' | 'markdown' | 'summary';
 
