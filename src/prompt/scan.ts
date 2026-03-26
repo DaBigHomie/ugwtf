@@ -77,11 +77,16 @@ async function scanDirectoryAuto(dirPath: string): Promise<ParsedPrompt[]> {
       try {
         const fullPath = join(dirPath, file);
         const raw = await readFile(fullPath, 'utf-8');
-        const content = normalizeContent(raw);
+        const { content, frontmatter } = normalizeContent(raw);
         const format = content.trimStart().startsWith('---') ? 'A' : 'B';
         const parsed = format === 'B'
           ? parseFormatB(content, fullPath)
           : parseFormatA(content, fullPath);
+        // Overlay frontmatter fields onto parsed prompt
+        if (frontmatter.scope) parsed.scope = frontmatter.scope;
+        if (frontmatter.type) parsed.type = frontmatter.type;
+        if (frontmatter.title && !parsed.title) parsed.title = frontmatter.title;
+        if (frontmatter.priority && !parsed.priority) parsed.priority = frontmatter.priority;
         prompts.push(parsed);
       } catch {
         // Skip unreadable files

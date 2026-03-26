@@ -25,6 +25,8 @@ interface ChainEntry {
   severity: 'critical' | 'high' | 'medium' | 'low';
   depends: string[];
   issue: number | null;
+  scope?: string;   // from prompt YAML frontmatter (e.g. "shop", "marketing")
+  type?: string;    // from prompt YAML frontmatter (e.g. "feat", "fix", "perf")
 }
 
 interface ChainConfig {
@@ -313,9 +315,16 @@ const chainIssueCreator: Agent = {
     const errors: string[] = [];
 
     for (const entry of missing) {
-      const title = `[Chain ${entry.position}/${config.chain.length}] ${entry.prompt}: ${entry.file.split('/').pop()?.replace('.prompt.md', '') ?? entry.prompt}`;
+      const chNum = String(entry.position).padStart(2, '0');
+      const commitType = entry.type ?? 'feat';
+      const scope = entry.scope ?? 'shop';
+      const description = (entry.file.split('/').pop()?.replace('.prompt.md', '') ?? entry.prompt)
+        .replace(/^\d+-/, '')               // strip leading number prefix "01-"
+        .replace(/^P\d+[A-Z]?-/i, '')      // strip "P4A-" prefix
+        .replace(/-/g, ' ');                // dashes to spaces
+      const title = `${commitType}(${scope}): ${description} — chain ${entry.position}/${config.chain.length} [CH-${chNum}]`;
       const body = buildChainIssueBody(entry, config);
-      const labels = [...config.labels, severityToLabel(entry.severity)];
+      const labels = [...config.labels, severityToLabel(entry.severity), 'chain-tracker', 'prompt-chain'];
 
       try {
         if (ctx.dryRun) {
@@ -830,6 +839,8 @@ const chainGenerator: Agent = {
         severity: priorityToSeverity(p.priority),
         depends: deps,
         issue: null,
+        scope: p.scope ?? undefined,
+        type: p.type ?? undefined,
       };
     });
 

@@ -13,6 +13,8 @@ export interface ParsedPrompt {
   format: 'A' | 'B';
   title: string;
   priority: string | null;     // P0-P8 or null
+  scope: string | null;        // e.g. "shop", "marketing", "db" — from YAML frontmatter
+  type: string | null;         // e.g. "feat", "fix", "perf" — from YAML frontmatter
   status: string | null;       // COMPLETE, READY TO START, IN PROGRESS, etc.
   estimatedTime: string | null;
   agentType: string | null;

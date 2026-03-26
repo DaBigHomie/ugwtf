@@ -15,9 +15,11 @@ import type { ParsedPrompt } from './types.js';
 /**
  * Strip ```prompt wrapper blocks and YAML frontmatter (--- ... ---).
  * Some repos wrap prompt content in fenced code blocks.
+ * Returns { content, frontmatter } where frontmatter is the parsed YAML fields.
  */
-export function normalizeContent(raw: string): string {
+export function normalizeContent(raw: string): { content: string; frontmatter: Record<string, string> } {
   let content = raw;
+  const frontmatter: Record<string, string> = {};
 
   // Strip ```prompt ... ``` wrapper (greedy to skip internal code fences)
   const promptBlockMatch = content.match(/^````?prompt\s*\n([\s\S]*)````?\s*$/m);
@@ -25,13 +27,20 @@ export function normalizeContent(raw: string): string {
     content = promptBlockMatch[1]!;
   }
 
-  // Strip YAML frontmatter (--- ... ---)
-  const frontmatterMatch = content.match(/^---\s*\n[\s\S]*?\n---\s*\n/);
+  // Strip YAML frontmatter (--- ... ---) and extract key: value pairs
+  const frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---\s*\n/);
   if (frontmatterMatch) {
+    const yamlBlock = frontmatterMatch[1]!;
+    for (const line of yamlBlock.split('\n')) {
+      const kv = line.match(/^(\w+)\s*:\s*(.+)$/);
+      if (kv) {
+        frontmatter[kv[1]!.trim()] = kv[2]!.replace(/^["']|["']$/g, '').trim();
+      }
+    }
     content = content.slice(frontmatterMatch[0].length);
   }
 
-  return content;
+  return { content, frontmatter };
 }
 
 // ---------------------------------------------------------------------------
@@ -127,6 +136,8 @@ export function parseFormatB(content: string, filePath: string): ParsedPrompt {
     format: 'B',
     title: titleMatch?.[1]?.replace(/\s*\(P\d\)\s*$/, '').trim() ?? basename(filePath, '.prompt.md'),
     priority: priorityRaw ?? null,
+    scope: null,
+    type: null,
     status: statusRaw?.replace(/\*+/g, '').trim() ?? null,
     estimatedTime: timeRaw ?? null,
     agentType: agentRaw ?? null,
@@ -170,6 +181,8 @@ export function parseFormatA(content: string, filePath: string): ParsedPrompt {
     format: 'A',
     title: titleMatch?.[1]?.trim() ?? basename(filePath, '.prompt.md'),
     priority: null, // Format A doesn't have priority
+    scope: null,
+    type: null,
     status: null,
     estimatedTime: null,
     agentType: agentMatch?.[1]?.trim() ?? descMatch?.[1]?.trim() ?? null,

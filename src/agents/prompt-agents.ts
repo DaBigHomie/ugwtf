@@ -290,10 +290,16 @@ const promptIssueCreator: Agent = {
     let skipped = 0;
     const errors: string[] = [];
 
-    for (const p of actionable) {
-      const issueTitle = p.priority
-        ? `${p.priority}: ${p.title}`
-        : p.title;
+    for (let idx = 0; idx < actionable.length; idx++) {
+      const p = actionable[idx]!;
+      const spNum = String(idx + 1).padStart(2, '0');
+      const commitType = p.type ?? 'feat';
+      const scope = p.scope ?? 'shop';
+      const description = p.title
+        .replace(/^30X\s+/i, '')           // strip "30X " prefix
+        .replace(/^P\d+[A-Z]?[-:]?\s*/i, '') // strip "P4A: " or "P0: " prefix
+        .trim();
+      const issueTitle = `${commitType}(${scope}): ${description.toLowerCase()} [SP-${spNum}]`;
 
       // Duplicate check
       if (existingTitles.has(issueTitle.toLowerCase())) {
@@ -306,7 +312,8 @@ const promptIssueCreator: Agent = {
         priorityToLabel(p.priority),
         'automation:copilot',
         'agent:copilot',
-        'enhancement',
+        'prompt-spec',
+        'needs-pr',
       ];
 
       // Add database label if prompt has DB schema
