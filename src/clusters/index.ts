@@ -23,7 +23,8 @@ import { issueAgents } from '../agents/issue-agents.js';
 import { prAgents } from '../agents/pr-agents.js';
 import { auditAgents } from '../agents/audit-agents.js';
 import { promptAgents } from '../agents/prompt-agents.js';
-import { chainAgents, chainGeneratorAgents } from '../agents/chain-agents.js';
+import { chainAgents } from '../agents/chain-agents.js';
+import { chainGeneratorAgents } from '../agents/chain-generator.js';
 import { visualAuditCluster } from '../audit-orchestrator/cluster.js';
 
 // --- 21 new domain clusters ---

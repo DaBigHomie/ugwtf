@@ -2,7 +2,7 @@
 
 > **Audience**: GitHub Copilot agents (VSCode + Cloud), CLI agents, human operators  
 > **Last updated**: 2026-03-26  
-> **Source of truth**: This file + `chain-instructions.md`
+> **Source of truth**: This file supersedes chain-instructions.md
 
 ---
 
@@ -89,15 +89,15 @@ The pipeline creates **two issue types per prompt**:
 ### Layer 1: Prompt-Spec Issues (from `prompts` command)
 - **Purpose**: Full implementation specification for the agent to follow
 - **Contains**: Objective, success criteria, code examples, file manifest
-- **Title format**: `P0: 30X P4-A: Fix Major Production Bugs`
-- **Labels**: `automation:copilot`, `agent:copilot`, `enhancement`, `priority:p0`
+- **Title format**: `fix(shop): fix major production bugs [SP-01]`
+- **Labels**: `automation:copilot`, `agent:copilot`, `prompt-spec`, `needs-pr`, `priority:p0`
 - **Created by**: `prompt-issue-creator` agent
 
 ### Layer 2: Chain-Tracker Issues (from `chain` command)
 - **Purpose**: Sequencing and orchestration — controls execution order
 - **Contains**: Position, wave, dependencies, severity, link to prompt file
-- **Title format**: `[Chain 1/5] P4A: 01-P4A-fix-major-bugs`
-- **Labels**: `automation:copilot`, `agent:copilot`, `enhancement`, `automation:in-progress`
+- **Title format**: `fix(shop): fix major production bugs — chain 1/5 [CH-01]`
+- **Labels**: `automation:copilot`, `agent:copilot`, `chain-tracker`, `prompt-chain`, `automation:in-progress`, `priority:*`
 - **Created by**: `chain-issue-creator` agent
 - **Copilot is assigned to THESE issues** (not spec issues)
 

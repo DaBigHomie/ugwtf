@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { join } from 'node:path';
 import { existsSync, readFileSync, mkdirSync } from 'node:fs';
-import { chainGeneratorAgents } from './chain-agents.js';
+import { chainGeneratorAgents } from './chain-generator.js';
 import { scanAllPrompts, clearPromptScanCache } from '../prompt/index.js';
 import type { AgentContext, AgentResult } from '../types.js';
 
