@@ -1,16 +1,16 @@
 {
-  "generated": "2026-03-26T05:10:08.947Z",
+  "generated": "2026-03-28T19:08:56.196Z",
   "repos": {
     "damieus": {
-      "score": 79,
+      "score": 78,
       "domains": {
         "labels": 100,
         "workflows": 100,
         "issues": 95,
-        "prs": 46,
+        "prs": 41,
         "branches": 55
       },
-      "timestamp": "2026-03-26T05:09:55.361Z"
+      "timestamp": "2026-03-28T19:08:40.178Z"
     },
     "ffs": {
       "score": 80,
@@ -21,40 +21,40 @@
         "prs": 34,
         "branches": 100
       },
-      "timestamp": "2026-03-26T05:09:58.939Z"
+      "timestamp": "2026-03-28T19:08:44.287Z"
     },
     "043": {
-      "score": 95,
+      "score": 73,
       "domains": {
         "labels": 100,
-        "workflows": 100,
-        "issues": 80,
-        "prs": 97,
-        "branches": 100
+        "workflows": 67,
+        "issues": 65,
+        "prs": 74,
+        "branches": 60
       },
-      "timestamp": "2026-03-26T05:09:58.940Z"
+      "timestamp": "2026-03-28T19:08:44.560Z"
     },
     "maximus": {
-      "score": 93,
+      "score": 92,
       "domains": {
         "labels": 100,
         "workflows": 100,
         "issues": 85,
         "prs": 95,
-        "branches": 84
+        "branches": 82
       },
-      "timestamp": "2026-03-26T05:10:02.639Z"
+      "timestamp": "2026-03-28T19:08:48.798Z"
     },
     "cae": {
-      "score": 97,
+      "score": 96,
       "domains": {
         "labels": 100,
         "workflows": 100,
-        "issues": 97,
+        "issues": 94,
         "prs": 95,
         "branches": 92
       },
-      "timestamp": "2026-03-26T05:10:05.700Z"
+      "timestamp": "2026-03-28T19:08:52.498Z"
     },
     "ugwtf": {
       "score": 82,
@@ -65,12 +65,12 @@
         "prs": 100,
         "branches": 100
       },
-      "timestamp": "2026-03-26T05:10:08.946Z"
+      "timestamp": "2026-03-28T19:08:56.195Z"
     }
   },
   "summary": {
     "total": 6,
-    "passing": 5,
-    "average": 88
+    "passing": 4,
+    "average": 84
   }
 }
