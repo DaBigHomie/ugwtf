@@ -37,6 +37,7 @@ import { scaffoldAgent, parseNewAgentArgs } from './scaffold/new-agent.js';
 import { scaffoldRepo, parseNewRepoArgs } from './scaffold/new-repo.js';
 import { listCommand, parseListArgs } from './commands/list.js';
 import { runAgentCommand, parseRunAgentArgs } from './commands/run-agent.js';
+import { agentsCommand, parseAgentsArgs } from './commands/agents.js';
 import { loadRC } from './config/rc-loader.js';
 import { parseWatchArgs, startWatch } from './watch/watcher.js';
 import { loadEnv } from './utils/env.js';
@@ -44,7 +45,7 @@ import { loadEnv } from './utils/env.js';
 const SCAFFOLD_COMMANDS = ['new-agent', 'new-repo'] as const;
 type ScaffoldCommand = typeof SCAFFOLD_COMMANDS[number];
 
-const UTILITY_COMMANDS = ['list', 'run'] as const;
+const UTILITY_COMMANDS = ['list', 'run', 'agents'] as const;
 type UtilityCommand = typeof UTILITY_COMMANDS[number];
 
 const WATCH_COMMAND = 'watch' as const;
@@ -102,6 +103,7 @@ function printUsage(): void {
   Utility:
     list       Show all clusters, agents, and repos (ugwtf list [clusters|agents|repos])
     run        Execute a single agent (ugwtf run <agent-id> [repos...] [--dry-run])
+    agents     VS Code agent lifecycle: scan, score (ugwtf agents [scan|score] [--path <dir>])
     watch      Watch repos for changes, re-run command (ugwtf watch [repos...] --command CMD)
 
   Options:
@@ -270,6 +272,11 @@ async function main(): Promise<void> {
       case 'run': {
         const opts = parseRunAgentArgs(subArgs);
         if (opts) await runAgentCommand(opts);
+        return;
+      }
+      case 'agents': {
+        const opts = parseAgentsArgs(subArgs);
+        if (opts) agentsCommand(opts);
         return;
       }
     }
