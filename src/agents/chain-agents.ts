@@ -28,12 +28,12 @@ const chainConfigLoader: Agent = {
   clusterId: 'chain',
 
   shouldRun(ctx: AgentContext): boolean {
-    return resolveChainPath(ctx.localPath) !== null;
+    return resolveChainPath(ctx.localPath, ctx.repoAlias) !== null;
   },
 
   async execute(ctx: AgentContext): Promise<AgentResult> {
     const start = Date.now();
-    const chainPath = resolveChainPath(ctx.localPath);
+    const chainPath = resolveChainPath(ctx.localPath, ctx.repoAlias);
 
     if (!chainPath) {
       return {
@@ -103,7 +103,7 @@ const chainIssueCreator: Agent = {
   clusterId: 'chain',
 
   shouldRun(ctx: AgentContext): boolean {
-    const chainPath = resolveChainPath(ctx.localPath);
+    const chainPath = resolveChainPath(ctx.localPath, ctx.repoAlias);
     if (!chainPath) return false;
 
     try {
@@ -116,7 +116,7 @@ const chainIssueCreator: Agent = {
 
   async execute(ctx: AgentContext): Promise<AgentResult> {
     const start = Date.now();
-    const chainPath = resolveChainPath(ctx.localPath);
+    const chainPath = resolveChainPath(ctx.localPath, ctx.repoAlias);
 
     if (!chainPath) {
       return {
@@ -218,7 +218,7 @@ const chainAdvancer: Agent = {
   clusterId: 'chain',
 
   shouldRun(ctx: AgentContext): boolean {
-    const chainPath = resolveChainPath(ctx.localPath);
+    const chainPath = resolveChainPath(ctx.localPath, ctx.repoAlias);
     if (!chainPath) return false;
 
     try {
@@ -232,7 +232,7 @@ const chainAdvancer: Agent = {
 
   async execute(ctx: AgentContext): Promise<AgentResult> {
     const start = Date.now();
-    const chainPath = resolveChainPath(ctx.localPath);
+    const chainPath = resolveChainPath(ctx.localPath, ctx.repoAlias);
 
     if (!chainPath) {
       return {

@@ -29,12 +29,12 @@ const cleanupAgent: Agent = {
   clusterId: 'cleanup',
 
   shouldRun(ctx: AgentContext): boolean {
-    return !!resolveChainPath(ctx.localPath);
+    return !!resolveChainPath(ctx.localPath, ctx.repoAlias);
   },
 
   async execute(ctx: AgentContext): Promise<AgentResult> {
     const start = Date.now();
-    const chainPath = resolveChainPath(ctx.localPath);
+    const chainPath = resolveChainPath(ctx.localPath, ctx.repoAlias);
 
     if (!chainPath) {
       return {

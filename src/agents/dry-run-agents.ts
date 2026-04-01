@@ -41,7 +41,7 @@ const dryRunAgent: Agent = {
   clusterId: 'dry-run',
 
   shouldRun(ctx: AgentContext): boolean {
-    return !!resolveChainPath(ctx.localPath);
+    return !!resolveChainPath(ctx.localPath, ctx.repoAlias);
   },
 
   async execute(ctx: AgentContext): Promise<AgentResult> {
@@ -50,7 +50,7 @@ const dryRunAgent: Agent = {
     const trace: TraceEntry[] = [];
 
     // ── Step 1: Chain config ──────────────────────────────────────────
-    const chainPath = resolveChainPath(ctx.localPath);
+    const chainPath = resolveChainPath(ctx.localPath, ctx.repoAlias);
     if (!chainPath) {
       return result('dry-run', ctx, start, 'failed', 'No chain config found', [], [
         { severity: 'error', message: 'prompt-chain.json not found in any expected location' },

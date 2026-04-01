@@ -36,7 +36,7 @@ const stalledIssueDetector: Agent = {
     // Load chain config to check specIssue cross-references
     let chainEntries: ChainEntry[] = [];
     if (ctx.localPath) {
-      const chainPath = resolveChainPath(ctx.localPath);
+      const chainPath = resolveChainPath(ctx.localPath, ctx.repoAlias);
       if (chainPath) {
         try {
           const config = JSON.parse(readFileSync(chainPath, 'utf-8')) as ChainConfig;
