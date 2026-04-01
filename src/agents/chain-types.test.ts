@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { join } from 'node:path';
-import { mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { resolveChainPath, getUgwtfRoot, CHAIN_CONFIG_FILENAME } from './chain-types.js';
 
 // ---------------------------------------------------------------------------
@@ -13,6 +13,7 @@ import { resolveChainPath, getUgwtfRoot, CHAIN_CONFIG_FILENAME } from './chain-t
 // ---------------------------------------------------------------------------
 
 const TMP_ROOT = join(import.meta.dirname, '../../tests/fixtures/.tmp-chain-types-test');
+const UGWTF_ROOT = join(import.meta.dirname, '../..');
 
 function ensureDir(dir: string): void {
   mkdirSync(dir, { recursive: true });
@@ -84,21 +85,17 @@ describe('resolveChainPath', () => {
     const targetDir = join(TMP_ROOT, 'target-repo-no-chain');
     ensureDir(targetDir);
 
-    // The ugwtf root is the actual repo root, which has projects/043/prompt-chain.json
-    const ugwtfRoot = join(import.meta.dirname, '../..');
-    const projectChainPath = join(ugwtfRoot, 'projects', '043', CHAIN_CONFIG_FILENAME);
+    const expectedPath = join(UGWTF_ROOT, 'projects', '043', CHAIN_CONFIG_FILENAME);
 
-    // Only test if the real o43 chain file exists (it should in this repo)
-    if (existsSync(projectChainPath)) {
+    // Pin cwd so getUgwtfRoot() deterministically resolves to our repo root
+    const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(UGWTF_ROOT);
+    try {
       const result = resolveChainPath(targetDir, '043');
-      // Since getUgwtfRoot may not find the registry localPath in test env,
-      // it falls back to process.cwd(). If cwd has projects/, it should find it.
-      // We verify the mechanism works end-to-end in the integration test below.
+      expect(result).not.toBeNull();
+      expect(result).toBe(expectedPath);
+    } finally {
+      cwdSpy.mockRestore();
     }
-
-    // Always verify that without repoAlias, it returns null
-    const result = resolveChainPath(targetDir);
-    expect(result).toBeNull();
   });
 
   it('does not use projects/ fallback when repoAlias is omitted', () => {
@@ -108,44 +105,72 @@ describe('resolveChainPath', () => {
     const result = resolveChainPath(targetDir);
     expect(result).toBeNull();
   });
+
+  it('returns null (not ugwtf scripts/) when target repo has no chain and no alias', () => {
+    // Ensures we never accidentally pick up ugwtf's own chain for other repos
+    const targetDir = join(TMP_ROOT, 'target-no-alias-collision');
+    ensureDir(targetDir);
+
+    const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(UGWTF_ROOT);
+    try {
+      const result = resolveChainPath(targetDir);
+      expect(result).toBeNull();
+    } finally {
+      cwdSpy.mockRestore();
+    }
+  });
 });
 
 describe('getUgwtfRoot', () => {
-  it('returns a path containing projects/ directory', () => {
-    const root = getUgwtfRoot();
-    // In this test environment (running from the ugwtf repo), cwd should qualify
-    if (root) {
-      expect(existsSync(join(root, 'projects'))).toBe(true);
+  it('returns a path containing projects/ directory when cwd is ugwtf', () => {
+    const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(UGWTF_ROOT);
+    try {
+      const root = getUgwtfRoot();
+      expect(root).not.toBeNull();
+      expect(existsSync(join(root!, 'projects'))).toBe(true);
+    } finally {
+      cwdSpy.mockRestore();
+    }
+  });
+
+  it('returns null when cwd has no projects/ and registry does not match', () => {
+    const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue('/tmp/no-such-dir');
+    try {
+      const root = getUgwtfRoot();
+      // May still resolve via registry if localPath exists on disk — that's OK
+      // The key invariant: if it returns non-null, projects/ exists there
+      if (root) {
+        expect(existsSync(join(root, 'projects'))).toBe(true);
+      }
+    } finally {
+      cwdSpy.mockRestore();
     }
   });
 });
 
 describe('cross-repo chain resolution (integration)', () => {
-  const UGWTF_ROOT = join(import.meta.dirname, '../..');
   const o43ChainPath = join(UGWTF_ROOT, 'projects', '043', CHAIN_CONFIG_FILENAME);
 
   it('projects/043/prompt-chain.json exists and targets one4three', () => {
     expect(existsSync(o43ChainPath)).toBe(true);
-    const config = JSON.parse(require('node:fs').readFileSync(o43ChainPath, 'utf-8'));
+    const config = JSON.parse(readFileSync(o43ChainPath, 'utf-8'));
     expect(config.repo).toBe('DaBigHomie/one4three-co-next-app');
   });
 
-  it('resolveChainPath finds o43 chain via projects/ fallback from a non-existent localPath', () => {
+  it('resolveChainPath deterministically finds 043 chain via projects/ fallback', () => {
     // Simulate: 043's localPath doesn't exist (like in GitHub web context)
-    const fakeLocalPath = join(UGWTF_ROOT, 'tests', 'fixtures', '.tmp-fake-043-local');
+    const fakeLocalPath = join(TMP_ROOT, '.fake-043-local');
     mkdirSync(fakeLocalPath, { recursive: true });
 
+    // Pin cwd so getUgwtfRoot() deterministically resolves
+    const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(UGWTF_ROOT);
     try {
       const result = resolveChainPath(fakeLocalPath, '043');
-      // getUgwtfRoot will find the root via cwd or registry fallback
-      if (result) {
-        expect(result).toContain('projects');
-        expect(result).toContain('043');
-        expect(result).toContain(CHAIN_CONFIG_FILENAME);
-      }
-      // If getUgwtfRoot can't resolve (registry localPath doesn't match), result may be null
-      // That's OK — the key test is that no collision with ugwtf's own scripts/prompt-chain.json occurs
+      // Must resolve to projects/043, never to scripts/prompt-chain.json
+      expect(result).not.toBeNull();
+      expect(result).toBe(o43ChainPath);
     } finally {
+      cwdSpy.mockRestore();
       rmSync(fakeLocalPath, { recursive: true, force: true });
     }
   });
@@ -156,12 +181,12 @@ describe('cross-repo chain resolution (integration)', () => {
     expect(result).toBe(join(UGWTF_ROOT, 'scripts', CHAIN_CONFIG_FILENAME));
   });
 
-  it('no collision: ugwtf chain is different from o43 chain', () => {
+  it('no collision: ugwtf chain is different from 043 chain', () => {
     const ugwtfChain = JSON.parse(
-      require('node:fs').readFileSync(join(UGWTF_ROOT, 'scripts', CHAIN_CONFIG_FILENAME), 'utf-8')
+      readFileSync(join(UGWTF_ROOT, 'scripts', CHAIN_CONFIG_FILENAME), 'utf-8')
     );
     const o43Chain = JSON.parse(
-      require('node:fs').readFileSync(o43ChainPath, 'utf-8')
+      readFileSync(o43ChainPath, 'utf-8')
     );
 
     expect(ugwtfChain.repo).toBe('DaBigHomie/ugwtf');

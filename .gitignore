@@ -6,3 +6,6 @@ coverage/
 .ugwtf/
 .env
 .env.local
+
+# Test artifacts — chain-generator writes here during non-dry-run tests
+projects/test-repo/

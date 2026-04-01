@@ -4,9 +4,9 @@
  * Tests the full generate-chain pipeline: prompt scanning, dependency parsing,
  * toposort, wave assignment, and output generation using test fixtures.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { join } from 'node:path';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { chainGeneratorAgents } from './chain-generator.js';
 import { scanAllPrompts, clearPromptScanCache } from '../prompt/index.js';
 import type { AgentContext, AgentResult } from '../types.js';
@@ -220,34 +220,39 @@ describe('chainGenerator agent', () => {
     const outputPath = result.artifacts[0]!;
     expect(existsSync(outputPath)).toBe(true);
 
-    const config = JSON.parse(readFileSync(outputPath, 'utf-8'));
-    expect(config.version).toBe(3);
-    expect(config.repo).toBe('DaBigHomie/test-repo');
-    expect(config.chain).toBeInstanceOf(Array);
-    expect(config.chain.length).toBe(7);
+    try {
+      const config = JSON.parse(readFileSync(outputPath, 'utf-8'));
+      expect(config.version).toBe(3);
+      expect(config.repo).toBe('DaBigHomie/test-repo');
+      expect(config.chain).toBeInstanceOf(Array);
+      expect(config.chain.length).toBe(7);
 
-    // Verify chain is topologically sorted (deps always come before dependents)
-    const positionOf = new Map<string, number>();
-    for (const entry of config.chain) {
-      positionOf.set(entry.prompt, entry.position);
-    }
-    for (const entry of config.chain) {
-      for (const dep of entry.depends) {
-        const depPos = positionOf.get(dep);
-        expect(depPos).toBeDefined();
-        expect(depPos).toBeLessThan(entry.position);
+      // Verify chain is topologically sorted (deps always come before dependents)
+      const positionOf = new Map<string, number>();
+      for (const entry of config.chain) {
+        positionOf.set(entry.prompt, entry.position);
       }
-    }
+      for (const entry of config.chain) {
+        for (const dep of entry.depends) {
+          const depPos = positionOf.get(dep);
+          expect(depPos).toBeDefined();
+          expect(depPos).toBeLessThan(entry.position);
+        }
+      }
 
-    // Verify wave ordering (dep wave < dependent wave)
-    const waveOf = new Map<string, number>();
-    for (const entry of config.chain) {
-      waveOf.set(entry.prompt, entry.wave);
-    }
-    for (const entry of config.chain) {
-      for (const dep of entry.depends) {
-        expect(waveOf.get(dep)).toBeLessThan(entry.wave);
+      // Verify wave ordering (dep wave < dependent wave)
+      const waveOf = new Map<string, number>();
+      for (const entry of config.chain) {
+        waveOf.set(entry.prompt, entry.wave);
       }
+      for (const entry of config.chain) {
+        for (const dep of entry.depends) {
+          expect(waveOf.get(dep)).toBeLessThan(entry.wave);
+        }
+      }
+    } finally {
+      // Clean up generated file to keep the working tree hermetic
+      rmSync(outputPath, { force: true });
     }
   });
 });
