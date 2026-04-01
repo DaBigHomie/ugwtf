@@ -213,6 +213,7 @@ describe('cross-repo chain resolution — 30x validation (integration)', () => {
     }
 
     // Topological ordering: dep wave ≤ dependent wave
+    // (same-wave deps are valid — e.g. P16 depends on P15, both wave 1)
     for (const entry of chain) {
       for (const dep of entry.depends as string[]) {
         expect(waveOf.get(dep)).toBeLessThanOrEqual(entry.wave as number);

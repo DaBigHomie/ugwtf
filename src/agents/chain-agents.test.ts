@@ -214,9 +214,10 @@ describe('chainGenerator agent', () => {
     expect(result.status).toBe('success');
     expect(result.artifacts.length).toBeGreaterThan(0);
 
-    // Output goes to the natural path (no temp dirs — that's a violation).
-    // Chain-generator writes to projects/<alias>/ for non-ugwtf repos when
-    // getUgwtfRoot() resolves, otherwise scripts/prompt-chain.json in localPath.
+    // Output goes to the natural path — temp directories are a violation.
+    // Tests must validate real-world output paths to catch path-routing bugs
+    // like the original collision (ugwtf scripts/ vs projects/<alias>/).
+    // Cleanup via rmSync in finally block keeps the working tree pristine.
     const outputPath = result.artifacts[0]!;
     expect(existsSync(outputPath)).toBe(true);
 
