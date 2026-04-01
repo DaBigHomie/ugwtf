@@ -332,3 +332,23 @@ Before any PR merge, ALL of the following must be true:
 ## 11. Pipeline Operations
 
 > For the full pipeline runbook (commands, troubleshooting, common operations), see **[`docs/agent-guide/10-PIPELINE-OPERATIONS.md`](agent-guide/10-PIPELINE-OPERATIONS.md)**.
+
+---
+
+## 12. Image Generation Pipeline
+
+> For the full image generation guide, see **[`image-gen-30x-cli/docs/agent-docs/image/`](https://github.com/DaBigHomie/image-gen-30x-cli/tree/main/docs/agent-docs/image)** in the `image-gen-30x-cli` repo.
+
+| Doc | Purpose |
+|-----|---------|
+| `00-QUICK-START.md` | Run commands, categories, quality gates |
+| `01-ARCHITECTURE.md` | File tree, data flow, core types |
+| `02-MANIFEST.md` | Job schema, adding new jobs |
+| `03-ASPECT-RATIOS.md` | Standard dimensions per component (3:4 products, 16:9 heroes) |
+| `04-PROMPT-ASSEMBLY.md` | 6-block prompt builder |
+| `05-GENERATION.md` | Gemini config, resume, MIME handling |
+| `06-DEPLOY-WORKFLOW.md` | Full deploy workflow to o43 |
+| `07-BRAND-GUIDELINES.md` | Brand rules, logo handling, representation |
+| `08-TROUBLESHOOTING.md` | Common pitfalls and fixes |
+
+> **Local path**: `~/management-git/image-gen-30x-cli/docs/agent-docs/image/`
