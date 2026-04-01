@@ -148,49 +148,147 @@ describe('getUgwtfRoot', () => {
   });
 });
 
-describe('cross-repo chain resolution (integration)', () => {
+describe('cross-repo chain resolution — 30x validation (integration)', () => {
   const o43ChainPath = join(UGWTF_ROOT, 'projects', '043', CHAIN_CONFIG_FILENAME);
+  const ugwtfChainPath = join(UGWTF_ROOT, 'scripts', CHAIN_CONFIG_FILENAME);
+  const VALID_SEVERITIES = ['critical', 'high', 'medium', 'low'];
 
-  it('projects/043/prompt-chain.json exists and targets one4three', () => {
+  function loadChain(path: string) {
+    return JSON.parse(readFileSync(path, 'utf-8'));
+  }
+
+  /**
+   * 30x structural validation — asserts every entry in a chain has correct
+   * types, unique IDs, valid refs, and topological ordering.
+   */
+  function assert30xStructure(
+    config: Record<string, unknown>,
+    expectedRepo: string,
+    expectedEntries: number,
+    expectedWaves: number,
+  ): void {
+    // Top-level fields
+    expect(config.version).toBeTypeOf('number');
+    expect(config.repo).toBe(expectedRepo);
+    expect(Array.isArray(config.labels)).toBe(true);
+    expect(Array.isArray(config.chain)).toBe(true);
+
+    const chain = config.chain as Array<Record<string, unknown>>;
+    expect(chain.length).toBe(expectedEntries);
+
+    const positions = new Set<number>();
+    const promptIds = new Set<string>();
+    const waveOf = new Map<string, number>();
+    const posOf = new Map<string, number>();
+
+    // Per-entry field validation
+    for (const entry of chain) {
+      expect(entry.position).toBeTypeOf('number');
+      expect(entry.prompt).toBeTypeOf('string');
+      expect(entry.file).toBeTypeOf('string');
+      expect(entry.wave).toBeTypeOf('number');
+      expect(VALID_SEVERITIES).toContain(entry.severity);
+      expect(Array.isArray(entry.depends)).toBe(true);
+      expect((entry.file as string)).toMatch(/\.prompt\.md$/);
+
+      positions.add(entry.position as number);
+      promptIds.add(entry.prompt as string);
+      waveOf.set(entry.prompt as string, entry.wave as number);
+      posOf.set(entry.prompt as string, entry.position as number);
+    }
+
+    // Uniqueness
+    expect(positions.size).toBe(expectedEntries);
+    expect(promptIds.size).toBe(expectedEntries);
+
+    // Wave count
+    const waves = new Set(chain.map(e => e.wave));
+    expect(waves.size).toBe(expectedWaves);
+
+    // Dependency integrity: every dep reference exists in the chain
+    for (const entry of chain) {
+      for (const dep of entry.depends as string[]) {
+        expect(promptIds.has(dep)).toBe(true);
+      }
+    }
+
+    // Topological ordering: dep wave ≤ dependent wave
+    for (const entry of chain) {
+      for (const dep of entry.depends as string[]) {
+        expect(waveOf.get(dep)).toBeLessThanOrEqual(entry.wave as number);
+      }
+    }
+
+    // Position ordering: dep position < dependent position
+    for (const entry of chain) {
+      for (const dep of entry.depends as string[]) {
+        expect(posOf.get(dep)).toBeLessThan(entry.position as number);
+      }
+    }
+  }
+
+  it('projects/043/prompt-chain.json passes 30x structural validation', () => {
     expect(existsSync(o43ChainPath)).toBe(true);
-    const config = JSON.parse(readFileSync(o43ChainPath, 'utf-8'));
-    expect(config.repo).toBe('DaBigHomie/one4three-co-next-app');
+    const config = loadChain(o43ChainPath);
+    assert30xStructure(config, 'DaBigHomie/one4three-co-next-app', 30, 4);
   });
 
-  it('resolveChainPath deterministically finds 043 chain via projects/ fallback', () => {
-    // Simulate: 043's localPath doesn't exist (like in GitHub web context)
+  it('resolveChainPath deterministically resolves 043 to a valid 30-entry chain', () => {
     const fakeLocalPath = join(TMP_ROOT, '.fake-043-local');
     mkdirSync(fakeLocalPath, { recursive: true });
 
-    // Pin cwd so getUgwtfRoot() deterministically resolves
     const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(UGWTF_ROOT);
     try {
       const result = resolveChainPath(fakeLocalPath, '043');
-      // Must resolve to projects/043, never to scripts/prompt-chain.json
       expect(result).not.toBeNull();
       expect(result).toBe(o43ChainPath);
+
+      // Validate the resolved chain has full 30-entry structure
+      const config = loadChain(result!);
+      assert30xStructure(config, 'DaBigHomie/one4three-co-next-app', 30, 4);
     } finally {
       cwdSpy.mockRestore();
       rmSync(fakeLocalPath, { recursive: true, force: true });
     }
   });
 
-  it('ugwtf self-dogfood chain resolves to scripts/ not projects/', () => {
-    // When running against ugwtf itself, scripts/prompt-chain.json should be found first
+  it('ugwtf self-dogfood chain resolves to scripts/ with 40-entry structure', () => {
     const result = resolveChainPath(UGWTF_ROOT, 'ugwtf');
-    expect(result).toBe(join(UGWTF_ROOT, 'scripts', CHAIN_CONFIG_FILENAME));
+    expect(result).toBe(ugwtfChainPath);
+
+    const config = loadChain(result!);
+    assert30xStructure(config, 'DaBigHomie/ugwtf', 40, 8);
   });
 
-  it('no collision: ugwtf chain is different from 043 chain', () => {
-    const ugwtfChain = JSON.parse(
-      readFileSync(join(UGWTF_ROOT, 'scripts', CHAIN_CONFIG_FILENAME), 'utf-8')
-    );
-    const o43Chain = JSON.parse(
-      readFileSync(o43ChainPath, 'utf-8')
-    );
+  it('no collision: ugwtf (40-entry/8-wave) and 043 (30-entry/4-wave) chains are fully disjoint', () => {
+    const ugwtfConfig = loadChain(ugwtfChainPath);
+    const o43Config = loadChain(o43ChainPath);
 
-    expect(ugwtfChain.repo).toBe('DaBigHomie/ugwtf');
-    expect(o43Chain.repo).toBe('DaBigHomie/one4three-co-next-app');
-    expect(ugwtfChain.chain.length).not.toBe(o43Chain.chain.length);
+    // Different repos
+    expect(ugwtfConfig.repo).toBe('DaBigHomie/ugwtf');
+    expect(o43Config.repo).toBe('DaBigHomie/one4three-co-next-app');
+
+    const ugwtfEntries = ugwtfConfig.chain as Array<Record<string, unknown>>;
+    const o43Entries = o43Config.chain as Array<Record<string, unknown>>;
+
+    // Different entry counts
+    expect(ugwtfEntries.length).toBe(40);
+    expect(o43Entries.length).toBe(30);
+
+    // Different wave counts
+    const ugwtfWaves = new Set(ugwtfEntries.map(e => e.wave));
+    const o43Waves = new Set(o43Entries.map(e => e.wave));
+    expect(ugwtfWaves.size).toBe(8);
+    expect(o43Waves.size).toBe(4);
+
+    // Zero overlapping prompt IDs
+    const ugwtfIds = new Set(ugwtfEntries.map(e => e.prompt));
+    const o43Ids = new Set(o43Entries.map(e => e.prompt));
+    const overlap = [...ugwtfIds].filter(id => o43Ids.has(id));
+    expect(overlap).toEqual([]);
+
+    // Both pass independent 30x validation
+    assert30xStructure(ugwtfConfig, 'DaBigHomie/ugwtf', 40, 8);
+    assert30xStructure(o43Config, 'DaBigHomie/one4three-co-next-app', 30, 4);
   });
 });
