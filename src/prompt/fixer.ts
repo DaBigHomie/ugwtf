@@ -174,7 +174,29 @@ function fixTags(content: string, parsed: ParsedPrompt): { content: string; fixe
 
   const validLabels = new Set(UNIVERSAL_LABELS.map(l => l.name));
 
-  if (parsed.tags.length === 0) return { content, fixed: false };
+  if (parsed.tags.length === 0 && parsed.hasTags) {
+    // Tags section exists but no values extracted — nothing to map
+    return { content, fixed: false };
+  }
+  if (parsed.tags.length === 0 && !parsed.hasTags) {
+    // No tags section at all — inject a default tags line
+    const defaultTags = '`type:feat`, `scope:ui`';
+    // Insert after first metadata block or at top of file
+    const metadataEndRegex = /(\*\*Revenue Impact\*\*:.*\n|\*\*Estimated Time\*\*:.*\n|\*\*Status\*\*:.*\n)/i;
+    const metaMatch = content.match(metadataEndRegex);
+    if (metaMatch && metaMatch.index !== undefined) {
+      const insertAt = metaMatch.index + metaMatch[0].length;
+      const result = content.slice(0, insertAt) + `**Tags**: ${defaultTags}\n` + content.slice(insertAt);
+      return { content: result, fixed: true };
+    }
+    // Fallback: insert before first ## heading
+    const headingIdx = content.indexOf('\n## ');
+    if (headingIdx > 0) {
+      const result = content.slice(0, headingIdx) + `\n**Tags**: ${defaultTags}\n` + content.slice(headingIdx);
+      return { content: result, fixed: true };
+    }
+    return { content, fixed: false };
+  }
 
   const hasInvalid = parsed.tags.some(t => !validLabels.has(t));
   if (!hasInvalid) return { content, fixed: false };
@@ -292,6 +314,7 @@ export function fixPrompt(parsed: ParsedPrompt, dryRun: boolean): FixResult {
     hasMergeGate: parsed.hasMergeGate || sectionsAdded.includes('Merge Gate'),
     hasBlockingGate: parsed.hasBlockingGate || sectionsAdded.includes('Blocking Gate'),
     hasEnvironment: parsed.hasEnvironment || sectionsAdded.includes('Environment'),
+    hasTags: parsed.hasTags || tagResult.fixed,
     raw: content,
   };
 

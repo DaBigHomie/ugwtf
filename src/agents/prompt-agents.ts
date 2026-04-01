@@ -487,8 +487,14 @@ const promptFixer: Agent = {
   id: 'prompt-fixer',
   name: 'Prompt Fixer',
   description: 'Auto-fix prompts: inject missing sections, fix tags, upgrade to 24-point standard',
-  clusterId: 'prompts',
-  shouldRun() { return true; },
+  clusterId: 'fix-prompts',
+  shouldRun(ctx: AgentContext) {
+    const extras = ctx.extras ?? {};
+    const commandFromExtras = (extras.command ?? extras.subcommand) as string | undefined;
+    const isFixCommand = commandFromExtras === 'fix-prompts';
+    const hasFixFlag = extras.fixPrompts === 'true';
+    return isFixCommand || hasFixFlag;
+  },
 
   async execute(ctx): Promise<AgentResult> {
     const start = Date.now();
@@ -554,4 +560,5 @@ const promptFixer: Agent = {
 // Export
 // ---------------------------------------------------------------------------
 
-export const promptAgents: Agent[] = [promptScanner, promptValidator, promptIssueCreator, promptForecaster, promptFixer];
+export const promptAgents: Agent[] = [promptScanner, promptValidator, promptIssueCreator, promptForecaster];
+export const promptFixerAgents: Agent[] = [promptFixer];

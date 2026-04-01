@@ -83,7 +83,8 @@ each tag against the known label set.
 | Score | Condition |
 |-------|-----------|
 | 3 pts | All tags are valid UGWTF labels |
-| 1 pt | Tags present but some are invalid |
+| 2 pts | Tags / labels section exists but no tags can be extracted (e.g., malformed or empty) |
+| 1 pt | At least one valid tag, but some tags are invalid / not in the UGWTF label set |
 | 0 pts | No tags / labels field found |
 
 ---
@@ -121,12 +122,12 @@ npx tsx scripts/validate-prompts.mts \
 
 | Level | Score | Percent | Action |
 |-------|-------|---------|--------|
-| ✅ Gold | ≥127 | ≥90% | Ready for chain deployment |
-| ⚠️ Pass | ≥113 | ≥80% | Deployable with warnings |
-| ⛔ Fail | <113 | <80% | Block — fix before deploy |
+| ✅ Gold | ≥134 | ≥90% | Ready for chain deployment |
+| ⚠️ Pass | ≥119 | ≥80% | Deployable with warnings |
+| ⛔ Fail | <119 | <80% | Block — fix before deploy |
 
 The `prompt-validator` agent computes average score across all
-prompts. Average ≥80% (113/141) required to pass.
+prompts. Average ≥80% (≥119/149) required to pass.
 
 ---
 
@@ -134,7 +135,7 @@ prompts. Average ≥80% (113/141) required to pass.
 
 ### Format B (Primary — `docs/prompts/`, `docs/agent-prompts/`)
 
-Full template with all 22 criteria. See
+Full template with all 24 criteria. See
 `prompt-instructions.md` for the complete template.
 
 ### Format A (Simple — `.github/prompts/`)

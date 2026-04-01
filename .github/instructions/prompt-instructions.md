@@ -257,7 +257,8 @@ Tags MUST come from UGWTF `UNIVERSAL_LABELS`:
 | Score | Condition |
 |-------|-----------|
 | 3 pts | All tags valid UGWTF labels |
-| 1 pt | Some tags invalid |
+| 2 pts | Tags section present but values can't be extracted (malformed / unparsable) |
+| 1 pt  | Some tags invalid |
 | 0 pts | No tags present |
 
 ⛔ `scrollytelling`, `animation`, `gsap` → INVALID (freeform)

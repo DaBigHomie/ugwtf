@@ -8,6 +8,8 @@
  * v1.0: 18-point scoring (125 pts max)
  * v2.0: 22-point scoring (141 pts max) — added blast radius, a11y,
  *        design system, data-testid after PR #573 post-mortem
+ * v3.0: 24-point scoring (149 pts max) — expanded criteria to align with
+ *        updated scorer in src/prompt/score.ts and current docs
  */
 
 export interface ParsedPrompt {

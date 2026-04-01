@@ -14,7 +14,7 @@ import {
   scanAllPrompts,
   clearPromptScanCache,
 } from '../prompt/index.js';
-import { promptAgents } from './prompt-agents.js';
+import { promptAgents, promptFixerAgents } from './prompt-agents.js';
 
 // ---------------------------------------------------------------------------
 // Helpers — build ParsedPrompt objects for targeted scoring tests
@@ -500,8 +500,8 @@ describe('scanAllPrompts', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('promptAgents', () => {
-  it('exports 5 agents', () => {
-    expect(promptAgents).toHaveLength(5);
+  it('exports 4 agents', () => {
+    expect(promptAgents).toHaveLength(4);
   });
 
   it('has correct agent IDs', () => {
@@ -510,7 +510,6 @@ describe('promptAgents', () => {
     expect(ids).toContain('prompt-validator');
     expect(ids).toContain('prompt-issue-creator');
     expect(ids).toContain('prompt-forecaster');
-    expect(ids).toContain('prompt-fixer');
   });
 
   it('all agents belong to "prompts" cluster', () => {
@@ -524,6 +523,32 @@ describe('promptAgents', () => {
       // shouldRun() takes no meaningful args for these agents
       expect(agent.shouldRun({} as any)).toBe(true);
     }
+  });
+});
+
+describe('promptFixerAgents', () => {
+  it('exports 1 agent', () => {
+    expect(promptFixerAgents).toHaveLength(1);
+  });
+
+  it('has correct agent ID', () => {
+    expect(promptFixerAgents[0]!.id).toBe('prompt-fixer');
+  });
+
+  it('belongs to "fix-prompts" cluster', () => {
+    expect(promptFixerAgents[0]!.clusterId).toBe('fix-prompts');
+  });
+
+  it('shouldRun returns false without fix-prompts command', () => {
+    expect(promptFixerAgents[0]!.shouldRun({} as any)).toBe(false);
+  });
+
+  it('shouldRun returns true when command is fix-prompts', () => {
+    expect(promptFixerAgents[0]!.shouldRun({ extras: { command: 'fix-prompts' } } as any)).toBe(true);
+  });
+
+  it('shouldRun returns true when fixPrompts flag is set', () => {
+    expect(promptFixerAgents[0]!.shouldRun({ extras: { fixPrompts: 'true' } } as any)).toBe(true);
   });
 });
 

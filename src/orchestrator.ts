@@ -30,7 +30,7 @@ const COMMAND_CLUSTER_MAP: Record<string, string[]> = {
   status:      ['audit'],
   checks:      ['quality'],
   prompts:     ['prompts'],
-  'fix-prompts': ['prompts'],
+  'fix-prompts': ['fix-prompts'],
   chain:       ['chain'],
   cleanup:     ['cleanup'],
   'dry-run':   ['dry-run'],
