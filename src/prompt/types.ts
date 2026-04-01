@@ -4,7 +4,10 @@
  * Unified ParsedPrompt reconciles fields from both:
  *   - src/agents/prompt-agents.ts (format, hasDatabaseSchema)
  *   - scripts/validate-prompts.mts (hasFilesToModify)
- * Plus 4 new boolean fields for the 18-point scoring system.
+ *
+ * v1.0: 18-point scoring (125 pts max)
+ * v2.0: 22-point scoring (141 pts max) — added blast radius, a11y,
+ *        design system, data-testid after PR #573 post-mortem
  */
 
 export interface ParsedPrompt {
@@ -30,6 +33,14 @@ export interface ParsedPrompt {
   hasEnvironment: boolean;
   hasBlockingGate: boolean;
   hasMergeGate: boolean;
+  hasBlastRadius: boolean;
+  hasA11y: boolean;
+  hasDesignSystem: boolean;
+  hasTestIdContracts: boolean;
+  hasAgentBootstrap: boolean;
+  hasWorkflowLifecycle: boolean;
+  tags: string[];               // extracted tag/label values (for validation against UGWTF labels)
+  filesToModify: string[];      // extracted file paths from Files to Modify section
   sections: string[];
   checklistItems: number;
   totalLines: number;

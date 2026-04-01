@@ -1,7 +1,7 @@
 /**
  * Prompt Agents — Unit Tests
  *
- * Tests the 18-point gold-standard validatePrompt() scoring,
+ * Tests the 24-point gold-standard validatePrompt() scoring,
  * parseDependencies(), scanAllPrompts(), and agent behavior.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -45,6 +45,14 @@ function emptyPrompt(overrides: Partial<ParsedPrompt> = {}): ParsedPrompt {
     hasEnvironment: false,
     hasBlockingGate: false,
     hasMergeGate: false,
+    hasBlastRadius: false,
+    hasA11y: false,
+    hasDesignSystem: false,
+    hasTestIdContracts: false,
+    hasAgentBootstrap: false,
+    hasWorkflowLifecycle: false,
+    tags: [],
+    filesToModify: [],
     sections: [],
     checklistItems: 0,
     totalLines: 10,
@@ -77,6 +85,14 @@ function perfectPrompt(overrides: Partial<ParsedPrompt> = {}): ParsedPrompt {
     hasEnvironment: true,
     hasBlockingGate: true,
     hasMergeGate: true,
+    hasBlastRadius: true,
+    hasA11y: true,
+    hasDesignSystem: true,
+    hasTestIdContracts: true,
+    hasAgentBootstrap: true,
+    hasWorkflowLifecycle: true,
+    tags: ['type:feat', 'scope:db'],
+    filesToModify: ['src/lib/supabase/schema.ts'],
     sections: ['Objective', 'Success Criteria', 'Testing Checklist', 'Implementation'],
     checklistItems: 5,
     totalLines: 120,
@@ -87,16 +103,16 @@ function perfectPrompt(overrides: Partial<ParsedPrompt> = {}): ParsedPrompt {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// validatePrompt — 18-point scoring
+// validatePrompt — 24-point scoring
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('validatePrompt', () => {
   it('scores a perfect prompt at 100%', () => {
     const result = validatePrompt(perfectPrompt());
     expect(result.percent).toBe(100);
-    expect(result.score).toBe(125);
-    expect(result.maxScore).toBe(125);
-    expect(result.criteria).toHaveLength(18);
+    expect(result.score).toBe(149);
+    expect(result.maxScore).toBe(149);
+    expect(result.criteria).toHaveLength(24);
   });
 
   it('scores an empty Format B prompt near minimum', () => {
@@ -299,9 +315,21 @@ describe('validatePrompt', () => {
       expect(result.criteria.find(c => c.name === 'Files to Modify')!.points).toBe(5);
     });
 
-    it('awards 3 pts for Tags / Labels when present', () => {
+    it('awards 2 pts for Tags / Labels when section present but no values extracted', () => {
       const result = validatePrompt(emptyPrompt({ hasTags: true }));
+      expect(result.criteria.find(c => c.name === 'Tags / Labels')!.points).toBe(2);
+    });
+
+    it('awards 3 pts for Tags / Labels when all tags are valid UGWTF labels', () => {
+      const result = validatePrompt(emptyPrompt({ hasTags: true, tags: ['type:feat', 'scope:ui'] }));
       expect(result.criteria.find(c => c.name === 'Tags / Labels')!.points).toBe(3);
+    });
+
+    it('awards 1 pt for Tags / Labels when some tags are invalid', () => {
+      const result = validatePrompt(emptyPrompt({ hasTags: true, tags: ['type:feat', 'scrollytelling'] }));
+      const c = result.criteria.find(c => c.name === 'Tags / Labels')!;
+      expect(c.points).toBe(1);
+      expect(c.note).toContain('scrollytelling');
     });
 
     it('awards 5 pts for Environment when present', () => {
@@ -337,14 +365,14 @@ describe('validatePrompt', () => {
 
   // ----- Aggregate scoring -----
   describe('aggregate scoring', () => {
-    it('returns exactly 18 criteria', () => {
+    it('returns exactly 24 criteria', () => {
       const result = validatePrompt(emptyPrompt());
-      expect(result.criteria).toHaveLength(18);
+      expect(result.criteria).toHaveLength(24);
     });
 
-    it('maxScore is always 125', () => {
+    it('maxScore is always 149', () => {
       const result = validatePrompt(emptyPrompt());
-      expect(result.maxScore).toBe(125);
+      expect(result.maxScore).toBe(149);
     });
 
     it('percent is correctly computed from score/maxScore', () => {
@@ -352,7 +380,7 @@ describe('validatePrompt', () => {
       expect(result.percent).toBe(Math.round((result.score / result.maxScore) * 100));
     });
 
-    it('mid-range prompt scores between 40-80%', () => {
+    it('mid-range prompt scores between 35-80%', () => {
       const mid = emptyPrompt({
         title: 'Database Schema Setup',
         priority: 'P1',
@@ -362,7 +390,7 @@ describe('validatePrompt', () => {
         totalLines: 60,
       });
       const result = validatePrompt(mid);
-      expect(result.percent).toBeGreaterThanOrEqual(40);
+      expect(result.percent).toBeGreaterThanOrEqual(35);
       expect(result.percent).toBeLessThanOrEqual(80);
     });
   });
@@ -472,8 +500,8 @@ describe('scanAllPrompts', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('promptAgents', () => {
-  it('exports 4 agents', () => {
-    expect(promptAgents).toHaveLength(4);
+  it('exports 5 agents', () => {
+    expect(promptAgents).toHaveLength(5);
   });
 
   it('has correct agent IDs', () => {
@@ -482,6 +510,7 @@ describe('promptAgents', () => {
     expect(ids).toContain('prompt-validator');
     expect(ids).toContain('prompt-issue-creator');
     expect(ids).toContain('prompt-forecaster');
+    expect(ids).toContain('prompt-fixer');
   });
 
   it('all agents belong to "prompts" cluster', () => {

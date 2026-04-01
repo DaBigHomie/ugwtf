@@ -2,70 +2,135 @@
 applyTo: "**/prompts/**,**/*.prompt.md,**/agent-prompts/**"
 ---
 
-# Prompt Authoring Instructions
+# Prompt Authoring — 24-Point Gold Standard
 
-> Gold-standard format for `.prompt.md` files consumed by UGWTF prompt agents.
-> Prompts that follow this format score 100/100 and execute reliably via Copilot coding agents.
+> Scorer v3.0 · 24 criteria · 149 pts max · All prompts target
+> Copilot Coding Agent
 
 ---
 
-## Optimal Format Template
-
-Every `.prompt.md` file MUST follow this structure:
+## Template
 
 ```markdown
-# [Clear, Descriptive Task Title]
+# {{TITLE}}
 
-**Priority**: P0
+**Priority**: {{PRIORITY}}
 **Status**: ⏳ **NOT STARTED**
-**Estimated Time**: 10-30 minutes
-**Agent Type**: Copilot Coding Agent
-**Revenue Impact**: High
-**Dependencies**: #3, #7
+**Estimated Time**: {{ESTIMATED_TIME}}
+**Revenue Impact**: {{REVENUE_IMPACT}}
+**Dependencies**: {{DEPENDENCIES}}
+**Tags**: {{TAGS}}
+
+---
+
+## Agent Bootstrap
+
+> ⚠️ The agent executing this prompt MUST load these files first:
+
+```bash
+# 1. Repo instructions (mandatory)
+cat .github/copilot-instructions.md
+cat AGENTS.md
+
+# 2. Path-specific instructions (load all matching)
+ls .github/instructions/*.instructions.md
+
+# 3. Active sprint context
+cat docs/active/INDEX.md
+```
+
+**Instruction files to load** (based on task scope):
+- `commit-quality.instructions.md` — always
+- `core-directives.instructions.md` — always
+- `typescript.instructions.md` — any code change
+- `regression-prevention.instructions.md` — any UI change
+- `{{SCOPE_INSTRUCTIONS}}` — task-specific
 
 ---
 
 ## Objective
 
-[One paragraph: What this prompt accomplishes and WHY it matters.
-Must be >20 characters. This is the highest-weighted criterion — the agent
-reads this first to understand the task.]
+[Agent-readable paragraph. WHAT to build + WHY.
+Describe BEHAVIOR, not implementation details.
+NO specific prop names, import paths, or HTML tags
+that may conflict. Let Pre-Flight Check discover
+current state.]
 
 ---
 
-## Files to Modify
-
-| File | Action | Purpose |
-|------|--------|---------|
-| `src/lib/example.ts` | Modify | Add validation logic |
-| `src/lib/example.test.ts` | Create | Unit tests |
-
----
-
-## Commands
+## Pre-Flight Check
 
 ```bash
-npm install some-package
-npx tsc --noEmit
+grep -rn "PATTERN" src/ 2>/dev/null
+find src/ -name "RelatedComponent*" 2>/dev/null
 ```
+
+---
+
+## Intended Result
+
+[Describe what EXISTS after completion. NOT a checkbox
+list — a description of the functional outcome.]
+
+---
+
+## Files to Modify/Create
+
+| File | Action | Exists? | Purpose |
+|------|--------|---------|---------|
+| `{{FILE_PATH}}` | {{ACTION}} | {{EXISTS}} | {{PURPOSE}} |
+
+---
+
+## data-testid Contracts
+
+| testid | Action | Used By |
+|--------|--------|---------|
+| `{{TESTID}}` | {{TESTID_ACTION}} | {{TESTID_CONSUMER}} |
+
+---
+
+## Blast Radius
+
+```bash
+grep -rn "{{CHANGED_PATTERN}}" src/ --include="*.tsx"
+```
+
+---
+
+## A11y Checklist
+
+- [ ] Interactive elements have `aria-label`
+- [ ] Heading hierarchy preserved (no h1→h3 skip)
+- [ ] Color contrast: brand tokens pass WCAG AA
+
+---
+
+## Design System
+
+- [ ] No hardcoded hex/rgb — Tailwind tokens only
+- [ ] No hardcoded px — Tailwind spacing scale
+- [ ] Dark mode: semantic tokens (bg-surface, etc.)
 
 ---
 
 ## Success Criteria
 
-- [ ] `npx tsc --noEmit` passes with 0 errors
-- [ ] `npm run lint` passes with 0 errors
-- [ ] `npm run build` succeeds
-- [ ] New function exported and callable
-- [ ] Unit tests cover happy path + error cases
+[Describe the intended functional result — NOT commands.
+Example: "Users see a clip-reveal animation on headings.
+Animation respects prefers-reduced-motion."]
 
 ---
 
 ## Testing Checklist
 
-- [ ] `npx tsc --noEmit` — 0 errors
-- [ ] `npx vitest run` — all tests pass
-- [ ] `npm run build` — succeeds with 0 warnings
+```bash
+#!/bin/bash
+npx tsc --noEmit || exit 1
+npm run lint || exit 1
+npm run build || exit 1
+{{EXTRA_TEST_COMMANDS}}
+```
 
 ---
 
@@ -73,193 +138,285 @@ npx tsc --noEmit
 
 ### Step 1: [Action]
 
-[Detailed instructions with exact file paths and code changes.]
-
 ```typescript
-// Example code showing the expected implementation
-export function myFunction(): string {
-  return 'example';
-}
+// Example code
 ```
-
-### Step 2: [Action]
-
-[Continue with specific, actionable steps.]
 
 ---
 
 ## Reference Implementation
 
-See `src/existing/pattern.ts` for the established pattern this prompt follows.
+See `{{REFERENCE_FILE}}` for the pattern to follow.
+
+---
+
+## Environment
+
+- **Framework**: {{FRAMEWORK}}
+- **Dependencies**: {{PACKAGES}}
+- **FSD Layer**: {{FSD_LAYER}}
+
+---
+
+## Database / Supabase
+
+{{DATABASE_SECTION}}
+
+---
+
+## Routes Affected
+
+{{ROUTES_AFFECTED}}
+
+---
+
+## Blocking Gate
+
+```bash
+{{BLOCKING_GATE_COMMANDS}}
 ```
 
 ---
 
-## 18-Criterion Scoring (125 points max)
-
-The UGWTF validator scores every prompt against these 18 criteria.
-Prompts must score **≥99.9%** to pass the quality gate.
-
-| # | Criterion | Points | What It Checks |
-|---|-----------|--------|----------------|
-| 1 | **Title** | 10 | 6-119 chars, clear and descriptive — becomes GitHub Issue title |
-| 2 | **Priority** | 10 | P0-P3 assigned — controls chain ordering |
-| 3 | **Objective** | 15 | >20 chars detailed description — HIGHEST weight, agent reads first |
-| 4 | **Sections** | 10 | ≥4 `## Heading` sections — structured prompts reduce hallucination |
-| 5 | **Success Criteria** | 10 | `## Success Criteria` with checkboxes — quality gates verify these |
-| 6 | **Testing Checklist** | 10 | `## Testing Checklist` — commands agent runs before pushing |
-| 7 | **Code Examples** | 10 | Fenced code blocks (```typescript, ```bash, etc.) — reduces ambiguity |
-| 8 | **Time Estimate** | 5 | `**Estimated Time**` present — used by forecaster for 30x readiness |
-| 9 | **Revenue Impact** | 5 | `**Revenue Impact**` present — prioritization signal |
-| 10 | **Checklists** | 5 | ≥3 `- [ ]` items — granular acceptance criteria |
-| 11 | **Reference Impl** | 5 | "Reference Implementation" mentioned — points agent at patterns |
-| 12 | **Content Depth** | 5 | ≥100 lines — deeper prompts produce better results |
-| 13 | **Files to Modify** | 5 | `## Files to Modify/Create/Touch` section — scopes agent work |
-| 14 | **Tags / Labels** | 3 | `**Tags**` or `**Labels**` present — enables auto-labeling |
-| 15 | **Environment** | 5 | `## Environment` section — tools, versions, runtime context |
-| 16 | **Blocking Gate** | 5 | `## Blocking Gate` section — hard prerequisite check |
-| 17 | **Merge Gate** | 5 | `## Merge Gate` section — conditions that must pass before merge |
-| 18 | **Dependencies** | 2 | `**Dependencies**` lists specific prompt/issue refs |
-
-**Total: 125 points**
-
-### Validation Command
+## Merge Gate
 
 ```bash
-npx tsx scripts/validate-prompts.mts --cwd <repo-path> --verbose
+npx tsc --noEmit
+npm run lint
+npm run build
+```
+
+---
+
+## Workflow & Lifecycle
+
+**CI Validation**: `ci.yml` — tsc + lint + build + test
+**PR Promotion**: `copilot-pr-promote.yml` — labels, milestone, reviewer
+**PR Validation**: `copilot-pr-validate.yml` — quality gates + blast radius
+**Chain Advance**: `copilot-chain-advance.yml` — closes → next issue
+
+**Post-Merge Steps** (automated):
+1. PR merged → `copilot-pr-merged.yml` adds `automation:completed`
+2. Linked chain issue auto-closes
+3. `copilot-chain-advance.yml` activates next wave
+4. Branch auto-deleted
+
+**E2E Tests to Run**:
+- `e2e/specs/route-health.spec.ts` — smoke
+- `{{E2E_SPEC_FILES}}` — feature-specific
+```
+
+---
+
+## 24-Criterion Scoring (149 pts max)
+
+| # | Criterion | Pts | What It Checks |
+|---|-----------|-----|----------------|
+| 1 | Title | 10 | 6-119 chars, descriptive |
+| 2 | Priority | 10 | P0-P3 (Format A = 5 partial) |
+| 3 | Objective | 15 | >20 chars description |
+| 4 | Sections | 10 | ≥4 `## Heading` sections |
+| 5 | Success Criteria | 10 | Intended result (⛔ NOT commands) |
+| 6 | Testing Checklist | 10 | Commands/scripts agent runs |
+| 7 | Code Examples | 10 | Fenced ` ``` ` blocks |
+| 8 | Time Estimate | 5 | `**Estimated Time**` present |
+| 9 | Revenue Impact | 5 | `**Revenue Impact**` present |
+| 10 | Checklists | 5 | ≥3 `- [ ]` items |
+| 11 | Reference Impl | 5 | "Reference Implementation" present |
+| 12 | Content Depth | 5 | ≥100 lines |
+| 13 | Files to Modify | 5 | `## Files to Modify/Create/Touch` |
+| 14 | Tags / Labels | 3 | UGWTF labels only (see below) |
+| 15 | Environment | 5 | `## Environment` section |
+| 16 | Blocking Gate | 5 | `## Blocking Gate` section |
+| 17 | Merge Gate | 5 | `## Merge Gate` section |
+| 18 | Dependencies | 2 | `#N`, `FI-NN`, or `01-filename` |
+| 19 | Blast Radius | 5 | `## Blast Radius` + grep commands |
+| 20 | A11y Gates | 3 | `## A11y` or a11y keywords |
+| 21 | Design System | 5 | `## Design System` — no hardcoded |
+| 22 | data-testid | 3 | `## data-testid` contracts |
+| 23 | Agent Bootstrap | 5 | `## Agent Bootstrap` — load instructions |
+| 24 | Workflow Lifecycle | 3 | `## Workflow & Lifecycle` — CI/chain refs |
+
+---
+
+## Tag Validation (#14)
+
+Tags MUST come from UGWTF `UNIVERSAL_LABELS`:
+
+| Category | Valid Tags |
+|----------|-----------|
+| Type | `type:feat` `type:fix` `type:chore` `type:docs` |
+| Type | `type:refactor` `type:test` `type:ci` |
+| Scope | `scope:ui` `scope:ci` `scope:db` `scope:api` `scope:auth` |
+| Category | `database` `infrastructure` `enhancement` `bug` |
+| Category | `documentation` `dependencies` `security` |
+| Migration | `safe-migration` `destructive-migration` `types-update` |
+| 043-only | `ecommerce` `checkout` `pdp` `admin` `orders` |
+| 043-only | `conversion` `marketing` `social` |
+
+| Score | Condition |
+|-------|-----------|
+| 3 pts | All tags valid UGWTF labels |
+| 1 pt | Some tags invalid |
+| 0 pts | No tags present |
+
+⛔ `scrollytelling`, `animation`, `gsap` → INVALID (freeform)
+
+---
+
+## Validation Command
+
+```bash
+npx tsx scripts/validate-prompts.mts \
+  --cwd <repo-path> --verbose
 ```
 
 ---
 
 ## Metadata Formats (Both Supported)
 
-### Format 1: Inline (Preferred)
+### Inline (Preferred)
 
 ```markdown
 **Priority**: P0
 **Estimated Time**: 30 minutes
 **Revenue Impact**: High
+**Tags**: `type:feat`, `scope:ui`
 ```
 
-### Format 2: Table
+### Table
 
 ```markdown
-## Metadata
 | Field | Value |
 |-------|-------|
-| **Priority** | P0 |
-| **Estimated Hours** | 3h |
-| **Revenue Impact** | High |
+| Priority | P0 |
+| Estimated Time | 30 min |
+| Tags | `type:feat`, `scope:ui` |
 ```
-
-The validator auto-detects and extracts from either format.
 
 ---
 
-## 30x Best Practices
+## Best Practices
 
-### 1. One Task = One Prompt = One Issue = One PR
-
-Each prompt file maps to exactly one GitHub Issue, assigned to one agent,
-producing one PR. Never combine multiple features into one prompt.
-
-### 2. Number Filenames for Ordering
-
-```
-01-supabase-client-setup.prompt.md
-02-product-schema.prompt.md
-03-cart-state-management.prompt.md
-```
-
-The number prefix controls execution order and makes dependency chains obvious.
-
-### 3. Make Dependencies Explicit and Machine-Parseable
-
-```markdown
-**Dependencies**: #1, #3
-```
-
-UGWTF's dependency parser extracts `#N` references, `FI-01` IDs, and
-`01-filename` patterns. Use these formats — not prose.
-
-### 4. Put Exact Commands in Success Criteria
-
-```markdown
-- [ ] `npx tsc --noEmit` passes with 0 errors
-- [ ] `npm run build` succeeds
-```
-
-Not: "TypeScript should compile" — give the agent the exact command.
-
-### 5. Keep Prompts Atomic (Under 30 Minutes)
-
-If estimated time exceeds 30 minutes, split into smaller prompts.
-Smaller scope = fewer hallucinations = higher success rate.
-
-### 6. Always Include Testing Checklist with Three Gates
-
-Every prompt must specify these three minimum quality gates:
-
-```markdown
-## Testing Checklist
-- [ ] `npx tsc --noEmit` — 0 errors
-- [ ] `npx vitest run` — all tests pass
-- [ ] `npm run build` — succeeds
-```
-
-### 7. Use `## Files to Modify` to Scope the Agent
-
-Listing exact file paths prevents the agent from wandering into unrelated code.
-
-```markdown
-## Files to Modify
-| File | Action | Purpose |
-|------|--------|---------|
-| `src/lib/supabase.ts` | Modify | Add new query function |
-```
-
-### 8. Include Code Examples for Non-Obvious Changes
-
-A 5-line code snippet eliminates ambiguity better than a paragraph of description.
-
-```markdown
-## Implementation
-
-```typescript
-export async function getProducts(): Promise<Product[]> {
-  const { data } = await supabase.from('products').select('*');
-  return data ?? [];
-}
-```​
-```
-
-### 9. Group Prompts into Waves via Dependencies
-
-UGWTF uses Kahn's algorithm (topological sort) to determine execution waves.
-Prompts with no dependencies run first (Wave 1). Prompts depending on Wave 1
-run next (Wave 2), and so on.
-
-```
-Wave 1: 01-setup, 02-schema (no deps)
-Wave 2: 03-cart (depends on #1, #2)
-Wave 3: 04-checkout (depends on #3)
-```
-
-### 10. Design for Self-Healing Failure
-
-When a prompt fails, the agent retries. Make this work by:
-- Clear success criteria with exact commands (not ambiguous descriptions)
-- Small scope (one responsibility per prompt)
-- Testing checklist the agent can execute independently
+| # | Rule | Detail |
+|---|------|--------|
+| 1 | One prompt = one PR | Never combine features |
+| 2 | Number filenames | `01-setup.prompt.md` |
+| 3 | Machine deps | `#N`, `FI-01`, `01-filename` |
+| 4 | Atomic scope | ≤30 min per prompt |
+| 5 | Three test gates | tsc + lint + build minimum |
+| 6 | Scope with files | `## Files to Modify` table |
+| 7 | Code > prose | 5-line snippet beats paragraph |
+| 8 | Blast radius grep | Search before changing values |
+| 9 | a11y in every UI | aria-labels, heading order |
+| 10 | Design tokens only | ⛔ No hex/rgb in components |
 
 ---
 
-## Anti-Patterns (Avoid These)
+## Anti-Patterns
 
-- **Vague objectives**: "Improve the codebase" — be specific
-- **Missing priority**: Every prompt needs P0-P3 for ordering
-- **No testing section**: Agent has no way to verify its own work
-- **Massive scope**: 4-hour prompts fail; split into 30-minute chunks
-- **Prose dependencies**: "This should be done after the database work" — use `**Dependencies**: #2`
-- **No code examples**: Agent guesses the implementation pattern
-- **Missing files list**: Agent modifies random files looking for the right ones
+| ⛔ Anti-Pattern | Fix |
+|-----------------|-----|
+| Vague objective | Specific behavior description |
+| Missing priority | Add P0-P3 |
+| No testing section | Add `## Testing Checklist` |
+| 4-hour scope | Split into ≤30-min prompts |
+| Prose dependencies | Use `**Dependencies**: #2` |
+| Freeform tags | Use UGWTF labels only |
+| `**Agent Type**` field | Removed — all use Copilot |
+| `## Commands` section | Use `## Testing Checklist` |
+| Success criteria = commands | Describe outcome, not cmds |
+| No blast radius grep | Add `## Blast Radius` |
+| Hardcoded colors | Use Tailwind tokens |
+| Missing data-testid | Add `## data-testid` table |
+| No Agent Bootstrap | Add `## Agent Bootstrap` section |
+| No workflow refs | Add `## Workflow & Lifecycle` |
+
+---
+
+## Tag Lifecycle Matrix
+
+Labels applied at each stage of the UGWTF pipeline.
+All labels come from `UNIVERSAL_LABELS` in `repo-registry.ts`.
+
+### Spec Issue (`ugwtf prompts` → prompt-spec)
+
+| Label | Source |
+|-------|--------|
+| `priority:p{0-3}` | Prompt `**Priority**` field |
+| `automation:copilot` | Auto-applied |
+| `agent:copilot` | Auto-applied |
+| `prompt-spec` | Auto-applied |
+| `needs-pr` | Auto-applied |
+| `database` | If `hasDatabaseSchema` |
+
+### Chain Issue (`ugwtf chain` → chain-tracker)
+
+| Label | Source |
+|-------|--------|
+| `priority:p{0-3}` | From severity mapping |
+| `chain-tracker` | Auto-applied |
+| `prompt-chain` | From chain config |
+| `automation:copilot` | From chain config |
+| `agent:copilot` | From chain config |
+
+### PR Labels (`copilot-pr-promote.yml`)
+
+| Label | Source |
+|-------|--------|
+| `automation:copilot` | Auto (Copilot branch) |
+| `type:{type}` | Extracted from PR title |
+| `scope:{scope}` | Extracted from PR title |
+
+### Lifecycle Transitions
+
+| Event | Adds | Removes |
+|-------|------|---------|
+| Copilot assigned | `automation:in-progress` | — |
+| PR fails gates | `needs-review` | — |
+| PR max retries | `needs-human-review` | `automation:in-progress` |
+| PR merged | `automation:completed` | `automation:in-progress` |
+| Chain closed | `automation:completed` | `automation:in-progress` |
+
+### Tags by PR Type
+
+| PR Type | Required Labels |
+|---------|----------------|
+| Feature (chain) | `type:feat`, `scope:*`, `automation:copilot` |
+| Fix (chain) | `type:fix`, `scope:*`, `automation:copilot` |
+| Chore (manual) | `type:chore`, `scope:*` |
+| Docs (manual) | `type:docs` |
+
+---
+
+## Placeholder Reference
+
+Creator scripts use `{{PLACEHOLDER}}` tokens for search-replace.
+This avoids markdown parsing — plain `String.replaceAll()`.
+
+| Placeholder | Description | Example |
+|-------------|-------------|---------|
+| `{{TITLE}}` | Issue/PR title | `Add size guide modal` |
+| `{{PRIORITY}}` | P0-P3 | `P1` |
+| `{{ESTIMATED_TIME}}` | Duration | `30 minutes` |
+| `{{REVENUE_IMPACT}}` | Impact + reason | `High — conversion` |
+| `{{DEPENDENCIES}}` | Refs | `#3, #7` |
+| `{{TAGS}}` | UGWTF labels | `` `type:feat`, `scope:ui` `` |
+| `{{SCOPE_INSTRUCTIONS}}` | Instruction file | `tailwind.instructions.md` |
+| `{{FILE_PATH}}` | Source path | `src/shared/ui/X.tsx` |
+| `{{ACTION}}` | CREATE/MODIFY | `MODIFY` |
+| `{{EXISTS}}` | ✅/❌ | `✅` |
+| `{{PURPOSE}}` | Why | `Add new hook` |
+| `{{TESTID}}` | Test ID | `size-guide-modal` |
+| `{{TESTID_ACTION}}` | CREATE/PRESERVE | `CREATE` |
+| `{{TESTID_CONSUMER}}` | E2E spec | `e2e/specs/pdp.spec.ts` |
+| `{{CHANGED_PATTERN}}` | Grep pattern | `SHIPPING_COST` |
+| `{{EXTRA_TEST_COMMANDS}}` | Extra cmds | `npx playwright test ...` |
+| `{{REFERENCE_FILE}}` | Pattern file | `src/shared/ui/Modal.tsx` |
+| `{{FRAMEWORK}}` | Runtime | `Next.js 15.5.12` |
+| `{{PACKAGES}}` | npm packages | `gsap, @gsap/react` |
+| `{{FSD_LAYER}}` | FSD location | `features/homepage` |
+| `{{DATABASE_SECTION}}` | SQL or "None" | `No DB changes required.` |
+| `{{ROUTES_AFFECTED}}` | App routes | `/shop — ProductGrid` |
+| `{{BLOCKING_GATE_COMMANDS}}` | Pre-reqs | `test -f src/lib/gsap.ts` |
+| `{{E2E_SPEC_FILES}}` | Test specs | `e2e/specs/pdp.spec.ts` |
