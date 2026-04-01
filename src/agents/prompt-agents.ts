@@ -19,11 +19,13 @@ import {
   scanAllPrompts,
   validatePrompt,
   parseEstimatedTime,
+  fixAllPrompts,
+  type FixResult,
 } from '../prompt/index.js';
 
 // Re-export for backward-compat consumers that import from this file
-export type { ParsedPrompt, ValidationResult };
-export { scanAllPrompts, validatePrompt, parseDependencies, clearPromptScanCache } from '../prompt/index.js';
+export type { ParsedPrompt, ValidationResult, FixResult };
+export { scanAllPrompts, validatePrompt, parseDependencies, clearPromptScanCache, fixAllPrompts } from '../prompt/index.js';
 
 /**
  * Filter prompts by --path flag (folder or single file).
@@ -174,7 +176,7 @@ const promptScanner: Agent = {
 const promptValidator: Agent = {
   id: 'prompt-validator',
   name: 'Prompt Validator',
-  description: 'Score each prompt 0-100 against gold-standard criteria (18-point system)',
+  description: 'Score each prompt 0-100 against gold-standard criteria (24-point system)',
   clusterId: 'prompts',
   shouldRun() { return true; },
 
@@ -478,7 +480,85 @@ const promptForecaster: Agent = {
 };
 
 // ---------------------------------------------------------------------------
+// Agent 5: Prompt Fixer
+// ---------------------------------------------------------------------------
+
+const promptFixer: Agent = {
+  id: 'prompt-fixer',
+  name: 'Prompt Fixer',
+  description: 'Auto-fix prompts: inject missing sections, fix tags, upgrade to 24-point standard',
+  clusterId: 'fix-prompts',
+  shouldRun(ctx: AgentContext) {
+    const extras = ctx.extras ?? {};
+    const commandFromExtras = (extras.command ?? extras.subcommand) as string | undefined;
+    const isFixCommand = commandFromExtras === 'fix-prompts';
+    const hasFixFlag = extras.fixPrompts === 'true';
+    return isFixCommand || hasFixFlag;
+  },
+
+  async execute(ctx): Promise<AgentResult> {
+    const start = Date.now();
+    const repoConfig = getRepo(ctx.repoAlias);
+    if (!repoConfig) {
+      return { agentId: this.id, status: 'failed', repo: ctx.repoAlias, duration: 0, message: 'No config', artifacts: [] };
+    }
+
+    const localPath = ctx.localPath;
+    ctx.logger.group(`Fixing prompts in ${ctx.repoAlias}`);
+
+    const results = await fixAllPrompts(localPath, {
+      path: ctx.extras.path,
+      dryRun: ctx.dryRun,
+    });
+
+    if (results.length === 0) {
+      ctx.logger.info('No prompts found to fix');
+      ctx.logger.groupEnd();
+      return { agentId: this.id, status: 'skipped', repo: ctx.repoAlias, duration: Date.now() - start, message: 'No prompts found', artifacts: [] };
+    }
+
+    let improved = 0;
+    let unchanged = 0;
+
+    for (const r of results) {
+      if (r.sectionsAdded.length > 0 || r.tagsFixed) {
+        improved++;
+        const mode = ctx.dryRun ? '[DRY RUN] ' : '';
+        ctx.logger.info(`${mode}${r.fileName}: ${r.beforePercent}% → ${r.afterPercent}% (+${r.sectionsAdded.length} sections${r.tagsFixed ? ', tags fixed' : ''})`);
+        if (r.sectionsAdded.length > 0) {
+          ctx.logger.debug(`  Added: ${r.sectionsAdded.join(', ')}`);
+        }
+      } else {
+        unchanged++;
+        ctx.logger.debug(`${r.fileName}: ${r.beforePercent}% — no changes needed`);
+      }
+    }
+
+    const avgBefore = Math.round(results.reduce((s, r) => s + r.beforePercent, 0) / results.length);
+    const avgAfter = Math.round(results.reduce((s, r) => s + r.afterPercent, 0) / results.length);
+
+    ctx.logger.info('');
+    ctx.logger.info(`Summary: ${improved} improved, ${unchanged} unchanged`);
+    ctx.logger.info(`Average score: ${avgBefore}% → ${avgAfter}%`);
+
+    ctx.logger.groupEnd();
+
+    return {
+      agentId: this.id,
+      status: 'success',
+      repo: ctx.repoAlias,
+      duration: Date.now() - start,
+      message: `Fixed ${improved}/${results.length} prompts | Avg: ${avgBefore}% → ${avgAfter}%`,
+      artifacts: results
+        .filter(r => r.sectionsAdded.length > 0 || r.tagsFixed)
+        .map(r => `${r.beforePercent}→${r.afterPercent}%:${r.fileName}`),
+    };
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Export
 // ---------------------------------------------------------------------------
 
 export const promptAgents: Agent[] = [promptScanner, promptValidator, promptIssueCreator, promptForecaster];
+export const promptFixerAgents: Agent[] = [promptFixer];

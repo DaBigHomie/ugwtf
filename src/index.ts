@@ -52,7 +52,7 @@ const WATCH_COMMAND = 'watch' as const;
 
 const VALID_COMMANDS: OrchestratorCommand[] = [
   'deploy', 'install', 'validate', 'fix', 'labels', 'issues', 'prs', 'audit', 'status', 'checks', 'prompts', 'chain',
-  'generate-chain', 'cleanup', 'dry-run',
+  'generate-chain', 'cleanup', 'dry-run', 'fix-prompts',
   'scan', 'security', 'performance', 'a11y', 'seo', 'docs', 'commerce',
   'scenarios', 'design-system', 'supabase', 'gateway',
 ];

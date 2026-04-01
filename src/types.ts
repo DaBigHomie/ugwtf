@@ -148,7 +148,8 @@ export type OrchestratorCommand =
   | 'supabase'    // Migration safety, RLS, type freshness, query patterns
   | 'gateway'    // Prompt validation, instruction scoring, token budgets
   | 'cleanup'    // Reset chain state: close orphan PRs, strip labels, re-dispatch
-  | 'dry-run';   // E2E pipeline validation without making changes
+  | 'dry-run'    // E2E pipeline validation without making changes
+  | 'fix-prompts'; // Standalone prompt fixer — injects missing sections, fixes tags
 
 export type OutputFormat = 'json' | 'markdown' | 'summary';
 

@@ -112,6 +112,73 @@ export function extractField(content: string, fieldName: string, valuePattern: s
 }
 
 // ---------------------------------------------------------------------------
+// Tag / label extraction
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract tag values from **Tags**: `tag1`, `tag2` or ## Tags section.
+ * Strips backticks and whitespace from each tag.
+ */
+export function extractTags(content: string): string[] {
+  // Inline: **Tags**: `tag1`, `tag2`, `tag3`
+  const inlineMatch = content.match(/\*\*(?:Tags|Labels)\*\*:\s*(.+)/i);
+  if (inlineMatch) {
+    return inlineMatch[1]!
+      .split(',')
+      .map(t => t.replace(/`/g, '').trim())
+      .filter(Boolean);
+  }
+
+  // Section: ## Tags followed by bullet list or comma-separated line
+  const sectionMatch = content.match(/## Tags\s*\n([\s\S]*?)(?=\n---|\n##|$)/i);
+  if (sectionMatch) {
+    const body = sectionMatch[1]!;
+    // Bullet list: - `tag1`
+    const bullets = [...body.matchAll(/[-*]\s*`?([^`\n]+)`?/g)].map(m => m[1]!.trim());
+    if (bullets.length > 0) return bullets;
+    // Comma-separated
+    return body.split(',').map(t => t.replace(/`/g, '').trim()).filter(Boolean);
+  }
+
+  return [];
+}
+
+// ---------------------------------------------------------------------------
+// File path extraction from Files to Modify section
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract file paths from ## Files to Modify/Create table or bullet list.
+ * Returns just the path strings (not action or purpose).
+ */
+export function extractFilePaths(content: string): string[] {
+  const sectionMatch = content.match(/## Files to (?:Modify|Create|Touch|Change)\s*\n([\s\S]*?)(?=\n---|\n##|$)/i)
+    ?? content.match(/## File Changes\s*\n([\s\S]*?)(?=\n---|\n##|$)/i);
+  if (!sectionMatch) return [];
+
+  const body = sectionMatch[1]!;
+  const paths: string[] = [];
+
+  // Table rows: | `src/file.ts` | MODIFY | ... | or | src/file.ts | MODIFY | ... |
+  for (const m of body.matchAll(/\|\s*`?([^|`\n]+\.[a-zA-Z]{1,6})`?\s*\|/g)) {
+    const p = m[1]!.trim();
+    if (p && !p.startsWith('---') && !p.toLowerCase().startsWith('file')) {
+      paths.push(p);
+    }
+  }
+
+  // Bullet list: - `src/file.ts` or - src/file.ts
+  if (paths.length === 0) {
+    for (const m of body.matchAll(/[-*]\s*`?([^`\n]+\.[a-zA-Z]{1,6})`?/g)) {
+      const p = m[1]!.trim();
+      if (p) paths.push(p);
+    }
+  }
+
+  return paths;
+}
+
+// ---------------------------------------------------------------------------
 // Format B parser (structured markdown with metadata header)
 // ---------------------------------------------------------------------------
 
@@ -153,6 +220,14 @@ export function parseFormatB(content: string, filePath: string): ParsedPrompt {
     hasEnvironment: /## Environment\b/i.test(content) || /\*\*Environment\*\*:\s*\S/i.test(content) || /\*\*Requires\*\*:.*(?:_KEY|_URL|_SECRET)/i.test(content),
     hasBlockingGate: /## Blocking\b/i.test(content) || /\*\*Do Not Start Until\*\*:\s*\S/i.test(content) || /\*\*Prerequisites\*\*:\s*\S/i.test(content),
     hasMergeGate: /## Merge Requirements/i.test(content) || /\*\*Do Not Merge Until\*\*:\s*\S/i.test(content) || /\*\*Merge Gate\*\*:\s*\S/i.test(content),
+    hasBlastRadius: /## Blast Radius/i.test(content) || /blast.?radius/i.test(content),
+    hasA11y: /## A11y\b/i.test(content) || /## Accessibility\b/i.test(content) || /aria-label|heading.?hierarchy|wcag/i.test(content),
+    hasDesignSystem: /## Design System/i.test(content) || /no hardcoded|design.?token|tailwind.?token/i.test(content),
+    hasTestIdContracts: /## data-testid/i.test(content) || /data-testid.?contract/i.test(content),
+    hasAgentBootstrap: /## Agent Bootstrap/i.test(content) || /copilot-instructions\.md|AGENTS\.md/i.test(content),
+    hasWorkflowLifecycle: /## Workflow.*Lifecycle/i.test(content) || /copilot-chain-advance|copilot-pr-validate|Post-Merge Steps/i.test(content),
+    tags: extractTags(content),
+    filesToModify: extractFilePaths(content),
     sections,
     checklistItems,
     totalLines: lines.length,
@@ -198,6 +273,14 @@ export function parseFormatA(content: string, filePath: string): ParsedPrompt {
     hasEnvironment: /## Environment\b/i.test(content) || /\*\*Environment\*\*:\s*\S/i.test(content) || /\*\*Requires\*\*:.*(?:_KEY|_URL|_SECRET)/i.test(content),
     hasBlockingGate: /## Blocking\b/i.test(content) || /\*\*Do Not Start Until\*\*:\s*\S/i.test(content) || /\*\*Prerequisites\*\*:\s*\S/i.test(content),
     hasMergeGate: /## Merge Requirements/i.test(content) || /\*\*Do Not Merge Until\*\*:\s*\S/i.test(content) || /\*\*Merge Gate\*\*:\s*\S/i.test(content),
+    hasBlastRadius: /## Blast Radius/i.test(content) || /blast.?radius/i.test(content),
+    hasA11y: /## A11y\b/i.test(content) || /## Accessibility\b/i.test(content) || /aria-label|heading.?hierarchy|wcag/i.test(content),
+    hasDesignSystem: /## Design System/i.test(content) || /no hardcoded|design.?token|tailwind.?token/i.test(content),
+    hasTestIdContracts: /## data-testid/i.test(content) || /data-testid.?contract/i.test(content),
+    hasAgentBootstrap: /## Agent Bootstrap/i.test(content) || /copilot-instructions\.md|AGENTS\.md/i.test(content),
+    hasWorkflowLifecycle: /## Workflow.*Lifecycle/i.test(content) || /copilot-chain-advance|copilot-pr-validate|Post-Merge Steps/i.test(content),
+    tags: extractTags(content),
+    filesToModify: extractFilePaths(content),
     sections,
     checklistItems,
     totalLines: lines.length,

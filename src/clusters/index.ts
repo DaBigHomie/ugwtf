@@ -22,7 +22,7 @@ import { qualityAgents } from '../agents/quality-agents.js';
 import { issueAgents } from '../agents/issue-agents.js';
 import { prAgents } from '../agents/pr-agents.js';
 import { auditAgents } from '../agents/audit-agents.js';
-import { promptAgents } from '../agents/prompt-agents.js';
+import { promptAgents, promptFixerAgents } from '../agents/prompt-agents.js';
 import { chainAgents } from '../agents/chain-agents.js';
 import { chainGeneratorAgents } from '../agents/chain-generator.js';
 import { cleanupAgents } from '../agents/cleanup-agents.js';
@@ -110,6 +110,13 @@ export const CLUSTERS: Cluster[] = [
     name: 'Prompt Intelligence',
     description: 'Scan, validate, score, and forecast .prompt.md files; create GitHub Issues',
     agents: promptAgents,
+    dependsOn: ['labels'],
+  },
+  {
+    id: 'fix-prompts',
+    name: 'Prompt Fixer',
+    description: 'Auto-fix prompts: inject missing sections, fix tags, upgrade to 24-point standard',
+    agents: promptFixerAgents,
     dependsOn: ['labels'],
   },
   {

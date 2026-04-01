@@ -11,6 +11,8 @@ export type { ParsedPrompt, CriterionResult, ValidationResult } from './types.js
 export {
   normalizeContent,
   extractField,
+  extractTags,
+  extractFilePaths,
   parseDependencies,
   parseFormatA,
   parseFormatB,
@@ -18,6 +20,14 @@ export {
 
 // Score
 export { validatePrompt, parseEstimatedTime } from './score.js';
+
+// Template
+export { renderTemplate, findUnfilledPlaceholders, TEMPLATE_VARS } from './template.js';
+export type { TemplateVars, TemplateVarKey } from './template.js';
+
+// Fixer
+export { fixPrompt, fixAllPrompts } from './fixer.js';
+export type { FixResult } from './fixer.js';
 
 // Scan
 export { scanAllPrompts, clearPromptScanCache } from './scan.js';

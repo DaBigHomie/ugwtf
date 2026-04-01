@@ -40,6 +40,7 @@ function makeCtx(overrides: Partial<AgentContext> = {}): AgentContext {
 
 // Mock getRepo so the agent can resolve our test repo alias
 vi.mock('../config/repo-registry.js', () => ({
+  UNIVERSAL_LABELS: [],
   getRepo: vi.fn((alias: string) => {
     if (alias === 'test-repo') {
       return {
