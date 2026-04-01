@@ -3,10 +3,11 @@
  *
  * Extracted from chain-agents.ts to reduce file size for agent readability.
  * Contains: ChainEntry, ChainConfig, resolveChainPath, validateChainConfig,
- *           severityToLabel, buildChainIssueBody
+ *           severityToLabel, buildChainIssueBody, getUgwtfRoot
  */
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { getRepo } from '../config/repo-registry.js';
 
 // ---------------------------------------------------------------------------
 // Chain Schema Types
@@ -39,15 +40,56 @@ export interface ChainConfig {
 export const CHAIN_CONFIG_FILENAME = 'prompt-chain.json';
 
 /**
- * Resolve the chain config path for a repo.
- * Looks in: scripts/prompt-chain.json (default)
+ * Detect the ugwtf repo root directory.
+ *
+ * Resolution order:
+ *   1. The ugwtf entry in the repo registry (`localPath`)
+ *   2. `process.cwd()` if it contains `projects/` (i.e. we're running from ugwtf checkout)
+ *
+ * Returns `null` when the ugwtf root cannot be determined.
  */
-export function resolveChainPath(localPath: string): string | null {
+export function getUgwtfRoot(): string | null {
+  // 1. Registry entry
+  const ugwtfConfig = getRepo('ugwtf');
+  if (ugwtfConfig?.localPath && existsSync(join(ugwtfConfig.localPath, 'projects'))) {
+    return ugwtfConfig.localPath;
+  }
+
+  // 2. cwd fallback (covers CI / GitHub web where cwd IS the ugwtf checkout)
+  const cwd = process.cwd();
+  if (existsSync(join(cwd, 'projects'))) {
+    return cwd;
+  }
+
+  return null;
+}
+
+/**
+ * Resolve the chain config path for a repo.
+ *
+ * Candidate order:
+ *   1. `<localPath>/scripts/prompt-chain.json`  — target repo's own scripts dir
+ *   2. `<localPath>/prompt-chain.json`           — target repo root
+ *   3. `<localPath>/.github/prompt-chain.json`   — target repo .github dir
+ *   4. `<ugwtfRoot>/projects/<alias>/prompt-chain.json` — centrally stored in ugwtf
+ *
+ * The fourth candidate (project-specific fallback) only activates when
+ * `repoAlias` is provided and the ugwtf root can be located.
+ */
+export function resolveChainPath(localPath: string, repoAlias?: string): string | null {
   const candidates = [
     join(localPath, 'scripts', CHAIN_CONFIG_FILENAME),
     join(localPath, CHAIN_CONFIG_FILENAME),
     join(localPath, '.github', CHAIN_CONFIG_FILENAME),
   ];
+
+  // Add ugwtf projects/<alias> fallback when repoAlias is available
+  if (repoAlias) {
+    const ugwtfRoot = getUgwtfRoot();
+    if (ugwtfRoot) {
+      candidates.push(join(ugwtfRoot, 'projects', repoAlias, CHAIN_CONFIG_FILENAME));
+    }
+  }
 
   for (const candidate of candidates) {
     if (existsSync(candidate)) {

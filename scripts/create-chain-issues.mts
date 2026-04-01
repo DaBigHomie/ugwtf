@@ -10,8 +10,8 @@
  *   --kick      After creating issues, assign Copilot to position 1
  *
  * Example:
- *   npx tsx scripts/create-chain-issues.mts projects/o43/prompt-chain.json --dry-run
- *   npx tsx scripts/create-chain-issues.mts projects/o43/prompt-chain.json --kick
+ *   npx tsx scripts/create-chain-issues.mts projects/043/prompt-chain.json --dry-run
+ *   npx tsx scripts/create-chain-issues.mts projects/043/prompt-chain.json --kick
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';

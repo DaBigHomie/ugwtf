@@ -12,7 +12,7 @@
  *   4. Posts a context comment and assigns Copilot
  *
  * Example:
- *   npx tsx scripts/advance-chain.mts projects/o43/prompt-chain.json --dry-run
+ *   npx tsx scripts/advance-chain.mts projects/043/prompt-chain.json --dry-run
  */
 import { readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';

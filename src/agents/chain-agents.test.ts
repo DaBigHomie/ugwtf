@@ -4,9 +4,9 @@
  * Tests the full generate-chain pipeline: prompt scanning, dependency parsing,
  * toposort, wave assignment, and output generation using test fixtures.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { join } from 'node:path';
-import { existsSync, readFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { chainGeneratorAgents } from './chain-generator.js';
 import { scanAllPrompts, clearPromptScanCache } from '../prompt/index.js';
 import type { AgentContext, AgentResult } from '../types.js';
@@ -204,11 +204,7 @@ describe('chainGenerator agent', () => {
     }
   });
 
-  it('writes output file in non-dry-run mode', async () => {
-    // Create a temporary output directory
-    const tmpDir = join(FIXTURES_DIR, 'scripts');
-    mkdirSync(tmpDir, { recursive: true });
-
+  it('writes output file in non-dry-run mode with 30x structural validation', async () => {
     const ctx = makeCtx({
       dryRun: false,
       extras: { path: 'docs/prompts/feature-improvements' },
@@ -218,48 +214,99 @@ describe('chainGenerator agent', () => {
     expect(result.status).toBe('success');
     expect(result.artifacts.length).toBeGreaterThan(0);
 
-    // Verify the output file exists and is valid JSON
-    const outputPath = join(FIXTURES_DIR, 'scripts', 'prompt-chain.json');
+    // Output goes to the natural path — temp directories are a violation.
+    // Tests must validate real-world output paths to catch path-routing bugs
+    // like the original collision (ugwtf scripts/ vs projects/<alias>/).
+    // Cleanup via rmSync in finally block keeps the working tree pristine.
+    const outputPath = result.artifacts[0]!;
     expect(existsSync(outputPath)).toBe(true);
 
-    const config = JSON.parse(readFileSync(outputPath, 'utf-8'));
-    expect(config.version).toBe(3);
-    expect(config.repo).toBe('DaBigHomie/test-repo');
-    expect(config.chain).toBeInstanceOf(Array);
-    expect(config.chain.length).toBe(7);
+    try {
+      const config = JSON.parse(readFileSync(outputPath, 'utf-8'));
 
-    // Verify chain is topologically sorted (deps always come before dependents)
-    const positionOf = new Map<string, number>();
-    for (const entry of config.chain) {
-      positionOf.set(entry.prompt, entry.position);
-    }
-    for (const entry of config.chain) {
-      for (const dep of entry.depends) {
-        const depPos = positionOf.get(dep);
-        expect(depPos).toBeDefined();
-        expect(depPos).toBeLessThan(entry.position);
-      }
-    }
+      // -- Top-level 30x validation --
+      expect(config.version).toBe(3);
+      expect(config.repo).toBe('DaBigHomie/test-repo');
+      expect(config.description).toBeTypeOf('string');
+      expect(Array.isArray(config.labels)).toBe(true);
+      expect(config.labels.length).toBeGreaterThan(0);
+      expect(Array.isArray(config.chain)).toBe(true);
+      expect(config.chain.length).toBe(7);
 
-    // Verify wave ordering (dep wave < dependent wave)
-    const waveOf = new Map<string, number>();
-    for (const entry of config.chain) {
-      waveOf.set(entry.prompt, entry.wave);
-    }
-    for (const entry of config.chain) {
-      for (const dep of entry.depends) {
-        expect(waveOf.get(dep)).toBeLessThan(entry.wave);
+      // -- Per-entry structural validation --
+      const validSeverities = ['critical', 'high', 'medium', 'low'];
+      const positions = new Set<number>();
+      const promptIds = new Set<string>();
+      const waveOf = new Map<string, number>();
+      const posOf = new Map<string, number>();
+
+      for (const entry of config.chain) {
+        // Required field types
+        expect(entry.position).toBeTypeOf('number');
+        expect(entry.prompt).toBeTypeOf('string');
+        expect(entry.file).toBeTypeOf('string');
+        expect(entry.wave).toBeTypeOf('number');
+        expect(validSeverities).toContain(entry.severity);
+        expect(Array.isArray(entry.depends)).toBe(true);
+
+        // Prompt file path convention
+        expect(entry.file).toMatch(/\.prompt\.md$/);
+
+        // Collect for aggregate checks
+        positions.add(entry.position);
+        promptIds.add(entry.prompt);
+        waveOf.set(entry.prompt, entry.wave);
+        posOf.set(entry.prompt, entry.position);
       }
+
+      // -- Uniqueness --
+      expect(positions.size).toBe(7);
+      expect(promptIds.size).toBe(7);
+
+      // -- Dependency integrity: every dep ref exists --
+      for (const entry of config.chain) {
+        for (const dep of entry.depends) {
+          expect(promptIds.has(dep)).toBe(true);
+        }
+      }
+
+      // -- Topological ordering: dep position < dependent position --
+      for (const entry of config.chain) {
+        for (const dep of entry.depends) {
+          const depPos = posOf.get(dep);
+          expect(depPos).toBeDefined();
+          expect(depPos).toBeLessThan(entry.position);
+        }
+      }
+
+      // -- Wave ordering: dep wave < dependent wave --
+      for (const entry of config.chain) {
+        for (const dep of entry.depends) {
+          expect(waveOf.get(dep)).toBeLessThan(entry.wave);
+        }
+      }
+
+      // -- Wave structure: exactly 4 waves for the 7-entry fixture --
+      const waves = new Set(config.chain.map((e: { wave: number }) => e.wave));
+      expect(waves.size).toBe(4);
+
+      // -- Positions are sequential from 1 --
+      const sortedPositions = [...positions].sort((a, b) => a - b);
+      expect(sortedPositions[0]).toBe(1);
+      expect(sortedPositions[sortedPositions.length - 1]).toBe(7);
+    } finally {
+      // Clean up generated file — keeps the working tree pristine
+      rmSync(outputPath, { force: true });
     }
   });
 });
 
 // ---------------------------------------------------------------------------
-// Real chain file validation — projects/o43/prompt-chain.json
+// Real chain file validation — projects/043/prompt-chain.json
 // ---------------------------------------------------------------------------
 
-describe('real chain file: projects/o43/prompt-chain.json', () => {
-  const chainPath = join(import.meta.dirname, '../../projects/o43/prompt-chain.json');
+describe('real chain file: projects/043/prompt-chain.json', () => {
+  const chainPath = join(import.meta.dirname, '../../projects/043/prompt-chain.json');
 
   it('exists and is valid JSON', () => {
     expect(existsSync(chainPath)).toBe(true);

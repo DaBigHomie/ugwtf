@@ -10,7 +10,7 @@ import { join, basename, relative } from 'node:path';
 import { scanAllPrompts, validatePrompt, type ParsedPrompt } from '../prompt/index.js';
 import { writeFile } from '../utils/fs.js';
 import { getRepo } from '../config/repo-registry.js';
-import { type ChainEntry, type ChainConfig, CHAIN_CONFIG_FILENAME } from './chain-types.js';
+import { type ChainEntry, type ChainConfig, CHAIN_CONFIG_FILENAME, getUgwtfRoot } from './chain-types.js';
 
 // ---------------------------------------------------------------------------
 // Agent 4: Chain Generator
@@ -283,8 +283,21 @@ const chainGenerator: Agent = {
       chain: chainEntries,
     };
 
-    // 8. Write to scripts/prompt-chain.json
-    const outputPath = join(localPath, 'scripts', CHAIN_CONFIG_FILENAME);
+    // 8. Determine output path:
+    //    - For ugwtf itself → scripts/prompt-chain.json (self-dogfood)
+    //    - For other repos  → projects/<alias>/prompt-chain.json in ugwtf root
+    //    - Fallback         → scripts/prompt-chain.json in target localPath
+    let outputPath: string;
+    if (ctx.repoAlias === 'ugwtf') {
+      outputPath = join(localPath, 'scripts', CHAIN_CONFIG_FILENAME);
+    } else {
+      const ugwtfRoot = getUgwtfRoot();
+      if (ugwtfRoot) {
+        outputPath = join(ugwtfRoot, 'projects', ctx.repoAlias, CHAIN_CONFIG_FILENAME);
+      } else {
+        outputPath = join(localPath, 'scripts', CHAIN_CONFIG_FILENAME);
+      }
+    }
 
     if (ctx.dryRun) {
       ctx.logger.info('[DRY RUN] Would write chain config:');
