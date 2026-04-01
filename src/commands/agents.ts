@@ -3,7 +3,7 @@
  *
  * Usage:
  *   ugwtf agents scan  [--path <dir>]   Discover .agent.md files
- *   ugwtf agents score [--path <dir>]   Score against 18-point rubric
+ *   ugwtf agents score [--path <dir>]   Score against 20-point rubric
  *   ugwtf agents sync  [--hub <dir>]    Sync hub → workspace → spokes
  */
 
@@ -103,8 +103,16 @@ function scoreAgent(filename: string, content: string, fm: AgentFrontmatter): Sc
   const hasFM = !!(fm.id && fm.version && fm.status && fm.description);
   criteria.push({ name: 'Frontmatter Complete', maxPoints: 1, awarded: hasFM ? 1 : 0, reason: hasFM ? 'All lifecycle fields present' : 'Missing lifecycle fields' });
 
+  // 14. Blast Radius Awareness (1pt) — added after PR #573 post-mortem
+  const hasBlastRadius = /blast.?radius|grep -r|search.*codebase|where else/i.test(body);
+  criteria.push({ name: 'Blast Radius Awareness', maxPoints: 1, awarded: hasBlastRadius ? 1 : 0, reason: hasBlastRadius ? 'Includes blast radius check' : 'No blast radius awareness' });
+
+  // 15. A11y / Accessibility (1pt)
+  const hasA11y = /a11y|aria-|accessibility|wcag|heading.?hierarchy|screen.?reader/i.test(body);
+  criteria.push({ name: 'A11y / Accessibility', maxPoints: 1, awarded: hasA11y ? 1 : 0, reason: hasA11y ? 'A11y requirements present' : 'No a11y requirements' });
+
   const score = criteria.reduce((s, c) => s + c.awarded, 0);
-  return { filename, score, maxScore: 18, frontmatter: fm, criteria };
+  return { filename, score, maxScore: 20, frontmatter: fm, criteria };
 }
 
 function discoverAgents(basePath: string): ScoredAgent[] {
@@ -138,7 +146,7 @@ export function agentsCommand(opts: { subcommand: string; path: string }): void 
     console.log(`ugwtf agents — VS Code custom agent lifecycle management\n`);
     console.log(`Subcommands:`);
     console.log(`  scan   [--path <dir>]  Discover .agent.md files and show scores`);
-    console.log(`  score  [--path <dir>]  Detailed 18-point rubric breakdown`);
+    console.log(`  score  [--path <dir>]  Detailed 20-point rubric breakdown`);
     return;
   }
 
@@ -153,7 +161,7 @@ export function agentsCommand(opts: { subcommand: string; path: string }): void 
 
   if (opts.subcommand === 'scan') {
     console.log(`\n📦 Agent Mastery Scan — ${agents.length} agents\n`);
-    console.log(`  ✅ Deploy-ready (≥15/18): ${passed}`);
+    console.log(`  ✅ Deploy-ready (≥15/20): ${passed}`);
     if (failed > 0) console.log(`  ⚠️  Below threshold: ${failed}`);
     console.log();
     for (const a of agents.sort((x, y) => y.score - x.score)) {
@@ -170,6 +178,6 @@ export function agentsCommand(opts: { subcommand: string; path: string }): void 
         console.log(`  [${ci}] ${c.name}: ${c.awarded}/${c.maxPoints} — ${c.reason}`);
       }
     }
-    console.log(`\n━━━ Summary: ${passed}/${agents.length} deploy-ready (≥15/18) ━━━`);
+    console.log(`\n━━━ Summary: ${passed}/${agents.length} deploy-ready (≥15/20) ━━━`);
   }
 }
