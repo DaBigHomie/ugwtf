@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { join } from 'node:path';
-import { existsSync, readFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { chainGeneratorAgents } from './chain-generator.js';
 import { scanAllPrompts, clearPromptScanCache } from '../prompt/index.js';
 import type { AgentContext, AgentResult } from '../types.js';
@@ -205,10 +205,6 @@ describe('chainGenerator agent', () => {
   });
 
   it('writes output file in non-dry-run mode', async () => {
-    // Create a temporary output directory
-    const tmpDir = join(FIXTURES_DIR, 'scripts');
-    mkdirSync(tmpDir, { recursive: true });
-
     const ctx = makeCtx({
       dryRun: false,
       extras: { path: 'docs/prompts/feature-improvements' },
@@ -218,8 +214,10 @@ describe('chainGenerator agent', () => {
     expect(result.status).toBe('success');
     expect(result.artifacts.length).toBeGreaterThan(0);
 
-    // Verify the output file exists and is valid JSON
-    const outputPath = join(FIXTURES_DIR, 'scripts', 'prompt-chain.json');
+    // The output path depends on context:
+    // - For non-ugwtf repos, chain-generator writes to projects/<alias>/prompt-chain.json
+    //   when getUgwtfRoot() resolves (cwd has projects/), otherwise scripts/prompt-chain.json
+    const outputPath = result.artifacts[0]!;
     expect(existsSync(outputPath)).toBe(true);
 
     const config = JSON.parse(readFileSync(outputPath, 'utf-8'));
@@ -255,11 +253,11 @@ describe('chainGenerator agent', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Real chain file validation — projects/o43/prompt-chain.json
+// Real chain file validation — projects/043/prompt-chain.json
 // ---------------------------------------------------------------------------
 
-describe('real chain file: projects/o43/prompt-chain.json', () => {
-  const chainPath = join(import.meta.dirname, '../../projects/o43/prompt-chain.json');
+describe('real chain file: projects/043/prompt-chain.json', () => {
+  const chainPath = join(import.meta.dirname, '../../projects/043/prompt-chain.json');
 
   it('exists and is valid JSON', () => {
     expect(existsSync(chainPath)).toBe(true);

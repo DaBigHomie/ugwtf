@@ -84,9 +84,9 @@ describe('resolveChainPath', () => {
     const targetDir = join(TMP_ROOT, 'target-repo-no-chain');
     ensureDir(targetDir);
 
-    // The ugwtf root is the actual repo root, which has projects/o43/prompt-chain.json
+    // The ugwtf root is the actual repo root, which has projects/043/prompt-chain.json
     const ugwtfRoot = join(import.meta.dirname, '../..');
-    const projectChainPath = join(ugwtfRoot, 'projects', 'o43', CHAIN_CONFIG_FILENAME);
+    const projectChainPath = join(ugwtfRoot, 'projects', '043', CHAIN_CONFIG_FILENAME);
 
     // Only test if the real o43 chain file exists (it should in this repo)
     if (existsSync(projectChainPath)) {
@@ -122,9 +122,9 @@ describe('getUgwtfRoot', () => {
 
 describe('cross-repo chain resolution (integration)', () => {
   const UGWTF_ROOT = join(import.meta.dirname, '../..');
-  const o43ChainPath = join(UGWTF_ROOT, 'projects', 'o43', CHAIN_CONFIG_FILENAME);
+  const o43ChainPath = join(UGWTF_ROOT, 'projects', '043', CHAIN_CONFIG_FILENAME);
 
-  it('projects/o43/prompt-chain.json exists and targets one4three', () => {
+  it('projects/043/prompt-chain.json exists and targets one4three', () => {
     expect(existsSync(o43ChainPath)).toBe(true);
     const config = JSON.parse(require('node:fs').readFileSync(o43ChainPath, 'utf-8'));
     expect(config.repo).toBe('DaBigHomie/one4three-co-next-app');
@@ -140,7 +140,7 @@ describe('cross-repo chain resolution (integration)', () => {
       // getUgwtfRoot will find the root via cwd or registry fallback
       if (result) {
         expect(result).toContain('projects');
-        expect(result).toContain('o43');
+        expect(result).toContain('043');
         expect(result).toContain(CHAIN_CONFIG_FILENAME);
       }
       // If getUgwtfRoot can't resolve (registry localPath doesn't match), result may be null
