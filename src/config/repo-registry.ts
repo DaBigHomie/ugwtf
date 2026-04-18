@@ -285,6 +285,38 @@ export const REPOS: Record<string, RepoConfig> = {
     },
   },
 
+  atb: {
+    slug: 'DaBigHomie/atl-table-booking-app',
+    alias: 'atb',
+    framework: 'node',
+    supabaseProjectId: null,
+    supabaseUrlSecret: 'SUPABASE_URL',
+    supabaseServiceKeySecret: 'SUPABASE_SERVICE_ROLE_KEY',
+    supabaseTypesPath: 'packages/shared/types/supabase.ts',
+    nodeVersion: '20',
+    defaultBranch: 'main',
+    hasE2E: true,
+    e2eCommand: 'npx playwright test',
+    extraLabels: [
+      { name: 'mobile', color: '10b981', description: 'Expo mobile app' },
+      { name: 'admin', color: '6366f1', description: 'Next.js admin dashboard' },
+      { name: 'booking', color: 'f59e0b', description: 'Booking flow feature' },
+      { name: 'payments', color: 'ef4444', description: 'Stripe payments integration' },
+    ],
+    localPath: `${HOME}/management-git/atl-table-booking-app`,
+    ci: {
+      lintCommand: 'pnpm turbo lint',
+      typeCheckCommand: 'pnpm turbo typecheck',
+      buildCommand: 'pnpm turbo build',
+      unitTestCommand: 'pnpm --filter @atl/api test:unit',
+      e2e: {
+        command: 'npx playwright test',
+        installCommand: 'npx playwright install --with-deps chromium',
+        blocking: false,
+      },
+    },
+  },
+
   ugwtf: {
     slug: 'DaBigHomie/ugwtf',
     alias: 'ugwtf',
