@@ -12,13 +12,7 @@
 import type { Agent, AgentResult, AgentFinding } from '../types.js';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-
-const SUPABASE_REPOS: Record<string, string> = {
-  damieus: 'okonslamwxtcoekuhmtm',
-  ffs: 'tyeusfguqqznvxgloobb',
-  '043': 'bgqjgpvzokonkyiljasj',
-  maximus: 'ycqtigpjjiqhkdecwiqt',
-};
+import { getRepo } from '../config/repo-registry.js';
 
 const FORBIDDEN_ROLE_RE = /SET\s+(LOCAL\s+)?ROLE\s+supabase_(storage|auth)_admin/i;
 
@@ -28,7 +22,7 @@ const forbiddenRoleScanner: Agent = {
   description: 'Reject SET ROLE supabase_storage_admin / supabase_auth_admin in migration files',
   clusterId: 'migration-drift',
   shouldRun(ctx) {
-    return ctx.repoAlias in SUPABASE_REPOS;
+    return !!getRepo(ctx.repoAlias)?.supabaseProjectId;
   },
 
   async execute(ctx): Promise<AgentResult> {
@@ -40,7 +34,7 @@ const forbiddenRoleScanner: Agent = {
 
     let files: string[];
     try {
-      files = (await readdir(migrationsDir)).filter((f) => f.endsWith('.sql'));
+      files = (await readdir(migrationsDir)).filter((f) => f.endsWith('.sql')).sort();
     } catch {
       ctx.logger.info('No supabase/migrations/ directory');
       ctx.logger.groupEnd();
@@ -48,16 +42,28 @@ const forbiddenRoleScanner: Agent = {
     }
 
     for (const file of files) {
-      const sql = await readFile(join(migrationsDir, file), 'utf-8');
-      const stripped = sql.split('\n').filter((l) => !/^\s*--/.test(l)).join('\n');
-      if (FORBIDDEN_ROLE_RE.test(stripped)) {
+      const migrationPath = join(migrationsDir, file);
+      try {
+        const sql = await readFile(migrationPath, 'utf-8');
+        const stripped = sql.split('\n').filter((l) => !/^\s*--/.test(l)).join('\n');
+        if (FORBIDDEN_ROLE_RE.test(stripped)) {
+          findings.push({
+            severity: 'error',
+            file: `supabase/migrations/${file}`,
+            message: 'Forbidden SET ROLE supabase_(storage|auth)_admin wrapper',
+            suggestion: 'Rewrite as plain DDL — the migration role (postgres) already owns storage.* and auth.* tables.',
+          });
+          ctx.logger.warn(`  X ${file}: forbidden role wrapper`);
+        }
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
         findings.push({
           severity: 'error',
           file: `supabase/migrations/${file}`,
-          message: 'Forbidden SET ROLE supabase_(storage|auth)_admin wrapper',
-          suggestion: 'Rewrite as plain DDL — the migration role (postgres) already owns storage.* and auth.* tables.',
+          message: `Unable to read migration file: ${reason}`,
+          suggestion: 'Ensure the migration file exists, is readable, and contains valid text content.',
         });
-        ctx.logger.warn(`  X ${file}: forbidden role wrapper`);
+        ctx.logger.warn(`  X ${file}: unable to read migration file (${reason})`);
       }
     }
 
@@ -82,14 +88,14 @@ const schemaMigrationDriftChecker: Agent = {
   description: 'Compare local migrations vs remote schema_migrations via Management API',
   clusterId: 'migration-drift',
   shouldRun(ctx) {
-    return ctx.repoAlias in SUPABASE_REPOS && !!process.env.SUPABASE_ACCESS_TOKEN;
+    return !!getRepo(ctx.repoAlias)?.supabaseProjectId && !!process.env.SUPABASE_ACCESS_TOKEN;
   },
 
   async execute(ctx): Promise<AgentResult> {
     const start = Date.now();
     ctx.logger.group(`Drift Check: ${ctx.repoAlias}`);
 
-    const projectRef = SUPABASE_REPOS[ctx.repoAlias];
+    const projectRef = getRepo(ctx.repoAlias)?.supabaseProjectId;
     const token = process.env.SUPABASE_ACCESS_TOKEN;
     if (!projectRef || !token) {
       ctx.logger.groupEnd();
@@ -100,7 +106,7 @@ const schemaMigrationDriftChecker: Agent = {
     let localVersions: string[] = [];
     try {
       localVersions = (await readdir(migrationsDir))
-        .filter((f) => /^\d{14}_.*\.sql$/.test(f) && !f.endsWith('.skip'))
+        .filter((f) => /^\d{14}_.*\.sql$/.test(f))
         .map((f) => f.slice(0, 14))
         .sort();
     } catch {
