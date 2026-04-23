@@ -53,6 +53,7 @@ import { integrationAgents } from '../agents/integration-agents.js';
 import { monitoringAgents } from '../agents/monitoring-agents.js';
 import { animationAgents } from '../agents/animation-agents.js';
 import { migrationAgents } from '../agents/migration-agents.js';
+import { migrationDriftAgents } from '../agents/migration-drift-agents.js';
 
 // --- 40x wave agents ---
 import { scenarioAgents } from '../agents/scenario-agents.js';
@@ -210,6 +211,13 @@ export const CLUSTERS: Cluster[] = [
     name: 'Migration Management',
     description: 'Validate migration ordering, naming conventions, and file sizes',
     agents: migrationAgents,
+    dependsOn: ['database'],
+  },
+  {
+    id: 'migration-drift',
+    name: 'Migration Drift Detection',
+    description: 'Detect SET ROLE wrappers + compare local vs remote schema_migrations',
+    agents: migrationDriftAgents,
     dependsOn: ['database'],
   },
   {
