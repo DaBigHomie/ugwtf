@@ -47,12 +47,12 @@ const COMMAND_CLUSTER_MAP: Record<string, string[]> = {
   // 40x wave
   scenarios:      ['scenarios'],
   'design-system': ['design-system'],
-  supabase:       ['supabase-fsd'],
+  supabase:       ['supabase-fsd', 'migration-drift'],
   gateway:        ['ai-gateway'],
 
   // Comprehensive scan — all domain clusters
   scan: [
-    'fsd', 'testing', 'database', 'migration', 'security', 'devops',
+    'fsd', 'testing', 'database', 'migration', 'migration-drift', 'security', 'devops',
     'analytics', 'docs', 'context', 'commerce', 'design', 'performance',
     'seo', 'a11y', 'sovereign', 'email', 'content', 'routing', 'state',
     'auth', 'integration', 'monitoring', 'animation',
