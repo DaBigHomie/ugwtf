@@ -395,6 +395,32 @@ export const REPOS: Record<string, RepoConfig> = {
       e2e: null,
     },
   },
+
+  "docs-standards": {
+    slug: "DaBigHomie/documentation-standards",
+    alias: "docs-standards",
+    framework: "node",
+    supabaseProjectId: null,
+    supabaseUrlSecret: null,
+    supabaseServiceKeySecret: null,
+    supabaseTypesPath: null,
+    nodeVersion: "20",
+    defaultBranch: "master",
+    hasE2E: false,
+    e2eCommand: null,
+    extraLabels: [
+      { name: "workspace-rule", color: "7c3aed", description: "Universal rule synced across registered repos" },
+      { name: "sync-target", color: "0ea5e9", description: "Cross-repo sync target (push-rules.mts)" },
+    ],
+    localPath: `${HOME}/management-git/documentation-standards`,
+    ci: {
+      lintCommand: null,
+      typeCheckCommand: null,
+      buildCommand: null,
+      unitTestCommand: null,
+      e2e: null,
+    },
+  },
 };
 
 /** Resolve repo config by alias or slug */
