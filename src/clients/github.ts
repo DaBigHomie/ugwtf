@@ -174,6 +174,16 @@ export function createGitHubClient(logger: Logger, dryRun = false): GitHubClient
 
     if (method === 'GET') {
       cache.set(path, { data: trimmed, timestamp: Date.now() });
+    } else {
+      // Invalidate cached GETs that share the resource prefix (e.g. POST /labels invalidates GET /labels?...)
+      const pathBase = path.split('?')[0] ?? path;
+      const prefix = pathBase.replace(/\/[^/]+$/, '');
+      for (const key of cache.keys()) {
+        const keyBase = key.split('?')[0] ?? key;
+        if (keyBase === pathBase || keyBase.startsWith(prefix + '/') || keyBase === prefix) {
+          cache.delete(key);
+        }
+      }
     }
     if (method !== 'GET' && rateLimitRemaining !== Infinity) {
       rateLimitRemaining--;
