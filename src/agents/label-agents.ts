@@ -104,6 +104,10 @@ const auditLabelsAgent: Agent = {
       return { agentId: this.id, status: 'failed', repo: ctx.repoAlias, duration: 0, message: 'No config', artifacts: [] };
     }
 
+    if (ctx.dryRun) {
+      return { agentId: this.id, status: 'success', repo: ctx.repoAlias, duration: Date.now() - start, message: 'Skipped in dry-run mode (label state cannot be verified)', artifacts: [] };
+    }
+
     const { owner, repo } = parseSlug(repoConfig.slug);
     const expected = [...UNIVERSAL_LABELS, ...repoConfig.extraLabels];
 

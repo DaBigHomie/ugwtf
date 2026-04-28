@@ -45,6 +45,7 @@ function makeDeployAgent(spec: WorkflowSpec): Agent {
     shouldRun(ctx) {
       const repo = getRepo(ctx.repoAlias);
       if (!repo) return false;
+      if (repo.skipWorkflowDeploy) return false;
       return spec.condition ? spec.condition(repo) : true;
     },
 
@@ -89,6 +90,10 @@ const validateWorkflowsAgent: Agent = {
     const missing: string[] = [];
     const drifted: string[] = [];
     const ok: string[] = [];
+
+    if (repo.skipWorkflowDeploy) {
+      return { agentId: this.id, status: 'success', repo: ctx.repoAlias, duration: Date.now() - start, message: 'Workflow deploy skipped (skipWorkflowDeploy=true)', artifacts: [] };
+    }
 
     for (const spec of WORKFLOW_SPECS) {
       if (spec.condition && !spec.condition(repo)) continue;

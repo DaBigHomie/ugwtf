@@ -34,6 +34,8 @@ export interface RepoConfig {
   extraLabels: LabelDef[];
   /** Absolute local path (for validation / file writing) */
   localPath: string;
+  /** If true, `ugwtf install` skips workflow YAML generation for this repo (instructions + labels still sync) */
+  skipWorkflowDeploy?: boolean;
 
   // CI configuration — UGWTF owns the full CI pipeline per repo
   ci: {
@@ -387,6 +389,7 @@ export const REPOS: Record<string, RepoConfig> = {
       { name: 'prompt-batch', color: 'f59e0b', description: 'Generated prompt batch for agent pipeline' },
     ],
     localPath: `${HOME}/management-git/audit-fix-ship`,
+    skipWorkflowDeploy: true,
     ci: {
       lintCommand: null,
       typeCheckCommand: 'tsc --noEmit -p scripts/tsconfig.json',
