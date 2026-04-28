@@ -27,7 +27,7 @@ src/
 │   ├── dry-run-agents.ts  # E2E validation without side effects
 │   └── ...
 ├── clusters/index.ts      # Cluster definitions
-├── config/repo-registry.ts# 6 registered repos
+├── config/repo-registry.ts# 10 registered repos
 ├── swarm/executor.ts      # Parallel/sequential cluster runner
 ├── clients/github.ts      # GitHub API client (gh CLI + fetch)
 └── utils/                 # Logger, filesystem, env helpers
@@ -69,7 +69,11 @@ src/
 | `043` | DaBigHomie/one4three-co-next-app |
 | `maximus` | DaBigHomie/maximus-ai |
 | `cae` | DaBigHomie/Cae |
+| `atb` | DaBigHomie/atl-table-booking-app |
 | `ugwtf` | DaBigHomie/ugwtf |
+| `image-gen` | DaBigHomie/image-gen-30x-cli |
+| `audit-fix-ship` | DaBigHomie/audit-fix-ship |
+| `docs-standards` | DaBigHomie/documentation-standards |
 
 ## Conventions
 
