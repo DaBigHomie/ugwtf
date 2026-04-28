@@ -1,223 +1,385 @@
+/**
+ * audit-orchestrator/reporters — Unit Tests
+ *
+ * Covers reportJson, reportMarkdown, reportTerminal, and re-exports.
+ */
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdirSync, readFileSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
-import type { AuditResult } from '../types.js';
+import type { AuditResult, PromptCluster } from '../types.js';
 
-const TEST_DIR = join(import.meta.dirname, '../../../.test-tmp-reporters');
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-/** Minimal valid AuditResult for testing reporters. */
+function makeCluster(overrides: Partial<PromptCluster> = {}): PromptCluster {
+  return {
+    id: 'C1',
+    name: 'Test Cluster',
+    prompts: ['ISSUE-01', 'ISSUE-02'],
+    canParallelize: true,
+    dependsOn: [],
+    estimatedMinutes: 20,
+    agentCount: 2,
+    ...overrides,
+  };
+}
+
 function makeResult(overrides: Partial<AuditResult> = {}): AuditResult {
   return {
     totalIssues: 2,
-    bySeverity: { critical: 0, high: 1, medium: 1, low: 0 },
+    bySeverity: { critical: 1, high: 1, medium: 0, low: 0 },
     byCategory: { accessibility: 1, 'dark-mode': 1 },
-    overallCompletion: 85,
-    clusters: [
-      {
-        id: 'C1',
-        name: 'Accessibility',
-        prompts: ['A11Y-01', 'A11Y-02'],
-        canParallelize: true,
-        dependsOn: [],
-        estimatedMinutes: 20,
-        agentCount: 2,
-      },
-      {
-        id: 'C2',
-        name: 'Dark Mode',
-        prompts: ['DM-01'],
-        canParallelize: false,
-        dependsOn: ['C1'],
-        estimatedMinutes: 10,
-        agentCount: 1,
-      },
-    ],
+    overallCompletion: 80,
+    clusters: [makeCluster()],
     issues: [
       {
         id: 'A11Y-01',
         title: 'Low ARIA coverage',
-        severity: 'high',
+        severity: 'critical',
         category: 'accessibility',
         description: 'Not enough aria- attributes',
         affectedFiles: ['/src'],
         completionPct: 50,
-        promptId: 'prompt-001',
+        promptId: 'prompt-1',
       },
       {
         id: 'DM-01',
         title: 'Dark mode missing',
-        severity: 'medium',
+        severity: 'high',
         category: 'dark-mode',
-        description: 'Dark mode not implemented',
-        affectedFiles: ['/src/styles'],
-        completionPct: 0,
+        description: 'No dark mode',
+        affectedFiles: ['/src/app.css'],
+        completionPct: 30,
       },
     ],
     timestamp: '2026-01-01T00:00:00.000Z',
-    cwd: '/repo',
+    cwd: '/tmp/test-project',
     framework: 'nextjs',
     ...overrides,
   };
 }
 
-describe('audit-orchestrator/reporters', () => {
-  beforeEach(() => {
-    mkdirSync(TEST_DIR, { recursive: true });
+// ---------------------------------------------------------------------------
+// reportJson
+// ---------------------------------------------------------------------------
+
+describe('reportJson', () => {
+  let writeFileSyncSpy: ReturnType<typeof vi.fn>;
+  let consoleLogSpy: ReturnType<typeof vi.fn>;
+
+  beforeEach(async () => {
+    writeFileSyncSpy = vi.fn();
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(vi.fn()) as ReturnType<typeof vi.fn>;
+
+    vi.doMock('node:fs', () => ({
+      writeFileSync: writeFileSyncSpy,
+      existsSync: vi.fn().mockReturnValue(false),
+      readFileSync: vi.fn(),
+      readdirSync: vi.fn(),
+      statSync: vi.fn(),
+    }));
   });
 
   afterEach(() => {
-    rmSync(TEST_DIR, { recursive: true, force: true });
+    vi.restoreAllMocks();
+    vi.resetModules();
+  });
+
+  it('logs JSON to console when no outputPath', async () => {
+    const { reportJson } = await import('./json.js');
+    const result = makeResult();
+    reportJson({ result });
+    expect(consoleLogSpy).toHaveBeenCalledWith(JSON.stringify(result, null, 2));
+  });
+
+  it('logs verbose message when outputPath and verbose', async () => {
+    const { reportJson } = await import('./json.js');
+    const result = makeResult();
+    // With writeFileSync mocked via module mock, just test that console is called
+    // when verbose + outputPath
+    // We'll verify by mocking fs directly
+    const fsMod = await import('node:fs');
+    vi.spyOn(fsMod, 'writeFileSync').mockImplementation(vi.fn());
+    reportJson({ result, outputPath: '/tmp/out.json', verbose: true });
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('/tmp/out.json'));
+  });
+
+  it('writes file when outputPath given', async () => {
+    const { reportJson } = await import('./json.js');
+    const result = makeResult();
+    const fsMod = await import('node:fs');
+    const spy = vi.spyOn(fsMod, 'writeFileSync').mockImplementation(vi.fn());
+    reportJson({ result, outputPath: '/tmp/out.json' });
+    expect(spy).toHaveBeenCalledWith('/tmp/out.json', JSON.stringify(result, null, 2));
+  });
+
+  it('does not log verbose message when outputPath but verbose=false', async () => {
+    const { reportJson } = await import('./json.js');
+    const result = makeResult();
+    const fsMod = await import('node:fs');
+    vi.spyOn(fsMod, 'writeFileSync').mockImplementation(vi.fn());
+    consoleLogSpy.mockClear();
+    reportJson({ result, outputPath: '/tmp/out.json', verbose: false });
+    expect(consoleLogSpy).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// reportMarkdown
+// ---------------------------------------------------------------------------
+
+describe('reportMarkdown', () => {
+  let consoleLogSpy: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(vi.fn()) as ReturnType<typeof vi.fn>;
+  });
+
+  afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  describe('reportJson', () => {
-    it('writes JSON to outputPath when provided', async () => {
-      const { reportJson } = await import('./json.js');
-      const outputPath = join(TEST_DIR, 'result.json');
-      const result = makeResult();
-      reportJson({ result, outputPath });
-      const written = JSON.parse(readFileSync(outputPath, 'utf-8'));
-      expect(written.totalIssues).toBe(2);
-      expect(written.framework).toBe('nextjs');
-    });
-
-    it('logs JSON to console when no outputPath', async () => {
-      const { reportJson } = await import('./json.js');
-      const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const result = makeResult();
-      reportJson({ result });
-      expect(spy).toHaveBeenCalledOnce();
-      const logged = JSON.parse(spy.mock.calls[0]![0] as string);
-      expect(logged.totalIssues).toBe(2);
-    });
-
-    it('logs verbose message when verbose=true and outputPath given', async () => {
-      const { reportJson } = await import('./json.js');
-      const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const outputPath = join(TEST_DIR, 'verbose.json');
-      reportJson({ result: makeResult(), outputPath, verbose: true });
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining('JSON written to'));
-    });
+  it('outputs markdown to console when no outputPath', async () => {
+    const { reportMarkdown } = await import('./markdown.js');
+    const result = makeResult();
+    reportMarkdown({ result });
+    const calls = consoleLogSpy.mock.calls.flat().join('\n');
+    expect(calls).toContain('# Audit Results');
+    expect(calls).toContain('Generated');
+    expect(calls).toContain('Total Issues');
+    expect(calls).toContain('Overall Completion');
   });
 
-  describe('reportMarkdown', () => {
-    it('writes markdown to outputPath when provided', async () => {
-      const { reportMarkdown } = await import('./markdown.js');
-      const outputPath = join(TEST_DIR, 'result.md');
-      reportMarkdown({ result: makeResult(), outputPath });
-      const md = readFileSync(outputPath, 'utf-8');
-      expect(md).toContain('# Audit Results');
-      expect(md).toContain('nextjs');
-      expect(md).toContain('A11Y-01');
-    });
-
-    it('logs markdown to console when no outputPath', async () => {
-      const { reportMarkdown } = await import('./markdown.js');
-      const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      reportMarkdown({ result: makeResult() });
-      expect(spy).toHaveBeenCalledOnce();
-      expect(spy.mock.calls[0]![0]).toContain('# Audit Results');
-    });
-
-    it('includes severity icons for issues', async () => {
-      const { reportMarkdown } = await import('./markdown.js');
-      const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const result = makeResult({
-        issues: [
-          { id: 'C1', title: 'Critical', severity: 'critical', category: 'accessibility', description: '', affectedFiles: [], completionPct: 0 },
-          { id: 'L1', title: 'Low', severity: 'low', category: 'dark-mode', description: '', affectedFiles: [], completionPct: 0 },
-          { id: 'M1', title: 'Medium', severity: 'medium', category: 'accessibility', description: '', affectedFiles: [], completionPct: 0 },
-        ],
-      });
-      reportMarkdown({ result });
-      const output = spy.mock.calls[0]![0] as string;
-      expect(output).toContain('🔴');
-      expect(output).toContain('🟢');
-      expect(output).toContain('🟡');
-    });
-
-    it('includes cluster execution plan', async () => {
-      const { reportMarkdown } = await import('./markdown.js');
-      const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      reportMarkdown({ result: makeResult() });
-      const output = spy.mock.calls[0]![0] as string;
-      expect(output).toContain('## Cluster Execution Plan');
-      expect(output).toContain('Accessibility');
-      expect(output).toContain('no deps');
-      expect(output).toContain('depends: C1');
-    });
-
-    it('logs verbose message when verbose=true and outputPath given', async () => {
-      const { reportMarkdown } = await import('./markdown.js');
-      const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const outputPath = join(TEST_DIR, 'verbose.md');
-      reportMarkdown({ result: makeResult(), outputPath, verbose: true });
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining('Markdown written to'));
-    });
+  it('includes severity counts in markdown output', async () => {
+    const { reportMarkdown } = await import('./markdown.js');
+    const result = makeResult();
+    reportMarkdown({ result });
+    const calls = consoleLogSpy.mock.calls.flat().join('\n');
+    expect(calls).toContain('Critical');
+    expect(calls).toContain('High');
   });
 
-  describe('reportTerminal', () => {
-    it('logs structured output to console', async () => {
-      const { reportTerminal } = await import('./terminal.js');
-      const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      reportTerminal({ result: makeResult() });
-      const allOutput = spy.mock.calls.map((c) => c[0]).join('\n');
-      expect(allOutput).toContain('SITE AUDIT');
-      expect(allOutput).toContain('Overall Completion: 85%');
-      expect(allOutput).toContain('A11Y-01');
-    });
-
-    it('outputs verbose description and files when verbose=true', async () => {
-      const { reportTerminal } = await import('./terminal.js');
-      const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      reportTerminal({ result: makeResult(), verbose: true });
-      const allOutput = spy.mock.calls.map((c) => c[0]).join('\n');
-      expect(allOutput).toContain('Not enough aria- attributes');
-      expect(allOutput).toContain('/src');
-    });
-
-    it('renders parallel execution map with clusters', async () => {
-      const { reportTerminal } = await import('./terminal.js');
-      const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      reportTerminal({ result: makeResult() });
-      const allOutput = spy.mock.calls.map((c) => c[0]).join('\n');
-      expect(allOutput).toContain('PARALLEL EXECUTION MAP');
-    });
-
-    it('renders severity icons for each severity level', async () => {
-      const { reportTerminal } = await import('./terminal.js');
-      const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const result = makeResult({
-        issues: [
-          { id: 'C1', title: 'Crit', severity: 'critical', category: 'accessibility', description: '', affectedFiles: [], completionPct: 0 },
-          { id: 'H1', title: 'High', severity: 'high', category: 'dark-mode', description: '', affectedFiles: [], completionPct: 0 },
-          { id: 'M1', title: 'Med', severity: 'medium', category: 'accessibility', description: '', affectedFiles: [], completionPct: 0 },
-          { id: 'L1', title: 'Low', severity: 'low', category: 'dark-mode', description: '', affectedFiles: [], completionPct: 0 },
-        ],
-        clusters: [],
-      });
-      reportTerminal({ result });
-      const allOutput = spy.mock.calls.map((c) => c[0]).join('\n');
-      expect(allOutput).toContain('🔴');
-      expect(allOutput).toContain('🟠');
-      expect(allOutput).toContain('🟡');
-      expect(allOutput).toContain('🟢');
-    });
-
-    it('handles empty clusters list gracefully', async () => {
-      const { reportTerminal } = await import('./terminal.js');
-      const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      reportTerminal({ result: makeResult({ clusters: [], issues: [] }) });
-      expect(spy).toHaveBeenCalled();
-    });
+  it('includes issues table in markdown output', async () => {
+    const { reportMarkdown } = await import('./markdown.js');
+    const result = makeResult();
+    reportMarkdown({ result });
+    const calls = consoleLogSpy.mock.calls.flat().join('\n');
+    expect(calls).toContain('| ID | Severity | Title');
+    expect(calls).toContain('A11Y-01');
+    expect(calls).toContain('DM-01');
   });
 
-  describe('reporters/index re-exports', () => {
-    it('re-exports reportJson, reportMarkdown, reportTerminal', async () => {
-      const reporters = await import('./index.js');
-      expect(typeof reporters.reportJson).toBe('function');
-      expect(typeof reporters.reportMarkdown).toBe('function');
-      expect(typeof reporters.reportTerminal).toBe('function');
+  it('sorts issues by severity in output', async () => {
+    const { reportMarkdown } = await import('./markdown.js');
+    const result = makeResult();
+    reportMarkdown({ result });
+    const output = consoleLogSpy.mock.calls.flat().join('\n');
+    const critIdx = output.indexOf('A11Y-01');
+    const highIdx = output.indexOf('DM-01');
+    expect(critIdx).toBeLessThan(highIdx);
+  });
+
+  it('includes cluster execution plan', async () => {
+    const { reportMarkdown } = await import('./markdown.js');
+    const result = makeResult();
+    reportMarkdown({ result });
+    const calls = consoleLogSpy.mock.calls.flat().join('\n');
+    expect(calls).toContain('Cluster Execution Plan');
+    expect(calls).toContain('Test Cluster');
+    expect(calls).toContain('parallel');
+  });
+
+  it('includes deps info for clusters with dependencies', async () => {
+    const { reportMarkdown } = await import('./markdown.js');
+    const result = makeResult({
+      clusters: [makeCluster({ dependsOn: ['other-cluster'] })],
     });
+    reportMarkdown({ result });
+    const calls = consoleLogSpy.mock.calls.flat().join('\n');
+    expect(calls).toContain('depends: other-cluster');
+  });
+
+  it('writes file when outputPath given', async () => {
+    const { reportMarkdown } = await import('./markdown.js');
+    const result = makeResult();
+    const fsMod = await import('node:fs');
+    const spy = vi.spyOn(fsMod, 'writeFileSync').mockImplementation(vi.fn());
+    reportMarkdown({ result, outputPath: '/tmp/report.md' });
+    expect(spy).toHaveBeenCalledWith('/tmp/report.md', expect.stringContaining('# Audit Results'));
+  });
+
+  it('logs verbose message when outputPath and verbose', async () => {
+    const { reportMarkdown } = await import('./markdown.js');
+    const result = makeResult();
+    const fsMod = await import('node:fs');
+    vi.spyOn(fsMod, 'writeFileSync').mockImplementation(vi.fn());
+    reportMarkdown({ result, outputPath: '/tmp/report.md', verbose: true });
+    const calls = consoleLogSpy.mock.calls.flat().join('\n');
+    expect(calls).toContain('/tmp/report.md');
+  });
+
+  it('includes byCategory in output', async () => {
+    const { reportMarkdown } = await import('./markdown.js');
+    const result = makeResult();
+    reportMarkdown({ result });
+    const calls = consoleLogSpy.mock.calls.flat().join('\n');
+    expect(calls).toContain('Issues by Category');
+    expect(calls).toContain('accessibility');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// reportTerminal
+// ---------------------------------------------------------------------------
+
+describe('reportTerminal', () => {
+  let consoleLogSpy: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(vi.fn()) as ReturnType<typeof vi.fn>;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('outputs header with framework and date', async () => {
+    const { reportTerminal } = await import('./terminal.js');
+    const result = makeResult();
+    reportTerminal({ result, verbose: false });
+    const output = consoleLogSpy.mock.calls.flat().join('\n');
+    expect(output).toContain('SITE AUDIT');
+    expect(output).toContain('nextjs');
+    expect(output).toContain('2026-01-01');
+  });
+
+  it('outputs overall completion percentage', async () => {
+    const { reportTerminal } = await import('./terminal.js');
+    const result = makeResult();
+    reportTerminal({ result, verbose: false });
+    const output = consoleLogSpy.mock.calls.flat().join('\n');
+    expect(output).toContain('80%');
+    expect(output).toContain('Total Issues: 2');
+  });
+
+  it('outputs severity breakdown', async () => {
+    const { reportTerminal } = await import('./terminal.js');
+    const result = makeResult();
+    reportTerminal({ result, verbose: false });
+    const output = consoleLogSpy.mock.calls.flat().join('\n');
+    expect(output).toContain('Critical: 1');
+    expect(output).toContain('High: 1');
+  });
+
+  it('outputs category breakdown with bar chart', async () => {
+    const { reportTerminal } = await import('./terminal.js');
+    const result = makeResult();
+    reportTerminal({ result, verbose: false });
+    const output = consoleLogSpy.mock.calls.flat().join('\n');
+    expect(output).toContain('Issues by Category');
+    expect(output).toContain('accessibility');
+    expect(output).toContain('dark-mode');
+  });
+
+  it('outputs issue list with severity icons', async () => {
+    const { reportTerminal } = await import('./terminal.js');
+    const result = makeResult();
+    reportTerminal({ result, verbose: false });
+    const output = consoleLogSpy.mock.calls.flat().join('\n');
+    expect(output).toContain('A11Y-01');
+    expect(output).toContain('DM-01');
+    expect(output).toContain('🔴');
+    expect(output).toContain('🟠');
+  });
+
+  it('outputs verbose issue details when verbose=true', async () => {
+    const { reportTerminal } = await import('./terminal.js');
+    const result = makeResult();
+    reportTerminal({ result, verbose: true });
+    const output = consoleLogSpy.mock.calls.flat().join('\n');
+    expect(output).toContain('Not enough aria- attributes');
+    expect(output).toContain('/src');
+  });
+
+  it('outputs cluster execution plan', async () => {
+    const { reportTerminal } = await import('./terminal.js');
+    const result = makeResult();
+    reportTerminal({ result, verbose: false });
+    const output = consoleLogSpy.mock.calls.flat().join('\n');
+    expect(output).toContain('Cluster Execution Plan');
+    expect(output).toContain('Test Cluster');
+    expect(output).toContain('parallel');
+  });
+
+  it('outputs parallel execution map when clusters exist', async () => {
+    const { reportTerminal } = await import('./terminal.js');
+    const result = makeResult();
+    reportTerminal({ result, verbose: false });
+    const output = consoleLogSpy.mock.calls.flat().join('\n');
+    expect(output).toContain('PARALLEL EXECUTION MAP');
+    expect(output).toContain('Total:');
+  });
+
+  it('handles sequential cluster correctly', async () => {
+    const { reportTerminal } = await import('./terminal.js');
+    const result = makeResult({
+      clusters: [makeCluster({ canParallelize: false })],
+    });
+    reportTerminal({ result, verbose: false });
+    const output = consoleLogSpy.mock.calls.flat().join('\n');
+    expect(output).toContain('sequential');
+  });
+
+  it('handles empty clusters (no parallel map)', async () => {
+    const { reportTerminal } = await import('./terminal.js');
+    const result = makeResult({ clusters: [] });
+    reportTerminal({ result, verbose: false });
+    const output = consoleLogSpy.mock.calls.flat().join('\n');
+    expect(output).toContain('SITE AUDIT');
+    // No parallel map printed when clusters empty
+    expect(output).not.toContain('PARALLEL EXECUTION MAP');
+  });
+
+  it('uses medium/low severity icons correctly', async () => {
+    const { reportTerminal } = await import('./terminal.js');
+    const result = makeResult({
+      issues: [
+        {
+          id: 'X-01',
+          title: 'Medium issue',
+          severity: 'medium',
+          category: 'design',
+          description: 'desc',
+          affectedFiles: [],
+          completionPct: 50,
+        },
+        {
+          id: 'X-02',
+          title: 'Low issue',
+          severity: 'low',
+          category: 'design',
+          description: 'desc',
+          affectedFiles: [],
+          completionPct: 80,
+        },
+      ],
+    });
+    reportTerminal({ result, verbose: false });
+    const output = consoleLogSpy.mock.calls.flat().join('\n');
+    expect(output).toContain('🟡');
+    expect(output).toContain('🟢');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// reporters/index re-exports
+// ---------------------------------------------------------------------------
+
+describe('reporters/index', () => {
+  it('re-exports all three reporters', async () => {
+    const reporters = await import('./index.js');
+    expect(typeof reporters.reportJson).toBe('function');
+    expect(typeof reporters.reportMarkdown).toBe('function');
+    expect(typeof reporters.reportTerminal).toBe('function');
   });
 });

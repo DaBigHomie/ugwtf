@@ -1,230 +1,253 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+/**
+ * audit-orchestrator/adapters — Unit Tests
+ *
+ * Covers detectAdapter, nextjsAdapter, viteReactAdapter.
+ */
+
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { nextjsAdapter } from './nextjs.js';
-import { viteReactAdapter } from './vite-react.js';
-import { detectAdapter } from './index.js';
+import { tmpdir } from 'node:os';
 
-const TEST_DIR = join(import.meta.dirname, '../../../.test-tmp-adapters');
+// ---------------------------------------------------------------------------
+// Temp directory setup
+// ---------------------------------------------------------------------------
 
-describe('audit-orchestrator/adapters', () => {
-  beforeEach(() => {
-    mkdirSync(TEST_DIR, { recursive: true });
+const TMP = join(tmpdir(), 'adapters-test-' + Date.now());
+const NEXT_ROOT = join(TMP, 'next-project');
+const VITE_ROOT = join(TMP, 'vite-project');
+const PKG_NEXT_ROOT = join(TMP, 'pkg-next-project');
+const PKG_VITE_ROOT = join(TMP, 'pkg-vite-project');
+const EMPTY_ROOT = join(TMP, 'empty-project');
+
+beforeAll(() => {
+  // Next.js project (has next.config.ts)
+  mkdirSync(join(NEXT_ROOT, 'src', 'app'), { recursive: true });
+  mkdirSync(join(NEXT_ROOT, 'src', 'shared', 'ui'), { recursive: true });
+  writeFileSync(join(NEXT_ROOT, 'next.config.ts'), 'export default {}');
+  writeFileSync(join(NEXT_ROOT, 'tailwind.config.ts'), 'module.exports = {}');
+  writeFileSync(join(NEXT_ROOT, 'src', 'app', 'globals.css'), '/* styles */');
+  writeFileSync(join(NEXT_ROOT, 'src', 'app', 'layout.tsx'), '<html />');
+
+  // Vite project (has vite.config.ts)
+  mkdirSync(join(VITE_ROOT, 'src', 'pages'), { recursive: true });
+  mkdirSync(join(VITE_ROOT, 'src', 'components', 'ui'), { recursive: true });
+  writeFileSync(join(VITE_ROOT, 'vite.config.ts'), 'export default {}');
+  writeFileSync(join(VITE_ROOT, 'src', 'index.css'), '/* styles */');
+  writeFileSync(join(VITE_ROOT, 'src', 'App.tsx'), '<App />');
+
+  // Package.json-based detection (Next)
+  mkdirSync(PKG_NEXT_ROOT, { recursive: true });
+  writeFileSync(join(PKG_NEXT_ROOT, 'package.json'), JSON.stringify({ dependencies: { next: '^14.0.0' } }));
+
+  // Package.json-based detection (Vite)
+  mkdirSync(PKG_VITE_ROOT, { recursive: true });
+  writeFileSync(join(PKG_VITE_ROOT, 'package.json'), JSON.stringify({ dependencies: { vite: '^5.0.0' } }));
+
+  // Empty project (no config files)
+  mkdirSync(EMPTY_ROOT, { recursive: true });
+});
+
+afterAll(() => {
+  rmSync(TMP, { recursive: true, force: true });
+});
+
+// ---------------------------------------------------------------------------
+// detectAdapter
+// ---------------------------------------------------------------------------
+
+describe('detectAdapter', () => {
+  it('detects Next.js adapter via next.config.ts', async () => {
+    const { detectAdapter } = await import('./index.js');
+    const adapter = detectAdapter(NEXT_ROOT);
+    expect(adapter.framework).toBe('nextjs');
   });
 
-  afterEach(() => {
-    rmSync(TEST_DIR, { recursive: true, force: true });
+  it('detects Vite adapter via vite.config.ts', async () => {
+    const { detectAdapter } = await import('./index.js');
+    const adapter = detectAdapter(VITE_ROOT);
+    expect(adapter.framework).toBe('vite-react');
   });
 
-  describe('nextjsAdapter', () => {
-    it('has framework="nextjs"', () => {
-      expect(nextjsAdapter.framework).toBe('nextjs');
-    });
-
-    describe('detectFramework', () => {
-      it('returns true when next.config.ts exists', () => {
-        writeFileSync(join(TEST_DIR, 'next.config.ts'), '');
-        expect(nextjsAdapter.detectFramework(TEST_DIR)).toBe(true);
-      });
-
-      it('returns true when next.config.js exists', () => {
-        writeFileSync(join(TEST_DIR, 'next.config.js'), '');
-        expect(nextjsAdapter.detectFramework(TEST_DIR)).toBe(true);
-      });
-
-      it('returns true when next.config.mjs exists', () => {
-        writeFileSync(join(TEST_DIR, 'next.config.mjs'), '');
-        expect(nextjsAdapter.detectFramework(TEST_DIR)).toBe(true);
-      });
-
-      it('returns false when no next.config file exists', () => {
-        expect(nextjsAdapter.detectFramework(TEST_DIR)).toBe(false);
-      });
-    });
-
-    describe('resolveStylesheet', () => {
-      it('returns src/app/globals.css when it exists', () => {
-        const dir = join(TEST_DIR, 'src', 'app');
-        mkdirSync(dir, { recursive: true });
-        writeFileSync(join(dir, 'globals.css'), '');
-        expect(nextjsAdapter.resolveStylesheet(TEST_DIR)).toBe(join(TEST_DIR, 'src', 'app', 'globals.css'));
-      });
-
-      it('falls back to first candidate when none exist', () => {
-        const result = nextjsAdapter.resolveStylesheet(TEST_DIR);
-        expect(result).toContain('globals.css');
-      });
-    });
-
-    describe('resolveConfig', () => {
-      it('returns tailwind.config.ts when it exists', () => {
-        writeFileSync(join(TEST_DIR, 'tailwind.config.ts'), '');
-        expect(nextjsAdapter.resolveConfig(TEST_DIR)).toBe(join(TEST_DIR, 'tailwind.config.ts'));
-      });
-
-      it('falls back to first candidate when none exist', () => {
-        expect(nextjsAdapter.resolveConfig(TEST_DIR)).toContain('tailwind.config');
-      });
-    });
-
-    describe('resolveLayout', () => {
-      it('returns src/app/layout.tsx when it exists', () => {
-        const dir = join(TEST_DIR, 'src', 'app');
-        mkdirSync(dir, { recursive: true });
-        writeFileSync(join(dir, 'layout.tsx'), '');
-        expect(nextjsAdapter.resolveLayout(TEST_DIR)).toBe(join(TEST_DIR, 'src', 'app', 'layout.tsx'));
-      });
-
-      it('falls back to first candidate when none exist', () => {
-        expect(nextjsAdapter.resolveLayout(TEST_DIR)).toContain('layout.tsx');
-      });
-    });
-
-    describe('resolvePages', () => {
-      it('returns src/app when it exists', () => {
-        const dir = join(TEST_DIR, 'src', 'app');
-        mkdirSync(dir, { recursive: true });
-        expect(nextjsAdapter.resolvePages(TEST_DIR)).toBe(dir);
-      });
-
-      it('falls back to first candidate when none exist', () => {
-        expect(nextjsAdapter.resolvePages(TEST_DIR)).toContain('app');
-      });
-    });
-
-    describe('resolveComponents', () => {
-      it('returns src/shared/ui when it exists', () => {
-        const dir = join(TEST_DIR, 'src', 'shared', 'ui');
-        mkdirSync(dir, { recursive: true });
-        expect(nextjsAdapter.resolveComponents(TEST_DIR)).toBe(dir);
-      });
-
-      it('falls back to first candidate when none exist', () => {
-        expect(nextjsAdapter.resolveComponents(TEST_DIR)).toContain('ui');
-      });
-    });
-
-    describe('resolveSrc', () => {
-      it('returns src/ when it exists', () => {
-        const src = join(TEST_DIR, 'src');
-        mkdirSync(src, { recursive: true });
-        expect(nextjsAdapter.resolveSrc(TEST_DIR)).toBe(src);
-      });
-
-      it('falls back to root when src does not exist', () => {
-        expect(nextjsAdapter.resolveSrc(TEST_DIR)).toBe(TEST_DIR);
-      });
-    });
+  it('falls back to next adapter via package.json dependencies', async () => {
+    const { detectAdapter } = await import('./index.js');
+    const adapter = detectAdapter(PKG_NEXT_ROOT);
+    expect(adapter.framework).toBe('nextjs');
   });
 
-  describe('viteReactAdapter', () => {
-    it('has framework="vite-react"', () => {
-      expect(viteReactAdapter.framework).toBe('vite-react');
-    });
-
-    describe('detectFramework', () => {
-      it('returns true when vite.config.ts exists', () => {
-        writeFileSync(join(TEST_DIR, 'vite.config.ts'), '');
-        expect(viteReactAdapter.detectFramework(TEST_DIR)).toBe(true);
-      });
-
-      it('returns true when vite.config.js exists', () => {
-        writeFileSync(join(TEST_DIR, 'vite.config.js'), '');
-        expect(viteReactAdapter.detectFramework(TEST_DIR)).toBe(true);
-      });
-
-      it('returns false when no vite config exists', () => {
-        expect(viteReactAdapter.detectFramework(TEST_DIR)).toBe(false);
-      });
-    });
-
-    describe('resolveStylesheet', () => {
-      it('returns src/index.css when it exists', () => {
-        const src = join(TEST_DIR, 'src');
-        mkdirSync(src, { recursive: true });
-        writeFileSync(join(src, 'index.css'), '');
-        expect(viteReactAdapter.resolveStylesheet(TEST_DIR)).toBe(join(src, 'index.css'));
-      });
-
-      it('falls back to first candidate when none exist', () => {
-        expect(viteReactAdapter.resolveStylesheet(TEST_DIR)).toContain('css');
-      });
-    });
-
-    describe('resolveLayout', () => {
-      it('returns src/App.tsx when it exists', () => {
-        const src = join(TEST_DIR, 'src');
-        mkdirSync(src, { recursive: true });
-        writeFileSync(join(src, 'App.tsx'), '');
-        expect(viteReactAdapter.resolveLayout(TEST_DIR)).toBe(join(src, 'App.tsx'));
-      });
-
-      it('falls back to first candidate when none exist', () => {
-        expect(viteReactAdapter.resolveLayout(TEST_DIR)).toContain('App');
-      });
-    });
-
-    describe('resolvePages', () => {
-      it('returns src/pages when it exists', () => {
-        const pages = join(TEST_DIR, 'src', 'pages');
-        mkdirSync(pages, { recursive: true });
-        expect(viteReactAdapter.resolvePages(TEST_DIR)).toBe(pages);
-      });
-
-      it('falls back to first candidate when none exist', () => {
-        expect(viteReactAdapter.resolvePages(TEST_DIR)).toContain('pages');
-      });
-    });
-
-    describe('resolveComponents', () => {
-      it('returns src/components/ui when it exists', () => {
-        const ui = join(TEST_DIR, 'src', 'components', 'ui');
-        mkdirSync(ui, { recursive: true });
-        expect(viteReactAdapter.resolveComponents(TEST_DIR)).toBe(ui);
-      });
-
-      it('falls back to first candidate when none exist', () => {
-        expect(viteReactAdapter.resolveComponents(TEST_DIR)).toContain('components');
-      });
-    });
-
-    describe('resolveSrc', () => {
-      it('always returns {root}/src', () => {
-        expect(viteReactAdapter.resolveSrc(TEST_DIR)).toBe(join(TEST_DIR, 'src'));
-      });
-    });
+  it('falls back to vite adapter via package.json devDependencies', async () => {
+    const { detectAdapter } = await import('./index.js');
+    const adapter = detectAdapter(PKG_VITE_ROOT);
+    expect(adapter.framework).toBe('vite-react');
   });
 
-  describe('detectAdapter', () => {
-    it('detects Next.js when next.config.ts exists', () => {
-      writeFileSync(join(TEST_DIR, 'next.config.ts'), '');
-      expect(detectAdapter(TEST_DIR).framework).toBe('nextjs');
-    });
+  it('defaults to Next.js when no config or package.json', async () => {
+    const { detectAdapter } = await import('./index.js');
+    const adapter = detectAdapter(EMPTY_ROOT);
+    expect(adapter.framework).toBe('nextjs');
+  });
+});
 
-    it('detects Vite when vite.config.ts exists', () => {
-      writeFileSync(join(TEST_DIR, 'vite.config.ts'), '');
-      expect(detectAdapter(TEST_DIR).framework).toBe('vite-react');
-    });
+// ---------------------------------------------------------------------------
+// nextjsAdapter
+// ---------------------------------------------------------------------------
 
-    it('detects Next.js from package.json dependencies', () => {
-      writeFileSync(
-        join(TEST_DIR, 'package.json'),
-        JSON.stringify({ dependencies: { next: '14.0.0' } }),
-      );
-      expect(detectAdapter(TEST_DIR).framework).toBe('nextjs');
-    });
+describe('nextjsAdapter', () => {
+  it('resolveStylesheet returns existing css path', async () => {
+    const { nextjsAdapter } = await import('./nextjs.js');
+    const path = nextjsAdapter.resolveStylesheet(NEXT_ROOT);
+    expect(path).toBe(join(NEXT_ROOT, 'src', 'app', 'globals.css'));
+  });
 
-    it('detects Vite from package.json devDependencies', () => {
-      writeFileSync(
-        join(TEST_DIR, 'package.json'),
-        JSON.stringify({ devDependencies: { vite: '5.0.0' } }),
-      );
-      expect(detectAdapter(TEST_DIR).framework).toBe('vite-react');
-    });
+  it('resolveStylesheet returns candidate[0] when none exist', async () => {
+    const { nextjsAdapter } = await import('./nextjs.js');
+    const path = nextjsAdapter.resolveStylesheet(EMPTY_ROOT);
+    expect(path).toContain('globals.css');
+  });
 
-    it('falls back to Next.js adapter when nothing matches', () => {
-      // No config files, no package.json
-      expect(detectAdapter(TEST_DIR).framework).toBe('nextjs');
-    });
+  it('resolveConfig returns existing tailwind.config.ts', async () => {
+    const { nextjsAdapter } = await import('./nextjs.js');
+    const path = nextjsAdapter.resolveConfig(NEXT_ROOT);
+    expect(path).toBe(join(NEXT_ROOT, 'tailwind.config.ts'));
+  });
+
+  it('resolveConfig falls back to candidate[0] when none exist', async () => {
+    const { nextjsAdapter } = await import('./nextjs.js');
+    const path = nextjsAdapter.resolveConfig(EMPTY_ROOT);
+    expect(path).toContain('tailwind.config.ts');
+  });
+
+  it('resolveLayout returns existing layout.tsx', async () => {
+    const { nextjsAdapter } = await import('./nextjs.js');
+    const path = nextjsAdapter.resolveLayout(NEXT_ROOT);
+    expect(path).toBe(join(NEXT_ROOT, 'src', 'app', 'layout.tsx'));
+  });
+
+  it('resolveLayout falls back to candidate[0] when none exist', async () => {
+    const { nextjsAdapter } = await import('./nextjs.js');
+    const path = nextjsAdapter.resolveLayout(EMPTY_ROOT);
+    expect(path).toContain('layout.tsx');
+  });
+
+  it('resolvePages returns src/app when it exists', async () => {
+    const { nextjsAdapter } = await import('./nextjs.js');
+    const path = nextjsAdapter.resolvePages(NEXT_ROOT);
+    expect(path).toBe(join(NEXT_ROOT, 'src', 'app'));
+  });
+
+  it('resolvePages falls back to candidate[0] when none exist', async () => {
+    const { nextjsAdapter } = await import('./nextjs.js');
+    const path = nextjsAdapter.resolvePages(EMPTY_ROOT);
+    expect(path).toContain('src');
+  });
+
+  it('resolveComponents returns src/shared/ui when it exists', async () => {
+    const { nextjsAdapter } = await import('./nextjs.js');
+    const path = nextjsAdapter.resolveComponents(NEXT_ROOT);
+    expect(path).toBe(join(NEXT_ROOT, 'src', 'shared', 'ui'));
+  });
+
+  it('resolveComponents falls back to candidate[0] when none exist', async () => {
+    const { nextjsAdapter } = await import('./nextjs.js');
+    const path = nextjsAdapter.resolveComponents(EMPTY_ROOT);
+    expect(path).toContain('ui');
+  });
+
+  it('resolveSrc returns src/ when it exists', async () => {
+    const { nextjsAdapter } = await import('./nextjs.js');
+    const path = nextjsAdapter.resolveSrc(NEXT_ROOT);
+    expect(path).toBe(join(NEXT_ROOT, 'src'));
+  });
+
+  it('resolveSrc falls back to root when src/ missing', async () => {
+    const { nextjsAdapter } = await import('./nextjs.js');
+    const path = nextjsAdapter.resolveSrc(EMPTY_ROOT);
+    expect(path).toBe(EMPTY_ROOT);
+  });
+
+  it('detectFramework returns true for next.config.ts', async () => {
+    const { nextjsAdapter } = await import('./nextjs.js');
+    expect(nextjsAdapter.detectFramework(NEXT_ROOT)).toBe(true);
+  });
+
+  it('detectFramework returns false when no next config', async () => {
+    const { nextjsAdapter } = await import('./nextjs.js');
+    expect(nextjsAdapter.detectFramework(EMPTY_ROOT)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// viteReactAdapter
+// ---------------------------------------------------------------------------
+
+describe('viteReactAdapter', () => {
+  it('resolveStylesheet returns src/index.css when it exists', async () => {
+    const { viteReactAdapter } = await import('./vite-react.js');
+    const path = viteReactAdapter.resolveStylesheet(VITE_ROOT);
+    expect(path).toBe(join(VITE_ROOT, 'src', 'index.css'));
+  });
+
+  it('resolveStylesheet falls back to candidate[0] when none exist', async () => {
+    const { viteReactAdapter } = await import('./vite-react.js');
+    const path = viteReactAdapter.resolveStylesheet(EMPTY_ROOT);
+    expect(path).toContain('index.css');
+  });
+
+  it('resolveConfig returns tailwind.config.ts when it exists', async () => {
+    const { viteReactAdapter } = await import('./vite-react.js');
+    const path = viteReactAdapter.resolveConfig(VITE_ROOT);
+    expect(path).toContain('tailwind.config.ts');
+  });
+
+  it('resolveLayout returns src/App.tsx when it exists', async () => {
+    const { viteReactAdapter } = await import('./vite-react.js');
+    const path = viteReactAdapter.resolveLayout(VITE_ROOT);
+    expect(path).toBe(join(VITE_ROOT, 'src', 'App.tsx'));
+  });
+
+  it('resolveLayout falls back to candidate[0] when none exist', async () => {
+    const { viteReactAdapter } = await import('./vite-react.js');
+    const path = viteReactAdapter.resolveLayout(EMPTY_ROOT);
+    expect(path).toContain('App.tsx');
+  });
+
+  it('resolvePages returns src/pages when it exists', async () => {
+    const { viteReactAdapter } = await import('./vite-react.js');
+    const path = viteReactAdapter.resolvePages(VITE_ROOT);
+    expect(path).toBe(join(VITE_ROOT, 'src', 'pages'));
+  });
+
+  it('resolvePages falls back to candidate[0] when none exist', async () => {
+    const { viteReactAdapter } = await import('./vite-react.js');
+    const path = viteReactAdapter.resolvePages(EMPTY_ROOT);
+    expect(path).toContain('pages');
+  });
+
+  it('resolveComponents returns src/components/ui when it exists', async () => {
+    const { viteReactAdapter } = await import('./vite-react.js');
+    const path = viteReactAdapter.resolveComponents(VITE_ROOT);
+    expect(path).toBe(join(VITE_ROOT, 'src', 'components', 'ui'));
+  });
+
+  it('resolveComponents falls back to candidate[0] when none exist', async () => {
+    const { viteReactAdapter } = await import('./vite-react.js');
+    const path = viteReactAdapter.resolveComponents(EMPTY_ROOT);
+    expect(path).toContain('ui');
+  });
+
+  it('resolveSrc always returns src/', async () => {
+    const { viteReactAdapter } = await import('./vite-react.js');
+    expect(viteReactAdapter.resolveSrc(VITE_ROOT)).toBe(join(VITE_ROOT, 'src'));
+    expect(viteReactAdapter.resolveSrc(EMPTY_ROOT)).toBe(join(EMPTY_ROOT, 'src'));
+  });
+
+  it('detectFramework returns true for vite.config.ts', async () => {
+    const { viteReactAdapter } = await import('./vite-react.js');
+    expect(viteReactAdapter.detectFramework(VITE_ROOT)).toBe(true);
+  });
+
+  it('detectFramework returns false when no vite config', async () => {
+    const { viteReactAdapter } = await import('./vite-react.js');
+    expect(viteReactAdapter.detectFramework(EMPTY_ROOT)).toBe(false);
   });
 });

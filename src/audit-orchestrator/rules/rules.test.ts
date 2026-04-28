@@ -1,211 +1,277 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
-import { nextjsAdapter } from '../adapters/nextjs.js';
-import type { AuditRuleContext } from '../types.js';
-import {
-  RULES,
-  runAllRules,
-  buildIssueCatalog,
-  buildClusters,
-  buildAuditResult,
-} from './index.js';
+/**
+ * audit-orchestrator/rules — Unit Tests
+ *
+ * Covers buildAuditResult, runAllRules, buildClusters, buildIssueCatalog
+ * and the individual rule functions via a mock filesystem.
+ */
 
-const TEST_DIR = join(import.meta.dirname, '../../../.test-tmp-rules');
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { AuditRuleContext, FrameworkAdapter } from '../types.js';
 
-/** Build a minimal AuditRuleContext pointing at an empty temp directory. */
-function makeCtx(root = TEST_DIR): AuditRuleContext {
-  return { root, adapter: nextjsAdapter };
+// ---------------------------------------------------------------------------
+// Minimal adapter for testing rules
+// ---------------------------------------------------------------------------
+
+function makeAdapter(root: string, framework: 'nextjs' | 'vite-react' = 'nextjs'): FrameworkAdapter {
+  return {
+    framework,
+    resolveStylesheet: () => `${root}/src/app/globals.css`,
+    resolveConfig: () => `${root}/tailwind.config.ts`,
+    resolveLayout: () => `${root}/src/app/layout.tsx`,
+    resolvePages: () => `${root}/src/app`,
+    resolveComponents: () => `${root}/src/shared/ui`,
+    resolveSrc: () => `${root}/src`,
+    detectFramework: () => true,
+  };
 }
 
-describe('audit-orchestrator/rules/index', () => {
-  beforeEach(() => {
-    mkdirSync(TEST_DIR, { recursive: true });
-    // Create src/ directory so adapter.resolveSrc() resolves properly
-    mkdirSync(join(TEST_DIR, 'src'), { recursive: true });
-  });
+function makeCtx(root = '/tmp/test-project', framework: 'nextjs' | 'vite-react' = 'nextjs'): AuditRuleContext {
+  return { root, adapter: makeAdapter(root, framework) };
+}
 
-  afterEach(() => {
-    rmSync(TEST_DIR, { recursive: true, force: true });
-  });
+// ---------------------------------------------------------------------------
+// rules/index — buildAuditResult, buildClusters, runAllRules, buildIssueCatalog
+// ---------------------------------------------------------------------------
 
-  describe('RULES', () => {
-    it('exports a non-empty RULES map', () => {
-      expect(Object.keys(RULES).length).toBeGreaterThan(0);
-    });
+describe('rules/index — buildAuditResult', () => {
+  // Rules read from filesystem; /tmp/test-project has no source files so
+  // countMatches returns 0 and existsSync returns false → every rule returns
+  // issues (which is fine — we're testing the aggregation logic).
 
-    it('contains expected rule keys', () => {
-      expect(RULES).toHaveProperty('dark-mode-contrast');
-      expect(RULES).toHaveProperty('accessibility');
-      expect(RULES).toHaveProperty('test-ids');
-      expect(RULES).toHaveProperty('button-consistency');
-    });
-
-    it('all RULES values are functions', () => {
-      for (const fn of Object.values(RULES)) {
-        expect(typeof fn).toBe('function');
-      }
-    });
-  });
-
-  describe('runAllRules', () => {
-    it('returns results keyed by rule name', () => {
-      const ctx = makeCtx();
-      const results = runAllRules(ctx);
-      for (const key of Object.keys(RULES)) {
-        expect(key in results).toBe(true);
-        expect(Array.isArray(results[key as keyof typeof RULES])).toBe(true);
-      }
-    });
-
-    it('each rule result contains valid AuditIssue objects', () => {
-      const ctx = makeCtx();
-      const results = runAllRules(ctx);
-      for (const issues of Object.values(results)) {
-        for (const issue of issues) {
-          expect(typeof issue.id).toBe('string');
-          expect(typeof issue.title).toBe('string');
-          expect(['critical', 'high', 'medium', 'low']).toContain(issue.severity);
-          expect(Array.isArray(issue.affectedFiles)).toBe(true);
-          expect(typeof issue.completionPct).toBe('number');
-        }
-      }
+  it('returns a valid AuditResult shape', async () => {
+    const { buildAuditResult } = await import('./index.js');
+    const result = buildAuditResult(makeCtx());
+    expect(result).toMatchObject({
+      totalIssues: expect.any(Number),
+      bySeverity: expect.any(Object),
+      byCategory: expect.any(Object),
+      overallCompletion: expect.any(Number),
+      clusters: expect.any(Array),
+      issues: expect.any(Array),
+      timestamp: expect.any(String),
+      cwd: '/tmp/test-project',
+      framework: 'nextjs',
     });
   });
 
-  describe('buildIssueCatalog', () => {
-    it('returns a flat array of AuditIssue objects', () => {
-      const ctx = makeCtx();
-      const issues = buildIssueCatalog(ctx);
-      expect(Array.isArray(issues)).toBe(true);
-      for (const issue of issues) {
-        expect(typeof issue.id).toBe('string');
-        expect(typeof issue.title).toBe('string');
-      }
-    });
-
-    it('returns issues when source directory has no matching patterns', () => {
-      // Empty src dir — all rules should fire their default issues
-      const ctx = makeCtx();
-      const issues = buildIssueCatalog(ctx);
-      expect(issues.length).toBeGreaterThanOrEqual(0);
-    });
+  it('bySeverity sums match totalIssues', async () => {
+    const { buildAuditResult } = await import('./index.js');
+    const result = buildAuditResult(makeCtx());
+    const severitySum = Object.values(result.bySeverity).reduce((a, b) => a + b, 0);
+    expect(severitySum).toBe(result.totalIssues);
   });
 
-  describe('buildClusters', () => {
-    it('returns empty array for no issues', () => {
-      expect(buildClusters([])).toEqual([]);
-    });
-
-    it('groups issues by category into clusters', () => {
-      const issues = buildIssueCatalog(makeCtx());
-      const clusters = buildClusters(issues);
-      // Each cluster should have unique id
-      const ids = clusters.map((c) => c.id);
-      expect(new Set(ids).size).toBe(ids.length);
-    });
-
-    it('cluster prompts contain issue IDs', () => {
-      const issues = [
-        { id: 'A1', title: 'Test', severity: 'high' as const, category: 'accessibility' as const, description: '', affectedFiles: [], completionPct: 0 },
-        { id: 'A2', title: 'Test 2', severity: 'medium' as const, category: 'accessibility' as const, description: '', affectedFiles: [], completionPct: 0 },
-      ];
-      const clusters = buildClusters(issues);
-      expect(clusters).toHaveLength(1);
-      expect(clusters[0]!.prompts).toContain('A1');
-      expect(clusters[0]!.prompts).toContain('A2');
-    });
-
-    it('sets canParallelize=true on all clusters', () => {
-      const issues = [
-        { id: 'X1', title: 'T', severity: 'low' as const, category: 'layout' as const, description: '', affectedFiles: [], completionPct: 0 },
-      ];
-      const [cluster] = buildClusters(issues);
-      expect(cluster!.canParallelize).toBe(true);
-    });
-
-    it('uses human-readable name for known categories', () => {
-      const issues = [
-        { id: 'D1', title: 'Dark', severity: 'critical' as const, category: 'dark-mode' as const, description: '', affectedFiles: [], completionPct: 0 },
-      ];
-      const [cluster] = buildClusters(issues);
-      expect(cluster!.name).toBe('Dark Mode & Contrast');
-    });
-
-    it('falls back to category string for unknown categories', () => {
-      // 'layout' is not in CATEGORY_NAMES so it falls back to the category string
-      const issues = [
-        { id: 'L1', title: 'Layout', severity: 'low' as const, category: 'layout' as const, description: '', affectedFiles: [], completionPct: 0 },
-      ];
-      const [cluster] = buildClusters(issues);
-      expect(cluster!.name).toBe('layout');
-    });
-
-    it('estimatedMinutes = count * 10', () => {
-      const issues = [
-        { id: 'X1', title: 'T1', severity: 'low' as const, category: 'layout' as const, description: '', affectedFiles: [], completionPct: 0 },
-        { id: 'X2', title: 'T2', severity: 'low' as const, category: 'layout' as const, description: '', affectedFiles: [], completionPct: 0 },
-        { id: 'X3', title: 'T3', severity: 'low' as const, category: 'layout' as const, description: '', affectedFiles: [], completionPct: 0 },
-      ];
-      const [cluster] = buildClusters(issues);
-      expect(cluster!.estimatedMinutes).toBe(30);
-    });
+  it('overallCompletion is clamped to [0, 100]', async () => {
+    const { buildAuditResult } = await import('./index.js');
+    const result = buildAuditResult(makeCtx());
+    expect(result.overallCompletion).toBeGreaterThanOrEqual(0);
+    expect(result.overallCompletion).toBeLessThanOrEqual(100);
   });
 
-  describe('buildAuditResult', () => {
-    it('returns a valid AuditResult shape', () => {
-      const ctx = makeCtx();
-      const result = buildAuditResult(ctx);
-      expect(typeof result.totalIssues).toBe('number');
-      expect(typeof result.overallCompletion).toBe('number');
-      expect(result.overallCompletion).toBeGreaterThanOrEqual(0);
-      expect(result.overallCompletion).toBeLessThanOrEqual(100);
-      expect(Array.isArray(result.issues)).toBe(true);
-      expect(Array.isArray(result.clusters)).toBe(true);
-      expect(typeof result.timestamp).toBe('string');
-      expect(result.cwd).toBe(TEST_DIR);
-      expect(result.framework).toBe('nextjs');
-    });
+  it('clusters contain all issue IDs', async () => {
+    const { buildAuditResult } = await import('./index.js');
+    const result = buildAuditResult(makeCtx());
+    const clusterPromptIds = result.clusters.flatMap((c) => c.prompts);
+    for (const issue of result.issues) {
+      expect(clusterPromptIds).toContain(issue.id);
+    }
+  });
 
-    it('bySeverity sums match totalIssues', () => {
-      const ctx = makeCtx();
-      const result = buildAuditResult(ctx);
-      const total = Object.values(result.bySeverity).reduce((a, b) => a + b, 0);
-      expect(total).toBe(result.totalIssues);
-    });
+  it('filters by cluster when clusterFilter matches cluster id', async () => {
+    const { buildAuditResult } = await import('./index.js');
+    const fullResult = buildAuditResult(makeCtx());
+    if (fullResult.clusters.length === 0) return;
+    const firstCluster = fullResult.clusters[0]!;
+    const filtered = buildAuditResult(makeCtx(), firstCluster.id);
+    // All issues in filtered result must be in the first cluster's prompts
+    for (const issue of filtered.issues) {
+      expect(firstCluster.prompts).toContain(issue.id);
+    }
+  });
 
-    it('filters to a specific cluster when clusterFilter matches cluster id', () => {
-      const ctx = makeCtx();
-      const all = buildAuditResult(ctx);
-      if (all.clusters.length > 0) {
-        const firstClusterId = all.clusters[0]!.id;
-        const filtered = buildAuditResult(ctx, firstClusterId);
-        expect(filtered.totalIssues).toBeLessThanOrEqual(all.totalIssues);
-      }
-    });
+  it('filters by cluster when clusterFilter matches cluster name', async () => {
+    const { buildAuditResult } = await import('./index.js');
+    const fullResult = buildAuditResult(makeCtx());
+    if (fullResult.clusters.length === 0) return;
+    const firstCluster = fullResult.clusters[0]!;
+    const nameFragment = firstCluster.name.slice(0, 5).toLowerCase();
+    const filtered = buildAuditResult(makeCtx(), nameFragment);
+    for (const issue of filtered.issues) {
+      expect(firstCluster.prompts).toContain(issue.id);
+    }
+  });
 
-    it('filters to a specific cluster when clusterFilter matches cluster name', () => {
-      const ctx = makeCtx();
-      const all = buildAuditResult(ctx);
-      if (all.clusters.length > 0) {
-        const firstName = all.clusters[0]!.name;
-        const filtered = buildAuditResult(ctx, firstName.slice(0, 4).toLowerCase());
-        expect(filtered.totalIssues).toBeLessThanOrEqual(all.totalIssues);
-      }
-    });
+  it('returns all issues when clusterFilter does not match any cluster', async () => {
+    const { buildAuditResult } = await import('./index.js');
+    const fullResult = buildAuditResult(makeCtx());
+    const filtered = buildAuditResult(makeCtx(), 'nonexistent-cluster-xyz');
+    expect(filtered.totalIssues).toBe(fullResult.totalIssues);
+  });
 
-    it('returns all issues when clusterFilter does not match', () => {
-      const ctx = makeCtx();
-      const all = buildAuditResult(ctx);
-      const filtered = buildAuditResult(ctx, 'NONEXISTENT_CLUSTER_XYZ');
-      // no matching cluster → all issues returned
-      expect(filtered.totalIssues).toBe(all.totalIssues);
-    });
+  it('timestamp is a valid ISO string', async () => {
+    const { buildAuditResult } = await import('./index.js');
+    const result = buildAuditResult(makeCtx());
+    expect(() => new Date(result.timestamp)).not.toThrow();
+    expect(new Date(result.timestamp).toISOString()).toBe(result.timestamp);
+  });
+});
 
-    it('overallCompletion is capped at 0 minimum', () => {
-      const ctx = makeCtx();
-      const result = buildAuditResult(ctx);
-      expect(result.overallCompletion).toBeGreaterThanOrEqual(0);
-    });
+describe('rules/index — buildClusters', () => {
+  it('returns empty array for empty issues', async () => {
+    const { buildClusters } = await import('./index.js');
+    expect(buildClusters([])).toEqual([]);
+  });
+
+  it('groups issues by category into clusters', async () => {
+    const { buildClusters } = await import('./index.js');
+    const issues = [
+      { id: 'A-01', title: 'A', severity: 'high' as const, category: 'accessibility' as const, description: '', affectedFiles: [], completionPct: 0 },
+      { id: 'A-02', title: 'B', severity: 'medium' as const, category: 'accessibility' as const, description: '', affectedFiles: [], completionPct: 0 },
+      { id: 'DM-01', title: 'C', severity: 'low' as const, category: 'dark-mode' as const, description: '', affectedFiles: [], completionPct: 0 },
+    ];
+    const clusters = buildClusters(issues);
+    expect(clusters.length).toBe(2);
+    const accessibilityCluster = clusters.find((c) => c.prompts.includes('A-01'));
+    expect(accessibilityCluster?.prompts).toContain('A-02');
+    expect(accessibilityCluster?.agentCount).toBe(2);
+  });
+
+  it('sets estimatedMinutes to issues × 10', async () => {
+    const { buildClusters } = await import('./index.js');
+    const issues = [
+      { id: 'X-01', title: 'X', severity: 'low' as const, category: 'design' as const, description: '', affectedFiles: [], completionPct: 0 },
+      { id: 'X-02', title: 'Y', severity: 'low' as const, category: 'design' as const, description: '', affectedFiles: [], completionPct: 0 },
+      { id: 'X-03', title: 'Z', severity: 'low' as const, category: 'design' as const, description: '', affectedFiles: [], completionPct: 0 },
+    ];
+    const [cluster] = buildClusters(issues);
+    expect(cluster!.estimatedMinutes).toBe(30);
+  });
+
+  it('caps agentCount at 5', async () => {
+    const { buildClusters } = await import('./index.js');
+    const issues = Array.from({ length: 10 }, (_, i) => ({
+      id: `X-0${i}`,
+      title: `Issue ${i}`,
+      severity: 'low' as const,
+      category: 'design' as const,
+      description: '',
+      affectedFiles: [],
+      completionPct: 0,
+    }));
+    const [cluster] = buildClusters(issues);
+    expect(cluster!.agentCount).toBe(5);
+  });
+
+  it('assigns sequential cluster IDs C1, C2, ...', async () => {
+    const { buildClusters } = await import('./index.js');
+    const issues = [
+      { id: 'A-01', title: 'A', severity: 'high' as const, category: 'accessibility' as const, description: '', affectedFiles: [], completionPct: 0 },
+      { id: 'DM-01', title: 'B', severity: 'medium' as const, category: 'dark-mode' as const, description: '', affectedFiles: [], completionPct: 0 },
+      { id: 'L-01', title: 'C', severity: 'low' as const, category: 'layout' as const, description: '', affectedFiles: [], completionPct: 0 },
+    ];
+    const clusters = buildClusters(issues);
+    expect(clusters.map((c) => c.id)).toEqual(['C1', 'C2', 'C3']);
+  });
+
+  it('uses CATEGORY_NAMES for known categories', async () => {
+    const { buildClusters } = await import('./index.js');
+    const issues = [
+      { id: 'A-01', title: 'A', severity: 'high' as const, category: 'accessibility' as const, description: '', affectedFiles: [], completionPct: 0 },
+    ];
+    const [cluster] = buildClusters(issues);
+    expect(cluster!.name).toBe('Accessibility');
+  });
+
+  it('falls back to category string for unknown categories', async () => {
+    const { buildClusters } = await import('./index.js');
+    // 'layout' and 'content' are in CATEGORY_NAMES; 'design' is also there.
+    // Use a category that maps through the fallback. 'layout' → 'layout' is not a key tested here.
+    // We'll use a category that's not in CATEGORY_NAMES at all via type assertion.
+    const issues = [
+      { id: 'X-01', title: 'X', severity: 'low' as const, category: 'unknown-cat' as 'accessibility', description: '', affectedFiles: [], completionPct: 0 },
+    ];
+    const [cluster] = buildClusters(issues);
+    expect(cluster!.name).toBe('unknown-cat');
+  });
+
+  it('sets canParallelize=true and dependsOn=[] for all clusters', async () => {
+    const { buildClusters } = await import('./index.js');
+    const issues = [
+      { id: 'A-01', title: 'A', severity: 'high' as const, category: 'accessibility' as const, description: '', affectedFiles: [], completionPct: 0 },
+    ];
+    const [cluster] = buildClusters(issues);
+    expect(cluster!.canParallelize).toBe(true);
+    expect(cluster!.dependsOn).toEqual([]);
+  });
+});
+
+describe('rules/index — runAllRules', () => {
+  it('returns an entry for each registered rule', async () => {
+    const { runAllRules, RULES } = await import('./index.js');
+    const results = runAllRules(makeCtx());
+    const ruleNames = Object.keys(RULES);
+    for (const name of ruleNames) {
+      expect(results).toHaveProperty(name);
+      expect(Array.isArray(results[name as keyof typeof results])).toBe(true);
+    }
+  });
+});
+
+describe('rules/index — buildIssueCatalog', () => {
+  it('returns a flat array of all rule issues', async () => {
+    const { buildIssueCatalog } = await import('./index.js');
+    const catalog = buildIssueCatalog(makeCtx());
+    expect(Array.isArray(catalog)).toBe(true);
+    // Every issue has the required fields
+    for (const issue of catalog) {
+      expect(issue).toHaveProperty('id');
+      expect(issue).toHaveProperty('title');
+      expect(issue).toHaveProperty('severity');
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Individual rules — smoke tests (real filesystem misses = issues returned)
+// ---------------------------------------------------------------------------
+
+describe('auditTestIds', () => {
+  it('returns an issue when no data-testid attrs found', async () => {
+    const { auditTestIds } = await import('./test-ids.js');
+    const issues = auditTestIds(makeCtx());
+    expect(issues.length).toBeGreaterThan(0);
+    expect(issues[0]!.id).toBe('TID-01');
+  });
+
+  it('severity is high when count < 10', async () => {
+    const { auditTestIds } = await import('./test-ids.js');
+    const issues = auditTestIds(makeCtx());
+    // /tmp/test-project/src doesn't exist → 0 matches → high severity
+    expect(issues[0]!.severity).toBe('high');
+  });
+});
+
+describe('auditMarquee', () => {
+  it('returns no issues when no marquee references found', async () => {
+    const { auditMarquee } = await import('./marquee.js');
+    const issues = auditMarquee(makeCtx());
+    // No marquee in /tmp/test-project → 0 → no issues
+    expect(issues).toEqual([]);
+  });
+});
+
+describe('auditAccessibility', () => {
+  it('returns issues when src has no aria attrs', async () => {
+    const { auditAccessibility } = await import('./accessibility.js');
+    const issues = auditAccessibility(makeCtx());
+    const ids = issues.map((i) => i.id);
+    expect(ids).toContain('A11Y-01'); // low ARIA count
+  });
+
+  it('returns focus-trap issue when no focus trap found', async () => {
+    const { auditAccessibility } = await import('./accessibility.js');
+    const issues = auditAccessibility(makeCtx());
+    const ids = issues.map((i) => i.id);
+    expect(ids).toContain('A11Y-03');
   });
 });

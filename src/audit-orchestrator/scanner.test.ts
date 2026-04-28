@@ -1,123 +1,172 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+/**
+ * audit-orchestrator/scanner — Unit Tests
+ *
+ * Covers findFiles, fileContains, countMatches, readFileSafe.
+ */
+
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { findFiles, fileContains, countMatches, readFileSafe } from './scanner.js';
 
-const TEST_DIR = join(import.meta.dirname, '../../.test-tmp-scanner');
+// ---------------------------------------------------------------------------
+// Temp directory setup
+// ---------------------------------------------------------------------------
 
-describe('audit-orchestrator/scanner', () => {
-  beforeEach(() => {
-    mkdirSync(TEST_DIR, { recursive: true });
+const TMP_ROOT = join(tmpdir(), 'scanner-test-' + Date.now());
+
+beforeAll(() => {
+  mkdirSync(join(TMP_ROOT, 'src', 'components'), { recursive: true });
+  mkdirSync(join(TMP_ROOT, 'node_modules', 'pkg'), { recursive: true });
+  mkdirSync(join(TMP_ROOT, 'empty-dir'), { recursive: true });
+
+  writeFileSync(join(TMP_ROOT, 'src', 'index.tsx'), `
+    const el = <button aria-label="click me" data-testid="btn">OK</button>;
+    const el2 = <img alt="photo" />;
+  `);
+  writeFileSync(join(TMP_ROOT, 'src', 'components', 'Card.tsx'), `
+    export function Card() {
+      return <div aria-hidden="true" data-testid="card" />;
+    }
+  `);
+  writeFileSync(join(TMP_ROOT, 'src', 'styles.css'), `
+    :root { --color-bg: #fff; }
+    .dark { background: #000; }
+  `);
+  writeFileSync(join(TMP_ROOT, 'node_modules', 'pkg', 'index.js'), 'aria-label');
+});
+
+afterAll(() => {
+  rmSync(TMP_ROOT, { recursive: true, force: true });
+});
+
+// ---------------------------------------------------------------------------
+// findFiles
+// ---------------------------------------------------------------------------
+
+describe('findFiles', () => {
+  it('finds tsx files recursively', () => {
+    const files = findFiles(join(TMP_ROOT, 'src'), /\.tsx$/);
+    expect(files.length).toBe(2);
+    expect(files.some((f) => f.endsWith('index.tsx'))).toBe(true);
+    expect(files.some((f) => f.endsWith('Card.tsx'))).toBe(true);
   });
 
-  afterEach(() => {
-    rmSync(TEST_DIR, { recursive: true, force: true });
+  it('excludes node_modules by default', () => {
+    const files = findFiles(TMP_ROOT, /\.js$/);
+    expect(files.every((f) => !f.includes('node_modules'))).toBe(true);
   });
 
-  describe('findFiles', () => {
-    it('returns empty array for non-existent directory', () => {
-      expect(findFiles('/nonexistent/path', /\.ts$/)).toEqual([]);
-    });
-
-    it('finds files matching extension in a directory', () => {
-      writeFileSync(join(TEST_DIR, 'a.ts'), 'content a');
-      writeFileSync(join(TEST_DIR, 'b.tsx'), 'content b');
-      writeFileSync(join(TEST_DIR, 'c.css'), 'content c');
-      const result = findFiles(TEST_DIR, /\.tsx?$/);
-      expect(result).toHaveLength(2);
-      expect(result.some((f) => f.endsWith('a.ts'))).toBe(true);
-      expect(result.some((f) => f.endsWith('b.tsx'))).toBe(true);
-    });
-
-    it('recurses into subdirectories', () => {
-      const sub = join(TEST_DIR, 'sub');
-      mkdirSync(sub, { recursive: true });
-      writeFileSync(join(sub, 'nested.ts'), 'nested');
-      const result = findFiles(TEST_DIR, /\.ts$/);
-      expect(result.some((f) => f.endsWith('nested.ts'))).toBe(true);
-    });
-
-    it('ignores node_modules and .next by default', () => {
-      const nm = join(TEST_DIR, 'node_modules');
-      mkdirSync(nm, { recursive: true });
-      writeFileSync(join(nm, 'dep.ts'), 'ignored');
-      writeFileSync(join(TEST_DIR, 'real.ts'), 'real');
-      const result = findFiles(TEST_DIR, /\.ts$/);
-      expect(result.every((f) => !f.includes('node_modules'))).toBe(true);
-    });
-
-    it('returns a single file when given a file path matching extension', () => {
-      const filePath = join(TEST_DIR, 'single.ts');
-      writeFileSync(filePath, 'single');
-      const result = findFiles(filePath, /\.ts$/);
-      expect(result).toEqual([filePath]);
-    });
-
-    it('returns empty array when file path does not match extension', () => {
-      const filePath = join(TEST_DIR, 'single.css');
-      writeFileSync(filePath, 'css');
-      const result = findFiles(filePath, /\.ts$/);
-      expect(result).toEqual([]);
-    });
+  it('returns empty array for nonexistent directory', () => {
+    const files = findFiles('/nonexistent/path/xyz', /\.ts$/);
+    expect(files).toEqual([]);
   });
 
-  describe('fileContains', () => {
-    it('returns false for non-existent file', () => {
-      expect(fileContains('/nonexistent.ts', ['pattern'])).toBe(false);
-    });
-
-    it('returns true when file contains string pattern', () => {
-      const file = join(TEST_DIR, 'check.ts');
-      writeFileSync(file, 'export const foo = "bar";');
-      expect(fileContains(file, ['foo'])).toBe(true);
-    });
-
-    it('returns false when file does not contain any pattern', () => {
-      const file = join(TEST_DIR, 'check.ts');
-      writeFileSync(file, 'export const foo = "bar";');
-      expect(fileContains(file, ['baz', 'qux'])).toBe(false);
-    });
-
-    it('returns true when file matches regex pattern', () => {
-      const file = join(TEST_DIR, 'check.ts');
-      writeFileSync(file, 'aria-label="close"');
-      expect(fileContains(file, [/aria-/])).toBe(true);
-    });
-
-    it('returns true when at least one pattern matches', () => {
-      const file = join(TEST_DIR, 'check.ts');
-      writeFileSync(file, 'skip-to-content');
-      expect(fileContains(file, ['not-here', 'skip-to'])).toBe(true);
-    });
+  it('returns empty array for empty directory', () => {
+    const files = findFiles(join(TMP_ROOT, 'empty-dir'), /\.ts$/);
+    expect(files).toEqual([]);
   });
 
-  describe('countMatches', () => {
-    it('returns 0 for directory with no matching files', () => {
-      expect(countMatches(TEST_DIR, /aria-/g)).toBe(0);
-    });
-
-    it('counts pattern matches across files', () => {
-      writeFileSync(join(TEST_DIR, 'a.ts'), 'aria-label="x" aria-label="y"');
-      writeFileSync(join(TEST_DIR, 'b.ts'), 'aria-hidden="true"');
-      const count = countMatches(TEST_DIR, /aria-/g);
-      expect(count).toBe(3);
-    });
-
-    it('returns 0 when pattern does not match any file', () => {
-      writeFileSync(join(TEST_DIR, 'a.ts'), 'export const x = 1;');
-      expect(countMatches(TEST_DIR, /nonexistent-pattern-xyz/g)).toBe(0);
-    });
+  it('handles file path directly (returns it if matches ext)', () => {
+    const file = join(TMP_ROOT, 'src', 'index.tsx');
+    const files = findFiles(file, /\.tsx$/);
+    expect(files).toEqual([file]);
   });
 
-  describe('readFileSafe', () => {
-    it('returns empty string for non-existent file', () => {
-      expect(readFileSafe('/nonexistent/file.ts')).toBe('');
-    });
+  it('handles file path directly (returns empty if no match)', () => {
+    const file = join(TMP_ROOT, 'src', 'index.tsx');
+    const files = findFiles(file, /\.css$/);
+    expect(files).toEqual([]);
+  });
 
-    it('returns file content for existing file', () => {
-      const file = join(TEST_DIR, 'safe.ts');
-      writeFileSync(file, 'hello world');
-      expect(readFileSafe(file)).toBe('hello world');
-    });
+  it('respects custom ignore list', () => {
+    const files = findFiles(TMP_ROOT, /\.js$/, []);
+    // With no ignore, finds node_modules
+    expect(files.some((f) => f.includes('node_modules'))).toBe(true);
+  });
+
+  it('finds css files', () => {
+    const files = findFiles(join(TMP_ROOT, 'src'), /\.css$/);
+    expect(files.some((f) => f.endsWith('styles.css'))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// fileContains
+// ---------------------------------------------------------------------------
+
+describe('fileContains', () => {
+  it('returns true when file contains a string pattern', () => {
+    const file = join(TMP_ROOT, 'src', 'index.tsx');
+    expect(fileContains(file, ['aria-label'])).toBe(true);
+  });
+
+  it('returns false when file does not contain pattern', () => {
+    const file = join(TMP_ROOT, 'src', 'index.tsx');
+    expect(fileContains(file, ['nonexistent-pattern-xyz'])).toBe(false);
+  });
+
+  it('returns true when file matches a RegExp pattern', () => {
+    const file = join(TMP_ROOT, 'src', 'index.tsx');
+    expect(fileContains(file, [/data-testid=/])).toBe(true);
+  });
+
+  it('returns false for nonexistent file', () => {
+    expect(fileContains('/nonexistent/file.tsx', ['anything'])).toBe(false);
+  });
+
+  it('returns true when any pattern matches', () => {
+    const file = join(TMP_ROOT, 'src', 'index.tsx');
+    expect(fileContains(file, ['nonexistent-xyz', 'aria-label'])).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// countMatches
+// ---------------------------------------------------------------------------
+
+describe('countMatches', () => {
+  it('counts aria- attributes across all tsx files in src', () => {
+    const count = countMatches(join(TMP_ROOT, 'src'), /aria-/g);
+    // index.tsx has 1 (aria-label), Card.tsx has 1 (aria-hidden) = 2
+    expect(count).toBe(2);
+  });
+
+  it('counts data-testid across all tsx files', () => {
+    const count = countMatches(join(TMP_ROOT, 'src'), /data-testid=/g);
+    // index.tsx: 1, Card.tsx: 1 = 2
+    expect(count).toBe(2);
+  });
+
+  it('returns 0 for pattern with no matches', () => {
+    const count = countMatches(join(TMP_ROOT, 'src'), /FocusTrap/g);
+    expect(count).toBe(0);
+  });
+
+  it('returns 0 for nonexistent directory', () => {
+    const count = countMatches('/nonexistent/path', /aria-/g);
+    expect(count).toBe(0);
+  });
+
+  it('respects custom file extension filter', () => {
+    // Only look at .css files
+    const count = countMatches(join(TMP_ROOT, 'src'), /color/g, /\.css$/);
+    expect(count).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// readFileSafe
+// ---------------------------------------------------------------------------
+
+describe('readFileSafe', () => {
+  it('returns file content for existing file', () => {
+    const content = readFileSafe(join(TMP_ROOT, 'src', 'index.tsx'));
+    expect(content).toContain('aria-label');
+  });
+
+  it('returns empty string for nonexistent file', () => {
+    expect(readFileSafe('/nonexistent/file.tsx')).toBe('');
   });
 });
