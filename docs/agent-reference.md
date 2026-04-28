@@ -33,7 +33,7 @@ All other commands (validate, audit, scan, fix, status) exist to **support** thi
 
 ## 2. Registered Repos
 
-UGWTF manages **6 repositories**. Each repo has an alias used in all CLI commands.
+UGWTF manages **9 repositories**. Each repo has an alias used in all CLI commands.
 
 | Alias | Slug | Framework | Supabase |
 |---|---|---|---|
@@ -42,7 +42,10 @@ UGWTF manages **6 repositories**. Each repo has an alias used in all CLI command
 | `043` | `DaBigHomie/one4three-co-next-app` | nextjs | ✓ |
 | `maximus` | `DaBigHomie/maximus-ai` | nextjs | ✓ |
 | `cae` | `DaBigHomie/Cae` | vite-react | ✗ |
+| `atb` | `DaBigHomie/atl-table-booking-app` | node | ✗ |
 | `ugwtf` | `DaBigHomie/ugwtf` | node | ✗ |
+| `image-gen` | `DaBigHomie/image-gen-30x-cli` | node | ✗ |
+| `audit-fix-ship` | `DaBigHomie/audit-fix-ship` | node | ✗ |
 
 ---
 

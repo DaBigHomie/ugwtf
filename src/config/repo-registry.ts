@@ -342,6 +342,59 @@ export const REPOS: Record<string, RepoConfig> = {
       e2e: null,
     },
   },
+
+  'image-gen': {
+    slug: 'DaBigHomie/image-gen-30x-cli',
+    alias: 'image-gen',
+    framework: 'node',
+    supabaseProjectId: null,
+    supabaseUrlSecret: null,
+    supabaseServiceKeySecret: null,
+    supabaseTypesPath: null,
+    nodeVersion: '20',
+    defaultBranch: 'main',
+    hasE2E: false,
+    e2eCommand: null,
+    extraLabels: [
+      { name: 'infrastructure', color: '0284c7', description: 'CLI infrastructure and tooling' },
+      { name: 'prompts', color: '7c3aed', description: 'Image generation prompt updates' },
+    ],
+    localPath: `${HOME}/management-git/image-gen-30x-cli`,
+    ci: {
+      lintCommand: 'npm run validate',
+      typeCheckCommand: 'tsc --noEmit',
+      buildCommand: null,
+      unitTestCommand: 'npm test',
+      e2e: null,
+    },
+  },
+
+  'audit-fix-ship': {
+    slug: 'DaBigHomie/audit-fix-ship',
+    alias: 'audit-fix-ship',
+    framework: 'node',
+    supabaseProjectId: null,
+    supabaseUrlSecret: null,
+    supabaseServiceKeySecret: null,
+    supabaseTypesPath: null,
+    nodeVersion: '20',
+    defaultBranch: 'main',
+    hasE2E: false,
+    e2eCommand: null,
+    extraLabels: [
+      { name: 'skill', color: '7c3aed', description: 'Claude skill content (SKILL.md, templates)' },
+      { name: 'wave', color: '0ea5e9', description: 'Wave 0/1/2/3/3.5/4 audit-fix-ship cycle' },
+      { name: 'prompt-batch', color: 'f59e0b', description: 'Generated prompt batch for agent pipeline' },
+    ],
+    localPath: `${HOME}/management-git/audit-fix-ship`,
+    ci: {
+      lintCommand: null,
+      typeCheckCommand: 'tsc --noEmit -p scripts/tsconfig.json',
+      buildCommand: null,
+      unitTestCommand: null,
+      e2e: null,
+    },
+  },
 };
 
 /** Resolve repo config by alias or slug */

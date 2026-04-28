@@ -27,7 +27,7 @@ src/
 │   ├── dry-run-agents.ts  # E2E validation without side effects
 │   └── ...
 ├── clusters/index.ts      # Cluster definitions
-├── config/repo-registry.ts# 6 registered repos
+├── config/repo-registry.ts# 9 registered repos
 ├── swarm/executor.ts      # Parallel/sequential cluster runner
 ├── clients/github.ts      # GitHub API client (gh CLI + fetch)
 └── utils/                 # Logger, filesystem, env helpers
