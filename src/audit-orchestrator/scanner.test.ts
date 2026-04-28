@@ -7,13 +7,14 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { findFiles, fileContains, countMatches, readFileSafe } from './scanner.js';
 
 // ---------------------------------------------------------------------------
 // Temp directory setup
 // ---------------------------------------------------------------------------
 
-const TMP_ROOT = '/tmp/scanner-test-' + Date.now();
+const TMP_ROOT = join(tmpdir(), 'scanner-test-' + Date.now());
 
 beforeAll(() => {
   mkdirSync(join(TMP_ROOT, 'src', 'components'), { recursive: true });

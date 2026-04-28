@@ -7,12 +7,13 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
 // ---------------------------------------------------------------------------
 // Temp directory setup
 // ---------------------------------------------------------------------------
 
-const TMP = '/tmp/adapters-test-' + Date.now();
+const TMP = join(tmpdir(), 'adapters-test-' + Date.now());
 const NEXT_ROOT = join(TMP, 'next-project');
 const VITE_ROOT = join(TMP, 'vite-project');
 const PKG_NEXT_ROOT = join(TMP, 'pkg-next-project');
