@@ -396,6 +396,32 @@ export const REPOS: Record<string, RepoConfig> = {
     },
   },
 
+  'stitch-mockup-toolkit': {
+    slug: 'DaBigHomie/stitch-mockup-toolkit',
+    alias: 'stitch-mockup-toolkit',
+    framework: 'node',
+    supabaseProjectId: null,
+    supabaseUrlSecret: null,
+    supabaseServiceKeySecret: null,
+    supabaseTypesPath: null,
+    nodeVersion: '20',
+    defaultBranch: 'main',
+    hasE2E: false,
+    e2eCommand: null,
+    extraLabels: [
+      { name: 'mockup', color: '7c3aed', description: 'Google Stitch mockup prompt or output' },
+      { name: 'brand-config', color: 'f59e0b', description: 'brand.config.json or template change' },
+    ],
+    localPath: `${HOME}/management-git/stitch-mockup-toolkit`,
+    ci: {
+      lintCommand: null,
+      typeCheckCommand: null,
+      buildCommand: null,
+      unitTestCommand: null,
+      e2e: null,
+    },
+  },
+
   "docs-standards": {
     slug: "DaBigHomie/documentation-standards",
     alias: "docs-standards",
