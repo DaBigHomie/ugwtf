@@ -62,8 +62,28 @@ gh pr merge <n> --squash --delete-branch           # squash-merge convention; on
 ```
 Never merge while a required check is `pending`/`fail`. If a check fails, fix on the branch, push, re-watch.
 
+## Post-merge cleanup (MANDATORY — SSOT §7.3)
+
+After merge SHA is captured AND CORTEX `status='complete'` is written
+(rule `12903`), remove the ship worktree. Never leave the merged
+worktree as an orphan.
+
+```bash
+gh pr view <n> --json state,mergedAt              # confirm state=MERGED
+git -C <parent-repo> worktree remove <worktree>   # NO --force
+```
+
+If the removal is blocked (dirty file, sibling conflict, HEAD
+unreachable): record `REFUSED: <reason>` in the Report — do NOT
+`--force` and do NOT silently leave.
+
+Ref: `maximus-ai/docs/PRIME-ORCHESTRATOR-SSOT.md` §7.3;
+`docs/policies/orchestrator-hard-rails-checklist.md` §M.
+
 ## Report
-Verdict + PR link + merge SHA + gate results. If anything held, say what and why.
+Verdict + PR link + merge SHA + gate results + post-merge cleanup
+result (worktree removed OR `REFUSED: <reason>`). If anything held,
+say what and why.
 
 ## Pairs with
 `forecast-scrutiny`, `repo-sync-guard`, and the MALFIG G-gates. CI/Vercel/hooks remain MALFIG's.
