@@ -17,9 +17,9 @@ Workspace-wide Git hygiene orchestrator. Enforces safe, non-destructive workflow
 > Do not execute `git reset --hard`, `git push --force`, or destructive branch/worktree deletions without explicit user approval. All operations must be fully reversible or run in dry-run mode first.
 
 ### 50x Logic Principles
-- **CORTEX State Verification:** Check the local SQLite database state (`.agent-kb/db/agent_kb.sqlite`) and run `cortex-sync-guard.mts` if present before shifting branch states to ensure no session provenance is lost.
+- **CORTEX State Verification:** Check the local SQLite database state (`.agent-kb/db/agent_kb.sqlite`) and run `cortex-sync-guard.mts` if present in the active repo before shifting branch states to ensure no session provenance is lost.
 - **Pipeline Integrity:** Check `.cortex-boot.json` and verify that all workspace plugins and hooks are correctly loaded. Ensure there are no disconnected agents or stalled loops.
-- **Loop/Workspace Audit:** Trace all linked sibling worktrees using `worktree-lint.mts` to ensure parallel tasks are properly isolated and do not clash on the same branch.
+- **Loop/Workspace Audit:** Trace all linked sibling worktrees. If `worktree-lint.mts` exists in the active repo, run it to ensure parallel tasks are properly isolated and do not clash on the same branch.
 
 ---
 
@@ -27,21 +27,27 @@ Workspace-wide Git hygiene orchestrator. Enforces safe, non-destructive workflow
 
 1. **Verify CORTEX DB State (50x logic)**
    Check the current session's SQLite state to ensure task registry and state hydration are aligned.
+   If `scripts/cortex-sync-guard.mts` exists in the active repo:
    ```bash
    npx tsx scripts/cortex-sync-guard.mts
    ```
+   Otherwise skip this step.
 
 2. **Audit Worktree Isolation**
    Run the worktree linter to detect overlapping branch mutations or uncommitted changes in linked sibling worktrees.
+   If `scripts/worktree-lint.mts` exists in the active repo:
    ```bash
    npx tsx scripts/worktree-lint.mts
    ```
+   Otherwise skip this step.
 
 3. **Pre-flight Audit (`repo-sync-guard`)**
-   Run the pre-flight tool with the global plugin path to refresh remote references and check tree cleanliness.
+   Run the pre-flight tool to refresh remote references and check tree cleanliness.
+   If `scripts/repo-sync-guard.mts` exists in the active repo, run:
    ```bash
-   npx tsx "~/.gemini/config/plugins/git-hygiene/scripts/repo-sync-guard.mts" <repo> --fetch
+   npx tsx scripts/repo-sync-guard.mts <repo> --fetch
    ```
+   Otherwise see `reference/repo-sync-guard.md` for guidance.
    *If findings are returned, resolve them via safe commits, pushes, or pulls. Run `/forecast-scrutiny` before any safe remediation (`--remediate`).*
 
 4. **Target Integration Dry-Run (MANDATORY FOR PRs/MERGES)**
@@ -56,6 +62,22 @@ Workspace-wide Git hygiene orchestrator. Enforces safe, non-destructive workflow
 
 5. **Safety Check**
    Review proposed commands. Forbid any command that overwrites git history or deletes unmerged branches.
+
+---
+
+## Safe Branch Cleanup
+
+Before deleting any local branch, classify it — never trust `git merge-base` or `git cherry` alone; both LIE for squash-merged branches (the tip SHA is never an ancestor of main post-squash, so ancestry checks false-negative). The reliable proof: **branch tip SHA == a merged PR's `headRefOid`**.
+
+**Tool:** `atl-table-booking-app/scripts/branch-cleanup-audit.mts` — READ-ONLY, never deletes; emits a suggested command list only.
+
+**Verdicts:** `SAFE-MERGED` (ancestor of origin/main) · `SAFE-SQUASH` (tip SHA == merged-PR head SHA) · `SAFE-REMOTE` (contained by some `origin/*` ref) · `KEEP-LIVE` (checked out in a worktree) · `KEEP-ARCHIVE` (intentional archive/forensic ref) · `HOLD` (unpushed, unmatched — real loss risk).
+
+**Usage:**
+```bash
+npx tsx scripts/branch-cleanup-audit.mts [--repo owner/name] [--json] [--emit-deletes]
+```
+`--emit-deletes` only prints the `git branch -D` commands for SAFE-* verdicts — it never executes them.
 
 ---
 
