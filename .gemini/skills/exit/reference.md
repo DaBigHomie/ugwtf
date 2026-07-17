@@ -1,5 +1,16 @@
 # Exit skill — reference
 
+## Agent doc rules (token savings)
+
+**Never** create markdown docs from scratch or search the repo for template structure.
+
+1. Run `npx tsx documentation-standards/scripts/scaffold-doc.mts --catalog` to list types.
+2. Run `scaffold-doc.mts --type <id> --out <path> --repo-path .` — read the emitted `.scaffold.json`.
+3. Fill **only** `agentFill` keys via `replace_string` / search_replace.
+4. Run `validateCommand` from the sidecar (or `handoff-framework validate` for numbered handoff docs).
+
+At session exit, `exit-session.mts` → `handoff-session-close.mts` auto-runs handoff-framework `generate-state` (no agent tokens for metrics).
+
 ## Session manifest skeleton
 
 ```markdown

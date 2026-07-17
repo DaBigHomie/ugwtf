@@ -1,7 +1,7 @@
 ---
 name: plan-by-surface-repo-layer-signal
-version: "1.0.0"
-updated: 2026-07-07
+version: "1.1.1"
+updated: 2026-07-14
 canonical_basis: documentation-standards/skills/plan-by-surface-repo-layer-signal/SKILL.md
 description: >-
   Categorize a queued backlog of items along four axes — SURFACE (one of the
@@ -43,13 +43,26 @@ on the emitted plan docs).
 | **This skill (Tier 1)** | `$MGMT_ROOT/documentation-standards/skills/plan-by-surface-repo-layer-signal/SKILL.md` |
 | **plan-audit-fix (embedded recipe)** | `$MGMT_ROOT/documentation-standards/skills/plan-audit-fix/SKILL.md` |
 | **forecast-scrutiny** | `$MGMT_ROOT/documentation-standards/skills/forecast-scrutiny/SKILL.md` |
-| **forensic-auditing** | `$MGMT_ROOT/plugins/forensic-auditing/skills/forensic-auditing/SKILL.md` |
+| **forensic-auditing** | `$HOME/.claude/skills/forensic-auditing/SKILL.md` (global user skill; per-repo mirror at `.claude/skills/forensic-auditing/SKILL.md`) |
 | **doc-forensic-inventory** | `$MGMT_ROOT/documentation-standards/skills/doc-forensic-inventory/SKILL.md` |
 | **MALFIG gate** | `$MGMT_ROOT/documentation-standards/skills/malfig/SKILL.md` |
 | **WARDEN doc-place** | `$MGMT_ROOT/documentation-standards/scripts/warden-doc-place.mts` |
 | **validate-plan-completeness (G11)** | `$MGMT_ROOT/maximus-ai/scripts/validate-plan-completeness.mts` |
-| **Authority plan (§7.1 / §7.4 / §1B basis)** | `~/.cursor/plans/malfig_workflow_diff_map_ba19fb65.plan.md` |
+| **Authority plan (§7.1 / §7.4 / §1B basis)** | `${CURSOR_PLANS_DIR:-$HOME/.cursor/plans}/malfig_workflow_diff_map_ba19fb65.plan.md` |
 | **PAC** | `$MGMT_ROOT/maximus-ai/docs/prime-governance/PRIME-PLACEMENT-ASSIGNMENT-CHARTER.md` |
+
+> [!WARNING]
+> **Verify-on-resolve (forensic-auditing Rule 4 — manifests != reality).** Run a
+> deterministic `test -f` on any Path-resolution row before relying on it — hub
+> landing state varies by checkout branch and machine (a stale working tree on a
+> non-`master` branch reads as "absent" when the file is in fact on
+> `origin/master`; check the ref, not one worktree). Known gaps as of 2026-07-14:
+> - **Authority plan** (`malfig_workflow_diff_map_ba19fb65.plan.md`) — resolves
+>   at NO `$CURSOR_PLANS_DIR` in this workspace. The §Fail-closed precheck below
+>   governs: emit `UNKNOWN` rather than guessing from the inlined taxonomy.
+> - **This skill (Tier 1)** — lands on `documentation-standards` master via
+>   docstd PR #116; confirm it is present (`git cat-file -e origin/master:…`)
+>   before treating the hub path as live SSOT.
 
 ## Scope boundaries (hard rails)
 
@@ -65,11 +78,23 @@ on the emitted plan docs).
 
 ## Inputs
 
+> [!WARNING]
+> The `mcp__claude_ai_Supabase__execute_sql` connector is DISABLED whenever
+> `ANTHROPIC_API_KEY` is set (the Claude Code default) — in that mode
+> `ToolSearch("select:mcp__claude_ai_Supabase__execute_sql")` returns no match.
+> Do not assume the connector is present; resolve access per the CORTEX
+> access policy below before reading CORTEX-tracked tasks.
+
 The skill accepts a queued backlog in any of three forms:
 
 1. **CORTEX-tracked tasks** — list of `task_*` IDs; the skill loads their
-   description, priority, status, and `blocked_on` via `mcp__claude_ai_Supabase__execute_sql`
-   (`project_id: eccpracfbrocmkzuogec`).
+   description, priority, status, and `blocked_on` via the CORTEX access
+   policy (see "## CORTEX writes" below for the full resolve order):
+   primary `mcp__claude_ai_Supabase__execute_sql` (`project_id:
+   eccpracfbrocmkzuogec`) when claude.ai connectors are enabled; else
+   CREDS-DIRECT via `maximus-ai/scripts/lib/cortex-write.mts` reader
+   helpers, or the hosted `plugin:supabase:supabase` MCP scoped with
+   `?project_ref=eccpracfbrocmkzuogec`.
 2. **Inline backlog** — a JSON array embedded in the dispatch prompt with
    `{id, priority, status, description, blocked_on?}` per row.
 3. **Repo state signals** — non-CORTEX queued items observed from the workspace
@@ -83,6 +108,22 @@ and a follow-up task is filed to canonize them in CORTEX.
 ---
 
 ## Categorize (verify-then-write)
+
+> [!IMPORTANT]
+> **Fail-closed precheck.** Before categorizing anything, check that the
+> authority plan resolves at
+> `${CURSOR_PLANS_DIR:-$HOME/.cursor/plans}/malfig_workflow_diff_map_ba19fb65.plan.md`
+> (or the PAC file at
+> `$MGMT_ROOT/maximus-ai/docs/prime-governance/PRIME-PLACEMENT-ASSIGNMENT-CHARTER.md`).
+> It may not exist on a given machine. If it is absent, the skill MUST NOT
+> invent categorizations by guessing from memory of §7.1 / §7.4 / §1B — it
+> emits `surface = UNKNOWN`, `repo = UNKNOWN`, `layer = UNKNOWN` for every
+> item and files a follow-up task to source the authority plan, instead of
+> guessing. The inlined 20-surface-type and three-tier lists below are the
+> fallback taxonomy for `surface` and `layer` only when the authority plan
+> is unavailable — the PAC §7.4 owning-repo mapping for `repo` REQUIRES the
+> authority plan or the PAC file to be present; there is no safe fallback
+> for `repo`.
 
 For every input item, populate this row:
 
@@ -137,6 +178,16 @@ For every input item, populate this row:
 ---
 
 ## Emit (master + per-repo sub-plans)
+
+> [!WARNING]
+> **Blast radius.** Executing this skill writes plan docs into multiple
+> repos, potentially including `atl-table-booking-app`. Every target-repo
+> write MUST land on a FRESH WORKTREE cut from that repo's `origin/main` or
+> `origin/master` — never a shared/existing checkout — and MUST NOT land in
+> `atl-table-booking-app`'s active P0 release branches. **Dry-run / preview
+> default:** before writing anything, the skill resolves and previews the
+> full write set (every plan doc path + its target repo) for confirmation;
+> writes proceed only after that preview is confirmed.
 
 ### Master plan
 
@@ -225,8 +276,45 @@ When the skill runs against a live backlog:
    for cross-repo items).
 3. **Never mirror the plan body** into CORTEX — index row only.
 
-CORTEX access: `ToolSearch("select:mcp__claude_ai_Supabase__execute_sql")`
-then call with `project_id: "eccpracfbrocmkzuogec"`.
+### CORTEX access policy (portable, resolve in order)
+
+1. **Primary — claude.ai connectors enabled:**
+   `ToolSearch("select:mcp__claude_ai_Supabase__execute_sql")`, then call
+   with `project_id: "eccpracfbrocmkzuogec"`.
+2. **Fallback — MCP unavailable** (e.g. `ANTHROPIC_API_KEY` is set, or
+   running under Claude Code): CREDS-DIRECT via
+   `maximus-ai/scripts/lib/cortex-write.mts` helpers (`cortexWriteTask`,
+   `cortexWriteKnowledge`), which read `SUPABASE_URL` +
+   `SUPABASE_SERVICE_ROLE_KEY` from `maximus-ai/.env.local` and are gated by
+   `CORTEX_CLOUD_SYNC`.
+3. **Alternate fallback:** the hosted `plugin:supabase:supabase` MCP scoped
+   with `?project_ref=eccpracfbrocmkzuogec`.
+
+### UPSERT contract (no raw INSERT)
+
+- Task rows UPSERT `on_conflict=(id)`.
+- Knowledge rows UPSERT `on_conflict=(key)`.
+- Route ALL writes through `cortex-write.mts` — it performs a read-back
+  verify and a delete-guard.
+- Raw `INSERT` is FORBIDDEN — it duplicates rows on re-run.
+
+### Project-scope rail
+
+- All CORTEX writes target project `eccpracfbrocmkzuogec` ONLY.
+- The skill MUST NEVER write the ATB project `vodxijszxtxasaovjahp` — that
+  project belongs to `atl-table-booking-app` and is out of scope for this
+  skill under any code path.
+
+---
+
+## Tier-2 distribution
+
+> [!IMPORTANT]
+> Tier-2 mirror copies of this skill (under `.cursor/`, `.gemini/`, `.claude/skills/...`)
+> MUST carry a `# GENERATED — edit canonical` banner and MUST be regenerated
+> from this Tier-1 canonical — never hand-edited. Any mirror found without
+> that banner is a known distribution defect: file a follow-up task to
+> regenerate it from this file rather than editing the mirror directly.
 
 ---
 
@@ -313,11 +401,11 @@ Each sub-plan embeds the §Same-workflow-logic execution recipe verbatim.
 
 ## Governance references
 
-- Authority plan (surface taxonomy + tier model): `~/.cursor/plans/malfig_workflow_diff_map_ba19fb65.plan.md` §7.1 / §7.4 / §1B
+- Authority plan (surface taxonomy + tier model): `${CURSOR_PLANS_DIR:-$HOME/.cursor/plans}/malfig_workflow_diff_map_ba19fb65.plan.md` §7.1 / §7.4 / §1B
 - PAC placement: `maximus-ai/docs/prime-governance/PRIME-PLACEMENT-ASSIGNMENT-CHARTER.md`
 - Doc types: `documentation-standards/docs/DOC-TYPE-RUBRIC.md`
 - Plan completeness (G11): `maximus-ai/scripts/validate-plan-completeness.mts`
-- Separation of duties (G13): `~/.claude/skills/human-approval-gate/SKILL.md`
+- Separation of duties (G13): `.claude/skills/human-approval-gate/SKILL.md` (repo-distributed skill; present in each enrolled repo's `.claude/skills/` — no global `$HOME/.claude/skills/` copy)
 
 ---
 
@@ -326,3 +414,5 @@ Each sub-plan embeds the §Same-workflow-logic execution recipe verbatim.
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0.0 | 2026-07-07 | plan-by-surface authoring dispatch | Initial skill — categorize backlog by surface/repo/layer/signal + emit master + per-repo plan docs with embedded execution recipe |
+| 1.1.0 | 2026-07-14 | audit-fix-plan (prime-orchestration-adapt) | Portable CORTEX access (creds-direct fallback) + authority-plan fail-closed precheck + fresh-worktree/dry-run guard + UPSERT on_conflict contract + project-scope rail (no ATB project) + portable authority path + Tier-2 regeneration note |
+| 1.1.1 | 2026-07-14 | audit-fix-plan (Tier-1 backport) | Fixed two residual path defects verified on disk — forensic-auditing (`$MGMT_ROOT/plugins/...` -> `$HOME/.claude/skills/`) and human-approval-gate (`$HOME/.claude/skills/...` -> repo-local `.claude/skills/`); added verify-on-resolve WARNING for hub-unlanded rows (Tier-1 skill, DOC-TYPE-RUBRIC) + absent authority plan. Backport from career-corpus PR #48 (task_pbss_backport_tier1_canonical). |
