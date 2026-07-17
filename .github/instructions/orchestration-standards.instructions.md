@@ -1,7 +1,7 @@
 ---
 title: Orchestration Standards
-version: 1.0.0
-updated: 2026-07-07
+version: 1.0.1
+updated: 2026-07-08
 applies_to: '**'
 ---
 
