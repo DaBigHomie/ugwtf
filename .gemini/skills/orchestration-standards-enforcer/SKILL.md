@@ -160,12 +160,35 @@ with a fresh worktree, gates, and an explicit `--apply`.
 
 ---
 
+## Recommended fanout wrapper — `governed-fanout.mts`
+
+For any operator running enforcer fanouts (this script, `sync-skills.mts`,
+`sync-agents.mts`, `sync-instructions.mts`, `sync-prompts.mts`,
+`sync-commands.mts`, `sync-user-claude.mts`), the **recommended non-dirty-primary
+path is the wrapper**:
+
+```bash
+npx tsx documentation-standards/scripts/governed-fanout.mts \
+  --sync-script=<skills|agents|instructions|prompts|commands|user-claude> \
+  [--apply] [--auto-merge] [--cleanup-after-merge]
+```
+
+The wrapper cuts a fresh worktree per enrolled repo, generates the
+`targets.json`, invokes the requested sync script, and (optionally) opens +
+merges the resulting PRs — leaving every primary worktree clean. Bare
+invocation of the sync-* scripts is a low-level primitive; typical users
+should call the wrapper. See `docs/runbooks/governed-fanout.md`.
+
+---
+
 ## Governance references
 
 - Authority plan: `~/.cursor/plans/malfig_workflow_diff_map_ba19fb65.plan.md`
   (surface taxonomy §7.1, artifact placement §7.4)
 - Peer scope loader: `scripts/lib/resolve-prime-repos.mts`
 - Peer sync pattern: `scripts/sync-skills.mts`
+- Recommended wrapper: `scripts/governed-fanout.mts` (task
+  `task_governed_fanout_wrapper_20260710`)
 - Gate stack skills: `forecast-scrutiny`, `malfig`, `forensic-auditing`,
   `doc-forensic-inventory`
 
@@ -177,3 +200,4 @@ with a fresh worktree, gates, and an explicit `--apply`.
 |---------|------|--------|------|
 | 1.0.0 | 2026-07-07 | Initial skill + canonical block + `enforce-orchestration-standards.mts` (dogfood scope: documentation-standards). Shipped in `docstd #65`. | `task_skill_orchestration_standards_enforcer_20260707` |
 | 1.0.1 | 2026-07-08 | Corrected canonical block prior-art citations: every PR now verified MERGED via `gh pr view` on its specific repo and repo-prefixed to disambiguate (`maximus-ai #196-#202`, `docstd #64`, `polaris #14`). Pre-fires ahead of the all-repos fan-out to prevent propagating unverified refs to 33 files across 11 repos. | `task_enforcer_block_correction_20260708` |
+| 1.0.2 | 2026-07-10 | Cross-linked the new `governed-fanout.mts` wrapper as the recommended non-dirty-primary path for all sync-* fanouts. | `task_governed_fanout_wrapper_20260710` |
