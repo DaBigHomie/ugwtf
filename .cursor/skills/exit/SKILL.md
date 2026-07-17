@@ -60,11 +60,47 @@ routine sessions with no new cross-references (adds no value there, just cost).
 
 ## 3. Handoff and agent manifests
 
+**Do not write docs from scratch.** Use scaffold scripts — agents fill only `.scaffold.json` `agentFill` placeholders via `replace_string` / search_replace.
+
+### 3.0 Token-efficient doc creation (required)
+
+```bash
+# List all scaffold types (PM + agent handoff + context manifest)
+npx tsx documentation-standards/scripts/scaffold-doc.mts --catalog
+
+# Scaffold a doc — auto-fills dates, git HEAD, branch; emits sidecar for agent fill
+npx tsx documentation-standards/scripts/scaffold-doc.mts --type pm-charter \
+  --out docs/plans/charter.md --repo-path . --vars PROJECT_NAME=MyApp,REPO_SLUG=maximus
+
+# Read the sidecar — replace ONLY listed keys
+cat docs/plans/charter.md.scaffold.json
+```
+
+| Script | Purpose |
+|--------|---------|
+| `scaffold-doc.mts` | Copy template + `.scaffold.json` sidecar (agent replace-only) |
+| `handoff-session-close.mts` | handoff-framework init/generate/validate + Forge scaffolds |
+| `exit-session.mts` | Full exit (calls handoff-session-close in Step 3) |
+
+**handoff-framework** (sibling repo `~/Management Git/handoff-framework`):
+
+- `generate-state` auto-fills `01-PROJECT_STATE` (metrics, gates, git log) — **no agent tokens**
+- `validate-docs` / `validate:naming` — run after fill
+- MCP (maximus-ai): `generate_handoff` + `validate_handoff` when MCP available
+
+### 3.1 Primary hub
+
 1. **Primary hub:** `documentation-standards` — use [`KEY-FILES.md`](https://github.com/DaBigHomie/documentation-standards/blob/master/KEY-FILES.md) and [`docs/AGENT-CONTEXT-KEY.md`](https://github.com/DaBigHomie/documentation-standards/blob/master/docs/AGENT-CONTEXT-KEY.md) as pointers.
-2. Write or update a **session manifest** under **`documentation-standards/docs/context-manifests/`** (or repo-local path if user prefers):
+2. On `/exit`, **`exit-session.mts` Step 3** runs `handoff-session-close.mts` which:
+   - Initializes `docs/handoff-{session}/` via handoff-framework (15 numbered templates)
+   - Auto-generates `01-PROJECT_STATE` via `generate-state.mts`
+   - Validates via `validate-docs.mts`
+   - Scaffolds Forge handoff + context manifest with `.scaffold.json` sidecars
+3. Write or update a **session manifest** under **`documentation-standards/docs/context-manifests/`** (or repo-local path if user prefers):
 
    - Filename: **`YYYY-MM-DD_HH-mm_scope.md`** or **`SESSION-<repo>-<branch>-YYYYMMDD.md`**.
    - Include: repos touched, branches, commits made (hashes), files intentionally dirty, **next steps**, links to PRs/issues if any.
+   - Prefer `scaffold-doc.mts --type agent-context-manifest` — fill sidecar only.
 
 3. **For larger sessions** (many files, multiple repos, or a handoff someone else needs to pick up
    cold): use the **`@dabighomie/handoff-framework`** package at `~/management-git/handoff-framework`

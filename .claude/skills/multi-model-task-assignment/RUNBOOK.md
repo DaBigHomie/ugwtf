@@ -1,3 +1,13 @@
+---
+title: "Multi-Model Task Assignment — RUNBOOK"
+doc_type: instruction
+repo: documentation-standards
+session_id: task_mmta_runbook_20260707
+created: 2026-07-07
+status: active
+tags: [mmta, runbook, orchestration, prime-orchestration, wave-delivery, loop-goal, patterns]
+---
+
 # multi-model-task-assignment — RUNBOOK
 
 Companion runbook for `loop-goal-workflow.template.mts`.
@@ -281,6 +291,26 @@ output_blob.authorization = "orchestrator brief 2026-07-07: merge on all-gates-P
 - `claude-board` — Pattern D prior-art (PR #61).
 - `plan-by-surface-repo-layer-signal` — Pattern D prior-art (PR #62).
 - `malfig-ship` — one-command ship workflow (PR/gate/merge).
+- `orchestrator-continuation` — orchestrator-handoff entry-point (Standing menu + Patterns A-I dispatcher; PR #73, v1.2.0 adds standing-authorization via PR #82). Composes this RUNBOOK's patterns from a slash command.
+- `orchestrator-response-templates` — reproducible OUTPUT shape of the orchestrator persona (status board, menu, BG-ack, session-tally, verify-then-write helper; PR #74).
+- `orchestration-standards-enforcer` — sync + verify the canonical orchestration-standards block across enrolled surfaces (PR #65, #66).
+
+**`/prime-orchestration-*` slash-command family (documentation-standards/.claude/commands/):**
+
+- `/continue-cycles` — alias origin (PR #73).
+- `/prime-orchestration-continue` — family-prefixed alias for `/continue-cycles` (PR #75).
+- `/prime-orchestration-continue-prime` — scoped continuation: `prime_addressed=true` tasks only (scope-aware family, PR #75 line).
+- `/prime-orchestration-continue-repo` — scoped continuation: one repo's non-Prime tasks (`--scope=repo=<slug>`).
+- `/prime-orchestration-continue-external` — scoped continuation: the human-review queue only.
+- `/prime-orchestration-adopt` — un-queued session-init: boot a session into PrimeO discipline when work is NOT yet tracked in CORTEX; `--concern` backfills a `cortex_tasks` row (PR #108 `aebd2de5`, v1.1.0).
+- `/prime-orchestration-diagnose-session` — 8-stage session diagnostic (bootstrap → identity → CORTEX self-check → PR-CORTEX drift → git deep-dive → CLAUDE.md audit → MMTA hints → report); SSOT §10 invariant (PR #109 `a3c223bd`).
+- `/prime-orchestration-audit-pr-set` — read-only 4-gate audit of N PRs across N repos (PR #75).
+- `/prime-orchestration-validate-cross-workstation` — validate work authored on another workstation (PR #75).
+- `/prime-orchestration-enforce` — chain enforcer + 4-gate for a scope (PR #75).
+- `/prime-orchestration-delegate` — direct ARSENAL shape invocation via MCP `dispatch_next_cycle` (PR #75).
+- `/prime-orchestration-grant-authorization` — record a durable cross-session standing authorization (PR #82).
+- `/prime-orchestration-revoke-authorization` — soft-delete a prior standing authorization (PR #82).
+- Family runbook: `documentation-standards/docs/runbooks/prime-orchestration-commands.md`.
 
 **User-installed skills (`~/.claude/skills/`):**
 
@@ -302,4 +332,6 @@ output_blob.authorization = "orchestrator brief 2026-07-07: merge on all-gates-P
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.2.0 | 2026-07-15 | §10 command family de-drifted (TASK-CRASH-RECOVER-06): added `/prime-orchestration-adopt` (PR #108), `/prime-orchestration-diagnose-session` (PR #109), and scoped `continue-prime`/`continue-repo`/`continue-external` — the list had frozen pre-2026-07-10 while the commands landed on `origin/master`. Verified each command file present via `git ls-tree origin/master .claude/commands/`. No pattern changes. |
+| 1.1.0 | 2026-07-10 | §10 See also extended with cross-links to the `/prime-orchestration-*` slash-command family (`documentation-standards#75`, #82), `orchestrator-continuation` skill (#73, v1.2.0 standing-authorization via #82), `orchestrator-response-templates` (#74), `orchestration-standards-enforcer` (#65, #66), and the family runbook `docs/runbooks/prime-orchestration-commands.md`. No pattern changes. (`task_prime_orchestration_docs_sweep_20260710`.) |
 | 1.0.0 | 2026-07-07 | Initial RUNBOOK companion to `loop-goal-workflow.template.mts` v1.1.0. Codifies Patterns A-I from the 2026-07-07 orchestration session. |
